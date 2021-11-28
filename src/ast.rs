@@ -183,9 +183,9 @@ pub struct FunctionCall<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfStatement<'a> {
     pub condition: Expression<'a>,
-    pub body: Box<BodyStatement<'a>>,
-    pub else_statement: Option<Box<BodyStatement<'a>>>,
-    pub else_if_statement: Option<Box<IfStatement<'a>>>,
+    pub body: Vec<BodyStatement<'a>>,
+    pub else_statement: Option<Vec<BodyStatement<'a>>>,
+    pub else_if_statement: Option<Vec<IfStatement<'a>>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
