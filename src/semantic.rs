@@ -70,13 +70,26 @@ impl<'a> State<'a> {
 
     pub fn function(&mut self, data: &ast::FunctionStatement<'a>) -> Vec<StateResult> {
         self.global.functions.insert(data.name(), data.clone());
-        let mut body_state = BodyState::new();
-        data.body
-            .iter()
+        // Init Body state. It's root state
+        let body_state = BodyState::new();
+        self.body_statement(&data.body, body_state)
+    }
+
+    pub fn body_statement(
+        &mut self,
+        data: &Vec<ast::BodyStatement<'a>>,
+        body_state: BodyState<'a>,
+    ) -> Vec<StateResult> {
+        let mut body_state = body_state;
+        data.iter()
             .map(|body| match body {
                 ast::BodyStatement::LetBinding(bind) => self.let_binding(bind, &mut body_state),
-                ast::BodyStatement::FunctionCall(_) => StateResult,
-                ast::BodyStatement::If(_) => StateResult,
+                ast::BodyStatement::FunctionCall(fn_call) => {
+                    self.function_call(fn_call, &body_state)
+                }
+                ast::BodyStatement::If(if_condition) => {
+                    self.if_condition(if_condition, &body_state)
+                }
                 ast::BodyStatement::Loop(_) => StateResult,
                 ast::BodyStatement::Expression(_) => StateResult,
             })
@@ -96,8 +109,17 @@ impl<'a> State<'a> {
     pub fn function_call(
         &mut self,
         _data: &ast::FunctionCall<'a>,
-        _state: &mut BodyState<'a>,
+        _state: &BodyState<'a>,
     ) -> StateResult {
+        StateResult
+    }
+
+    pub fn if_condition(
+        &mut self,
+        _data: &ast::IfStatement<'a>,
+        state: &BodyState<'a>,
+    ) -> StateResult {
+        let _state = state;
         StateResult
     }
 }
