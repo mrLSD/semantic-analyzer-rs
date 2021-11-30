@@ -125,7 +125,15 @@ impl<'a> State<'a> {
     ) -> Vec<StateResult> {
         let mut res = self.body_statement(&data.body, body_state.clone());
         if let Some(data) = &data.else_statement {
-            let mut r = self.body_statement(data, body_state);
+            let mut r = self.body_statement(data, body_state.clone());
+            res.append(&mut r)
+        }
+        if let Some(data) = &data.else_if_statement {
+            let mut r = data.iter().fold(vec![], |mut r, if_stmt| {
+                let mut res = self.if_condition(if_stmt, body_state.clone());
+                r.append(&mut res);
+                r
+            });
             res.append(&mut r)
         }
         res
