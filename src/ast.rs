@@ -193,7 +193,7 @@ pub enum BodyStatement<'a> {
     LetBinding(LetBinding<'a>),
     FunctionCall(FunctionCall<'a>),
     If(IfStatement<'a>),
-    Loop(Box<BodyStatement<'a>>),
+    Loop(Vec<BodyStatement<'a>>),
     Expression(Expression<'a>),
 }
 

@@ -92,8 +92,12 @@ impl<'a> State<'a> {
                 ast::BodyStatement::If(if_condition) => {
                     self.if_condition(if_condition, body_state.clone())
                 }
-                ast::BodyStatement::Loop(_) => vec![],
-                ast::BodyStatement::Expression(_) => vec![],
+                ast::BodyStatement::Loop(loop_statement) => {
+                    self.loop_statement(loop_statement, body_state.clone())
+                }
+                ast::BodyStatement::Expression(expression) => {
+                    self.expression(&expression, body_state.clone())
+                }
             };
             s.append(&mut res);
             s
@@ -137,5 +141,13 @@ impl<'a> State<'a> {
             res.append(&mut r)
         }
         res
+    }
+
+    pub fn loop_statement(
+        &mut self,
+        data: &Vec<ast::BodyStatement<'a>>,
+        body_state: BodyState<'a>,
+    ) -> Vec<StateResult> {
+        self.body_statement(data, body_state.clone())
     }
 }
