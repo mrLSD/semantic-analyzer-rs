@@ -158,7 +158,7 @@ pub enum ExpressionOperations {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expression<'a> {
     pub expression_value: ExpressionValue<'a>,
-    pub operation: Option<(ExpressionOperations, ExpressionValue<'a>)>,
+    pub operation: Option<(ExpressionOperations, Box<Expression<'a>>)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

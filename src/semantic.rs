@@ -96,7 +96,7 @@ impl<'a> State<'a> {
                     self.loop_statement(loop_statement, body_state.clone())
                 }
                 ast::BodyStatement::Expression(expression) => {
-                    self.expression(&expression, body_state.clone())
+                    self.expression(expression, body_state.clone())
                 }
             };
             s.append(&mut res);
@@ -149,5 +149,23 @@ impl<'a> State<'a> {
         body_state: BodyState<'a>,
     ) -> Vec<StateResult> {
         self.body_statement(data, body_state.clone())
+    }
+
+    /// Expression is basic entity for state operation and state usage.
+    /// State correctness verified by expressions call.
+    pub fn expression(
+        &mut self,
+        data: &ast::Expression<'a>,
+        body_state: BodyState<'a>,
+    ) -> Vec<StateResult> {
+        match &data.expression_value {
+            ast::ExpressionValue::ValueName(_value) => (),
+            ast::ExpressionValue::PrimitiveValue(_value) => (),
+            ast::ExpressionValue::FunctionCall(_fn_call) => (),
+        }
+        if let Some(e) = &data.operation {
+            self.expression(&e.1, body_state);
+        }
+        vec![]
     }
 }
