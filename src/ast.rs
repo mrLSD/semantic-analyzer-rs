@@ -30,6 +30,12 @@ pub struct ParameterName<'a>(Ident<'a>);
 #[derive(Debug, Clone, PartialEq)]
 pub struct ValueName<'a>(Ident<'a>);
 
+impl GetName for ValueName<'_> {
+    fn name(&self) -> String {
+        self.0.fragment().to_string()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum PrimitiveTypes {
     U8,

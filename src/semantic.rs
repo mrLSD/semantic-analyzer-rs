@@ -22,7 +22,10 @@ pub struct State<'a> {
     pub global: GlobalState<'a>,
 }
 
-pub struct StateResult;
+#[derive(Debug, Clone)]
+pub enum StateResult {
+    ValueNotFound,
+}
 
 impl<'a> BodyState<'a> {
     pub fn new() -> Self {
@@ -110,7 +113,7 @@ impl<'a> State<'a> {
         state: &mut BodyState<'a>,
     ) -> Vec<StateResult> {
         state.values.insert(data.name(), data.clone());
-        vec![StateResult]
+        vec![]
     }
 
     /// Function call do not change state
@@ -119,7 +122,7 @@ impl<'a> State<'a> {
         _data: &ast::FunctionCall<'a>,
         _state: &BodyState<'a>,
     ) -> Vec<StateResult> {
-        vec![StateResult]
+        vec![]
     }
 
     pub fn if_condition(
@@ -158,14 +161,27 @@ impl<'a> State<'a> {
         data: &ast::Expression<'a>,
         body_state: BodyState<'a>,
     ) -> Vec<StateResult> {
-        match &data.expression_value {
-            ast::ExpressionValue::ValueName(_value) => (),
-            ast::ExpressionValue::PrimitiveValue(_value) => (),
-            ast::ExpressionValue::FunctionCall(_fn_call) => (),
-        }
+        let mut res = match &data.expression_value {
+            ast::ExpressionValue::ValueName(value) => {
+                // First check value in body state
+                if body_state.values.contains_key(&value.name())
+                    || self.global.constants.contains_key(&value.name())
+                {
+                    vec![]
+                } else if self.global.imports.contains_key(&value.name()) {
+                    todo!("implement import modules analyzer for external constants")
+                } else {
+                    vec![StateResult::ValueNotFound]
+                }
+            }
+            // do nothing for primitive value
+            ast::ExpressionValue::PrimitiveValue(_value) => vec![],
+            ast::ExpressionValue::FunctionCall(fn_call) => self.function_call(fn_call, &body_state),
+        };
         if let Some(e) = &data.operation {
-            self.expression(&e.1, body_state);
+            let mut res_mut = self.expression(&e.1, body_state);
+            res.append(&mut res_mut);
         }
-        vec![]
+        res
     }
 }
