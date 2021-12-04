@@ -2,6 +2,7 @@
 #![allow(clippy::ptr_arg)]
 
 use crate::ast::{self, GetName};
+use crate::codegen::Codegen;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -18,8 +19,9 @@ pub struct BodyState<'a> {
 }
 
 #[derive(Debug)]
-pub struct State<'a> {
+pub struct State<'a, T: Codegen> {
     pub global: GlobalState<'a>,
+    pub codegen: T,
 }
 
 #[derive(Debug, Clone)]
@@ -37,14 +39,15 @@ impl<'a> BodyState<'a> {
     }
 }
 
-impl<'a> State<'a> {
-    pub fn new() -> Self {
+impl<'a, T: Codegen> State<'a, T> {
+    pub fn new(codegen: T) -> Self {
         Self {
             global: GlobalState {
                 functions: HashMap::new(),
                 imports: HashMap::new(),
                 constants: HashMap::new(),
             },
+            codegen,
         }
     }
 
