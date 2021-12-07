@@ -1,8 +1,13 @@
-use inkwell::builder::Builder;
-use inkwell::context::Context;
-use inkwell::module::Module;
-use inkwell::passes::PassManager;
-use inkwell::values::{FunctionValue, PointerValue};
+#![allow(dead_code)]
+use crate::ast;
+use crate::codegen::Codegen;
+use inkwell::{
+    builder::Builder,
+    context::Context,
+    module::Module,
+    passes::PassManager,
+    values::{FunctionValue, PointerValue},
+};
 use std::collections::HashMap;
 
 //mod ink;
@@ -18,7 +23,12 @@ pub struct Compiler<'a, 'ctx> {
 }
 
 impl<'a, 'ctx> Compiler<'a, 'ctx> {
-    pub fn new(context: &'a Context, module: &'a Module<'ctx>, builder: &'a Builder<'ctx>) -> Self {
+    pub fn new(
+        context: &'a Context,
+        module: &'a Module<'ctx>,
+        builder: &'a Builder<'ctx>,
+        fpm: &'a PassManager<FunctionValue<'ctx>>,
+    ) -> Self {
         Self {
             context,
             module,
@@ -48,5 +58,15 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
         fpm.initialize();
         let _compiler = Compiler::new(&context, &module, &builder, &fpm);
+    }
+}
+
+impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
+    fn function_declaration(&self, _fn_decl: ast::FunctionStatement) -> &Self {
+        self
+    }
+
+    fn expression(&self, _expression: ast::Expression) -> &Self {
+        self
     }
 }
