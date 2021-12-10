@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 use crate::ast;
+use crate::ast::GetName;
 use crate::codegen::Codegen;
+use inkwell::types::BasicMetadataTypeEnum;
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -13,7 +15,7 @@ use std::collections::HashMap;
 //mod ink;
 
 pub struct Compiler<'a, 'ctx> {
-    pub context: &'a Context,
+    pub context: &'ctx Context,
     pub module: &'a Module<'ctx>,
     pub builder: &'a Builder<'ctx>,
     pub fpm: &'a PassManager<FunctionValue<'ctx>>,
@@ -24,7 +26,7 @@ pub struct Compiler<'a, 'ctx> {
 
 impl<'a, 'ctx> Compiler<'a, 'ctx> {
     pub fn new(
-        context: &'a Context,
+        context: &'ctx Context,
         module: &'a Module<'ctx>,
         builder: &'a Builder<'ctx>,
         fpm: &'a PassManager<FunctionValue<'ctx>>,
@@ -62,8 +64,20 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 }
 
 impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
-    fn function_declaration(&self, _fn_decl: ast::FunctionStatement) -> &Self {
-        self
+    fn function_declaration(&self, fn_decl: ast::FunctionStatement) {
+        let param_types = fn_decl
+            .parameters
+            .iter()
+            .map(|param| match &param.parameter_type {
+                ast::Type::Primitive(ty) => match ty {
+                    ast::PrimitiveTypes::I8 => self.context.i8_type().into(),
+                    _ => self.context.i8_type().into(),
+                },
+                _ => self.context.i64_type().into(),
+            })
+            .collect::<Vec<BasicMetadataTypeEnum>>();
+        let fn_type = self.context.f64_type().fn_type(&param_types, false);
+        let _fn_val = self.module.add_function(&fn_decl.name(), fn_type, None);
     }
 
     fn expression(&self, _expression: ast::Expression) -> &Self {

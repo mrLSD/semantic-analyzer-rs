@@ -1175,7 +1175,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         let fn_type = self.context.f64_type().fn_type(args_types, false);
         let fn_val = self.module.add_function(proto.name.as_str(), fn_type, None);
 
-        // set arguments names
+        // set arguments Ωnames
         for (i, arg) in fn_val.get_param_iter().enumerate() {
             arg.into_float_value().set_name(proto.args[i].as_str());
         }
