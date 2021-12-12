@@ -2,7 +2,7 @@
 use crate::ast;
 use crate::ast::GetName;
 use crate::codegen::Codegen;
-use inkwell::types::BasicMetadataTypeEnum;
+use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum};
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -62,6 +62,40 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         let _compiler = Compiler::new(&context, &module, &builder, &fpm);
     }
 
+    fn get_basic_type(&self, ty: &ast::Type<'_>) -> BasicTypeEnum<'ctx> {
+        match ty {
+            ast::Type::Primitive(ty) => match ty {
+                ast::PrimitiveTypes::I8 | ast::PrimitiveTypes::U8 => self.context.i8_type().into(),
+                ast::PrimitiveTypes::I16 | ast::PrimitiveTypes::U16 => {
+                    self.context.i16_type().into()
+                }
+                ast::PrimitiveTypes::I32 | ast::PrimitiveTypes::U32 => {
+                    self.context.i32_type().into()
+                }
+                ast::PrimitiveTypes::I64 | ast::PrimitiveTypes::U64 => {
+                    self.context.i64_type().into()
+                }
+                ast::PrimitiveTypes::F32 => self.context.f32_type().into(),
+                ast::PrimitiveTypes::F64 => self.context.f64_type().into(),
+                ast::PrimitiveTypes::Bool => self.context.bool_type().into(),
+                ast::PrimitiveTypes::Char => self.context.i8_type().into(),
+            },
+            ast::Type::Struct(ty_struct) => {
+                let struct_types = ty_struct
+                    .types
+                    .iter()
+                    .map(|ty| self.get_basic_type(&ty.attr_type))
+                    .collect::<Vec<BasicTypeEnum>>();
+                self.context.struct_type(&struct_types[..], false).into()
+            }
+            ast::Type::Array(ty) => {
+                let ty_array = self.get_basic_type(ty);
+                // TODO: fix array length
+                ty_array.array_type(10).into()
+            }
+        }
+    }
+
     pub fn get_type(&self, ty: &ast::Type<'_>) -> BasicMetadataTypeEnum<'ctx> {
         match ty {
             ast::Type::Primitive(ty) => match ty {
@@ -80,7 +114,19 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 ast::PrimitiveTypes::Bool => self.context.bool_type().into(),
                 ast::PrimitiveTypes::Char => self.context.i8_type().into(),
             },
-            _ => self.context.i64_type().into(),
+            ast::Type::Struct(ty_struct) => {
+                let struct_types = ty_struct
+                    .types
+                    .iter()
+                    .map(|ty| self.get_basic_type(&ty.attr_type))
+                    .collect::<Vec<BasicTypeEnum>>();
+                self.context.struct_type(&struct_types[..], false).into()
+            }
+            ast::Type::Array(ty) => {
+                let ty_array = self.get_basic_type(ty);
+                // TODO: fix array length
+                ty_array.array_type(10).into()
+            }
         }
     }
 }
