@@ -88,10 +88,9 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                     .collect::<Vec<BasicTypeEnum>>();
                 self.context.struct_type(&struct_types[..], false).into()
             }
-            ast::Type::Array(ty) => {
+            ast::Type::Array(ty, capacity) => {
                 let ty_array = self.get_basic_type(ty);
-                // TODO: fix array length
-                ty_array.array_type(10).into()
+                ty_array.array_type(*capacity).into()
             }
         }
     }
@@ -122,10 +121,9 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                     .collect::<Vec<BasicTypeEnum>>();
                 self.context.struct_type(&struct_types[..], false).into()
             }
-            ast::Type::Array(ty) => {
+            ast::Type::Array(ty, capacity) => {
                 let ty_array = self.get_basic_type(ty);
-                // TODO: fix array length
-                ty_array.array_type(10).into()
+                ty_array.array_type(*capacity).into()
             }
         }
     }

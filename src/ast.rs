@@ -68,7 +68,7 @@ pub struct StructTypes<'a> {
 pub enum Type<'a> {
     Primitive(PrimitiveTypes),
     Struct(StructTypes<'a>),
-    Array(Box<Self>),
+    Array(Box<Self>, u32),
 }
 
 #[derive(Debug, Clone, PartialEq)]
