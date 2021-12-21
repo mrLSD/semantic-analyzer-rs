@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+
 use crate::ast;
 use crate::ast::GetName;
 use crate::codegen::Codegen;
@@ -133,8 +134,8 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         self.module.add_function(&fn_decl.name(), fn_type, None)
     }
 
-    fn function_statement(&mut self, fn_decl: ast::FunctionStatement<'_>) -> Self::Backend {
-        let fn_value = self.function_declaration(&fn_decl);
+    fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend {
+        let fn_value = self.function_declaration(fn_decl);
 
         // Set functions parameters value name
         for (i, arg) in fn_value.get_param_iter().enumerate() {
@@ -157,10 +158,18 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
             self.variables.insert(arg_name, alloca);
         }
 
-        fn_value
+        if fn_value.verify(true) {
+            self.fpm.run_on(&fn_value);
+            fn_value
+        } else {
+            unsafe {
+                fn_value.delete();
+            }
+            panic!("Wrong function");
+        }
     }
 
-    fn expression(&self, _expression: ast::Expression) -> &Self {
+    fn expression(&self, _expression: &ast::Expression) -> &Self {
         self
     }
 }

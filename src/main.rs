@@ -1,3 +1,5 @@
+extern crate core;
+
 mod ast;
 mod backend;
 mod codegen;
