@@ -133,7 +133,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         self.module.add_function(&fn_decl.name(), fn_type, None)
     }
 
-    fn function_statement(&self, fn_decl: ast::FunctionStatement<'_>) -> Self::Backend {
+    fn function_statement(&mut self, fn_decl: ast::FunctionStatement<'_>) -> Self::Backend {
         let fn_value = self.function_declaration(&fn_decl);
 
         // Set functions parameters value name
@@ -150,10 +150,11 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         self.builder.position_at_end(entry);
 
         // Allocate variables
-        for (_i, _arg) in fn_value.get_param_iter().enumerate() {
-            // let alloca = self.create_entry_block_alloca(arg_name);
-            // self.builder.build_store(alloca, arg);
-            // self.variables.insert(proto.args[i].clone(), alloca);
+        for (i, arg) in fn_value.get_param_iter().enumerate() {
+            let arg_name = fn_decl.parameters[i].name();
+            let alloca = self.create_entry_block_alloca(fn_value, arg_name.as_str());
+            self.builder.build_store(alloca, arg);
+            self.variables.insert(arg_name, alloca);
         }
 
         fn_value
