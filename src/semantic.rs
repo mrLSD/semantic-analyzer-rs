@@ -91,4 +91,13 @@ impl<'a> State<'a> {
         state.values.insert(data.name(), data.clone());
         StateResult
     }
+
+    /// Function call do not change state
+    pub fn function_call(
+        &mut self,
+        _data: &ast::FunctionCall<'a>,
+        _state: &mut BodyState<'a>,
+    ) -> StateResult {
+        StateResult
+    }
 }
