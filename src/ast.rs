@@ -168,6 +168,12 @@ pub struct LetBinding<'a> {
     pub value: Box<BodyStatement<'a>>,
 }
 
+impl GetName for LetBinding<'_> {
+    fn name(&self) -> String {
+        self.name.0.fragment().to_string()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall<'a> {
     pub name: FunctionName<'a>,

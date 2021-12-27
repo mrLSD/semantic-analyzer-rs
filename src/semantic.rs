@@ -23,7 +23,26 @@ pub struct State<'a> {
 
 pub struct StateResult;
 
+impl<'a> BodyState<'a> {
+    pub fn new() -> Self {
+        Self {
+            values: HashMap::new(),
+            functions: HashMap::new(),
+        }
+    }
+}
+
 impl<'a> State<'a> {
+    pub fn new() -> Self {
+        Self {
+            global: GlobalState {
+                functions: HashMap::new(),
+                imports: HashMap::new(),
+                constants: HashMap::new(),
+            },
+        }
+    }
+
     pub fn main(&mut self, data: &ast::Main<'a>) -> Vec<StateResult> {
         data.iter().fold(vec![], |mut s: Vec<StateResult>, main| {
             let mut res = match main {
@@ -51,10 +70,11 @@ impl<'a> State<'a> {
 
     pub fn function(&mut self, data: &ast::FunctionStatement<'a>) -> Vec<StateResult> {
         self.global.functions.insert(data.name(), data.clone());
+        let mut body_state = BodyState::new();
         data.body
             .iter()
             .map(|body| match body {
-                ast::BodyStatement::LetBinding(bind) => self.let_binding(bind),
+                ast::BodyStatement::LetBinding(bind) => self.let_binding(bind, &mut body_state),
                 ast::BodyStatement::FunctionCall(_) => StateResult,
                 ast::BodyStatement::If(_) => StateResult,
                 ast::BodyStatement::Loop(_) => StateResult,
@@ -63,7 +83,12 @@ impl<'a> State<'a> {
             .collect()
     }
 
-    pub fn let_binding(&mut self, _data: &ast::LetBinding<'a>) -> StateResult {
+    pub fn let_binding(
+        &mut self,
+        data: &ast::LetBinding<'a>,
+        state: &mut BodyState<'a>,
+    ) -> StateResult {
+        state.values.insert(data.name(), data.clone());
         StateResult
     }
 }
