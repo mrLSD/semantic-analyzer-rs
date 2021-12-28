@@ -102,7 +102,13 @@ pub struct FunctionStatement<'a> {
     pub name: FunctionName<'a>,
     pub parameters: Vec<FunctionParameter<'a>>,
     pub result_type: Vec<Type<'a>>,
-    pub body: BodyStatement<'a>,
+    pub body: Vec<BodyStatement<'a>>,
+}
+
+impl GetName for FunctionStatement<'_> {
+    fn name(&self) -> String {
+        self.name.0.fragment().to_string()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
