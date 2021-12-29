@@ -122,6 +122,15 @@ pub enum ExpressionOperations {
     Divide,
     ShiftLeft,
     ShiftRight,
+    And,
+    Or,
+    Xor,
+    Eq,
+    NotEq,
+    Great,
+    Less,
+    GreatEq,
+    LessEq,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -144,9 +153,18 @@ pub struct FunctionCall<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct IfStatement<'a> {
+    pub condition: Expression<'a>,
+    pub body: Box<BodyStatement<'a>>,
+    pub else_statement: Option<Box<BodyStatement<'a>>>,
+    pub else_if_statement: Option<Box<IfStatement<'a>>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum BodyStatement<'a> {
     LetBinding(LetBinding<'a>),
     FunctionCall(FunctionCall<'a>),
+    If(IfStatement<'a>),
     Expression(Expression<'a>),
 }
 
