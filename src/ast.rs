@@ -6,6 +6,8 @@ pub type Ident<'a> = LocatedSpan<&'a [u8]>;
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImportName<'a>(Ident<'a>);
 
+pub type ImportPath<'a> = Vec<ImportName<'a>>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ConstantName<'a>(Ident<'a>);
 
@@ -150,7 +152,7 @@ pub enum BodyStatement<'a> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MainStatement<'a> {
-    Import(Vec<ImportName<'a>>),
+    Import(ImportPath<'a>),
     Constant(Constant<'a>),
     Function(FunctionStatement<'a>),
 }
