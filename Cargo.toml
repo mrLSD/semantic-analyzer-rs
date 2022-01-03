@@ -1,0 +1,8 @@
+[package]
+name = "z-rose"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nom_locate = "4.0.0"
+nom = "7.1.0"
