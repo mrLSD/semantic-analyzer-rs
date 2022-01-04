@@ -75,20 +75,48 @@ pub struct FunctionStatement<'a> {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ExpressionValue<'a> {
+    ValueName(ValueName<'a>),
+    PrimitiveValue,
+    FunctionCall(FunctionCall<'a>),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ExpressionOperations {
+    Add,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Expression<'a> {
+    pub expression_value: ExpressionValue<'a>,
+    pub operation: Option<(ExpressionOperations, ExpressionValue<'a>)>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ValueState<'a> {
     pub name: ValueName<'a>,
+    pub value_type: Option<Type<'a>>,
+    pub value: Box<BodyStatement<'a>>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FunctionCall<'a> {
+    pub name: FunctionName<'a>,
+    pub parameters: Vec<Expression<'a>>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum BodyStatement<'a> {
     LetBinding(ValueState<'a>),
+    FunctionCall(FunctionCall<'a>),
+    Expression(Expression<'a>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum MainStatement<'a> {
     Import(Vec<ImportName<'a>>),
     Constant(Constant<'a>),
-    Function(FunctionName<'a>),
+    Function(FunctionStatement<'a>),
 }
 
 pub type Main<'a> = Vec<MainStatement<'a>>;
