@@ -51,13 +51,22 @@ pub enum Type<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ConstantValue<'a>(Ident<'a>);
+pub enum ConstantValue<'a> {
+    Constant(ConstantName<'a>),
+    Value(PrimitiveValue),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConstantExpression<'a> {
+    pub value: ConstantValue<'a>,
+    pub operation: Option<(ExpressionOperations, Box<ConstantExpression<'a>>)>,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Constant<'a> {
     name: ConstantName<'a>,
     constant_type: Type<'a>,
-    constant_value: ConstantValue<'a>,
+    constant_value: ConstantExpression<'a>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
