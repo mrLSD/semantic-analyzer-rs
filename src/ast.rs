@@ -24,6 +24,10 @@ pub enum PrimitiveTypes {
     U16,
     U32,
     U64,
+    I8,
+    I16,
+    I32,
+    I64,
     F32,
     F64,
     Bool,
@@ -70,7 +74,7 @@ pub struct Constant<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Parameter<'a> {
+pub struct FunctionParameter<'a> {
     pub name: ParameterName<'a>,
     pub parameter_type: Type<'a>,
 }
@@ -78,8 +82,8 @@ pub struct Parameter<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionStatement<'a> {
     pub name: FunctionName<'a>,
-    pub parameter: Vec<Parameter<'a>>,
-    pub result_type: Type<'a>,
+    pub parameters: Vec<FunctionParameter<'a>>,
+    pub result_type: Vec<Type<'a>>,
     pub body: BodyStatement<'a>,
 }
 
@@ -125,7 +129,7 @@ pub struct Expression<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ValueState<'a> {
+pub struct LetBinding<'a> {
     pub name: ValueName<'a>,
     pub value_type: Option<Type<'a>>,
     pub value: Box<BodyStatement<'a>>,
@@ -139,7 +143,7 @@ pub struct FunctionCall<'a> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BodyStatement<'a> {
-    LetBinding(ValueState<'a>),
+    LetBinding(LetBinding<'a>),
     FunctionCall(FunctionCall<'a>),
     Expression(Expression<'a>),
 }
