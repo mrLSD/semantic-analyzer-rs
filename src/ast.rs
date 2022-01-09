@@ -1,10 +1,20 @@
 #![allow(dead_code)]
 use nom_locate::LocatedSpan;
 
-pub type Ident<'a> = LocatedSpan<&'a [u8]>;
+pub type Ident<'a> = LocatedSpan<&'a str>;
+
+pub trait GetName {
+    fn name(&self) -> String;
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImportName<'a>(Ident<'a>);
+
+impl GetName for ImportName<'_> {
+    fn name(&self) -> String {
+        self.0.fragment().to_string()
+    }
+}
 
 pub type ImportPath<'a> = Vec<ImportName<'a>>;
 
@@ -70,9 +80,15 @@ pub struct ConstantExpression<'a> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Constant<'a> {
-    name: ConstantName<'a>,
-    constant_type: Type<'a>,
-    constant_value: ConstantExpression<'a>,
+    pub name: ConstantName<'a>,
+    pub constant_type: Type<'a>,
+    pub constant_value: ConstantExpression<'a>,
+}
+
+impl GetName for Constant<'_> {
+    fn name(&self) -> String {
+        self.name.0.fragment().to_string()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

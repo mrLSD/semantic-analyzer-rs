@@ -1,10 +1,13 @@
-use crate::ast;
+#![allow(dead_code)]
+#![allow(clippy::ptr_arg)]
+use crate::ast::{self, GetName};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct GlobalState<'a> {
-    pub imports: Vec<ast::ImportPath<'a>>,
-    pub constants: Vec<ast::Constant<'a>>,
-    pub functions: Vec<ast::FunctionStatement<'a>>,
+    pub imports: HashMap<String, ast::ImportPath<'a>>,
+    pub constants: HashMap<String, ast::Constant<'a>>,
+    pub functions: HashMap<String, ast::FunctionStatement<'a>>,
 }
 
 #[derive(Debug)]
@@ -19,22 +22,20 @@ pub struct State<'a> {
     pub body: BodyState<'a>,
 }
 
-pub trait BindGenerator<'a> {
-    fn bind_gen(&self, state: &'a State);
-}
-
-impl<'a> BindGenerator<'a> for ast::Main<'a> {
-    fn bind_gen(&self, state: &'a State) {
-        let _: Vec<()> = self.iter().map(|main| main.bind_gen(state)).collect();
-    }
-}
-
-impl<'a> BindGenerator<'a> for ast::MainStatement<'a> {
-    fn bind_gen(&self, _state: &'a State) {
-        match self {
-            ast::MainStatement::Import(_) => (),
-            ast::MainStatement::Constant(_) => (),
+impl<'a> State<'a> {
+    pub fn main(&mut self, data: &ast::MainStatement<'a>) {
+        match data {
+            ast::MainStatement::Import(import) => self.import(import),
+            ast::MainStatement::Constant(constant) => self.constant(constant),
             ast::MainStatement::Function(_) => (),
         }
+    }
+
+    pub fn import(&mut self, data: &ast::ImportPath<'a>) {
+        self.global.imports.insert(data[0].name(), data.to_owned());
+    }
+
+    pub fn constant(&mut self, data: &ast::Constant<'a>) {
+        self.global.constants.insert(data.name(), data.clone());
     }
 }
