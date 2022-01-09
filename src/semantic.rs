@@ -25,6 +25,7 @@ pub struct State<'a> {
 #[derive(Debug, Clone)]
 pub enum StateResult {
     ValueNotFound,
+    FunctionNotFound,
 }
 
 impl<'a> BodyState<'a> {
@@ -116,13 +117,24 @@ impl<'a> State<'a> {
         vec![]
     }
 
-    /// Function call do not change state
+    /// Function call do not change state analyzer but use it
     pub fn function_call(
         &mut self,
-        _data: &ast::FunctionCall<'a>,
-        _state: &BodyState<'a>,
+        data: &ast::FunctionCall<'a>,
+        body_state: &BodyState<'a>,
     ) -> Vec<StateResult> {
-        vec![]
+        let res = if body_state.functions.contains_key(&data.name())
+            || self.global.functions.contains_key(&data.name())
+        {
+            vec![]
+        } else {
+            vec![StateResult::FunctionNotFound]
+        };
+        data.parameters.iter().fold(res, |mut s, e| {
+            let mut res_expr = self.expression(e, body_state.clone());
+            s.append(&mut res_expr);
+            s
+        })
     }
 
     pub fn if_condition(

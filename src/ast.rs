@@ -186,6 +186,12 @@ pub struct FunctionCall<'a> {
     pub parameters: Vec<Expression<'a>>,
 }
 
+impl GetName for FunctionCall<'_> {
+    fn name(&self) -> String {
+        self.name.0.fragment().to_string()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfStatement<'a> {
     pub condition: Expression<'a>,
