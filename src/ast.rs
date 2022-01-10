@@ -50,7 +50,6 @@ pub enum PrimitiveTypes {
     F64,
     Bool,
     Char,
-    String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
