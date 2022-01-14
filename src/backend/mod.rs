@@ -105,14 +105,23 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 }
 
 impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
-    fn function_declaration(&self, fn_decl: ast::FunctionStatement<'_>) {
+    type Backend = FunctionValue<'ctx>;
+    fn function_declaration(&self, fn_decl: ast::FunctionStatement<'_>) -> Self::Backend {
         let param_types = fn_decl
             .parameters
             .iter()
             .map(|param| self.get_type(&param.parameter_type))
             .collect::<Vec<BasicMetadataTypeEnum>>();
         let fn_type = self.context.f64_type().fn_type(&param_types, false);
-        let _fn_val = self.module.add_function(&fn_decl.name(), fn_type, None);
+        self.module.add_function(&fn_decl.name(), fn_type, None)
+    }
+
+    fn function_statement(&self, fn_decl: ast::FunctionStatement<'_>) -> Self::Backend {
+        let fn_value = self.function_declaration(fn_decl);
+        let entry = self.context.append_basic_block(fn_value, "entry");
+        self.builder.position_at_end(entry);
+        // TODO: Add func param values init, function body
+        fn_value
     }
 
     fn expression(&self, _expression: ast::Expression) -> &Self {
