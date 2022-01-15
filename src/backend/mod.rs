@@ -103,6 +103,22 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             }
         }
     }
+
+    /// Creates a new stack allocation instruction in the
+    /// entry block of the function.
+    fn create_entry_block_alloca(
+        &self,
+        fn_value: FunctionValue<'ctx>,
+        name: &str,
+    ) -> PointerValue<'ctx> {
+        let builder = self.context.create_builder();
+        let entry = fn_value.get_first_basic_block().unwrap();
+        match entry.get_first_instruction() {
+            Some(first_instr) => builder.position_before(&first_instr),
+            None => builder.position_at_end(entry),
+        }
+        builder.build_alloca(self.context.f64_type(), name)
+    }
 }
 
 impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
@@ -132,6 +148,13 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
 
         let entry = self.context.append_basic_block(fn_value, "entry");
         self.builder.position_at_end(entry);
+
+        // Allocate variables
+        for (_i, _arg) in fn_value.get_param_iter().enumerate() {
+            // let alloca = self.create_entry_block_alloca(arg_name);
+            // self.builder.build_store(alloca, arg);
+            // self.variables.insert(proto.args[i].clone(), alloca);
+        }
 
         fn_value
     }
