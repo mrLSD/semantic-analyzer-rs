@@ -125,9 +125,13 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
             arg.set_name(fn_decl.parameters[i].name().as_str());
         }
 
+        // Check empty body
+        if fn_decl.body.is_empty() {
+            return fn_value;
+        }
+
         let entry = self.context.append_basic_block(fn_value, "entry");
         self.builder.position_at_end(entry);
-        // TODO: Add func param values init, function body
 
         fn_value
     }
