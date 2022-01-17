@@ -122,14 +122,13 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
 
         // Set functions parameters value name
         for (i, arg) in fn_value.get_param_iter().enumerate() {
-            arg.into_float_value()
-                .set_name(fn_decl.parameters[i].name().as_str());
-            //###
+            arg.set_name(fn_decl.parameters[i].name().as_str());
         }
 
         let entry = self.context.append_basic_block(fn_value, "entry");
         self.builder.position_at_end(entry);
         // TODO: Add func param values init, function body
+
         fn_value
     }
 
