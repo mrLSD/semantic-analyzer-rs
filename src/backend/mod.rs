@@ -5,6 +5,7 @@ use crate::codegen::Codegen;
 use inkwell::types::{
     ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType,
 };
+use inkwell::values::BasicValue;
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -106,7 +107,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
 impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     type Backend = FunctionValue<'ctx>;
-    fn function_declaration(&self, fn_decl: ast::FunctionStatement<'_>) -> Self::Backend {
+    fn function_declaration(&self, fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend {
         let param_types = fn_decl
             .parameters
             .iter()
@@ -117,7 +118,15 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     }
 
     fn function_statement(&self, fn_decl: ast::FunctionStatement<'_>) -> Self::Backend {
-        let fn_value = self.function_declaration(fn_decl);
+        let fn_value = self.function_declaration(&fn_decl);
+
+        // Set functions parameters value name
+        for (i, arg) in fn_value.get_param_iter().enumerate() {
+            arg.into_float_value()
+                .set_name(fn_decl.parameters[i].name().as_str());
+            //###
+        }
+
         let entry = self.context.append_basic_block(fn_value, "entry");
         self.builder.position_at_end(entry);
         // TODO: Add func param values init, function body

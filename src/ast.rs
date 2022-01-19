@@ -102,6 +102,12 @@ pub struct FunctionParameter<'a> {
     pub parameter_type: Type<'a>,
 }
 
+impl GetName for FunctionParameter<'_> {
+    fn name(&self) -> String {
+        todo!()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionStatement<'a> {
     pub name: FunctionName<'a>,
