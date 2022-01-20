@@ -6,7 +6,7 @@ use crate::codegen::Codegen;
 use inkwell::types::{
     ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType,
 };
-use inkwell::values::BasicValue;
+// use inkwell::values::BasicValue;
 use inkwell::{
     builder::Builder,
     context::Context,

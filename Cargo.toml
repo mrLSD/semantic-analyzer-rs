@@ -1,9 +1,12 @@
 [package]
 name = "z-rose"
 version = "0.1.0"
+authors = ["Evgeny Ukhanov <mrlsd@ya.ru>"]
+description = "Programming language and compiler"
+license = "MIT"
 edition = "2021"
 
 [dependencies]
-nom_locate = "4.0.0"
-nom = "7.1.0"
-inkwell = { git = "https://github.com/TheDan64/inkwell", rev = "d44ec8b", features = ["llvm12-0"] }
+nom_locate = "4.0"
+nom = "7.1"
+inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm12-0"] }
