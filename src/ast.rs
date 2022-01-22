@@ -12,7 +12,7 @@ pub struct ImportName<'a>(Ident<'a>);
 
 impl GetName for ImportName<'_> {
     fn name(&self) -> String {
-        self.0.fragment().to_string()
+        (*self.0.fragment()).to_string()
     }
 }
 
@@ -32,7 +32,7 @@ pub struct ValueName<'a>(Ident<'a>);
 
 impl GetName for ValueName<'_> {
     fn name(&self) -> String {
-        self.0.fragment().to_string()
+        (*self.0.fragment()).to_string()
     }
 }
 
@@ -92,7 +92,7 @@ pub struct Constant<'a> {
 
 impl GetName for Constant<'_> {
     fn name(&self) -> String {
-        self.name.0.fragment().to_string()
+        (*self.name.0.fragment()).to_string()
     }
 }
 
@@ -118,7 +118,7 @@ pub struct FunctionStatement<'a> {
 
 impl GetName for FunctionStatement<'_> {
     fn name(&self) -> String {
-        self.name.0.fragment().to_string()
+        (*self.name.0.fragment()).to_string()
     }
 }
 
@@ -181,7 +181,7 @@ pub struct LetBinding<'a> {
 
 impl GetName for LetBinding<'_> {
     fn name(&self) -> String {
-        self.name.0.fragment().to_string()
+        (*self.name.0.fragment()).to_string()
     }
 }
 
@@ -193,7 +193,7 @@ pub struct FunctionCall<'a> {
 
 impl GetName for FunctionCall<'_> {
     fn name(&self) -> String {
-        self.name.0.fragment().to_string()
+        (*self.name.0.fragment()).to_string()
     }
 }
 

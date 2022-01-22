@@ -67,7 +67,7 @@ impl<'a, T: Codegen> State<'a, T> {
     pub fn import(&mut self, data: &ast::ImportPath<'a>) -> Vec<StateResult> {
         self.global
             .imports
-            .insert(data[data.len() - 1].name(), data.to_owned());
+            .insert(data[data.len() - 1].name(), data.clone());
         vec![]
     }
 
@@ -97,13 +97,13 @@ impl<'a, T: Codegen> State<'a, T> {
                 }
 
                 ast::BodyStatement::If(if_condition) => {
-                    self.if_condition(if_condition, body_state.clone())
+                    self.if_condition(if_condition, &body_state)
                 }
                 ast::BodyStatement::Loop(loop_statement) => {
-                    self.loop_statement(loop_statement, body_state.clone())
+                    self.loop_statement(loop_statement, &body_state)
                 }
                 ast::BodyStatement::Expression(expression) => {
-                    self.expression(expression, body_state.clone())
+                    self.expression(expression, &body_state)
                 }
             };
             s.append(&mut res);
@@ -112,11 +112,12 @@ impl<'a, T: Codegen> State<'a, T> {
     }
 
     pub fn let_binding(
-        &mut self,
+        &self,
         data: &ast::LetBinding<'a>,
         state: &mut BodyState<'a>,
     ) -> Vec<StateResult> {
         state.values.insert(data.name(), data.clone());
+        let _ = self;
         vec![]
     }
 
@@ -134,7 +135,7 @@ impl<'a, T: Codegen> State<'a, T> {
             vec![StateResult::FunctionNotFound]
         };
         data.parameters.iter().fold(res, |mut s, e| {
-            let mut res_expr = self.expression(e, body_state.clone());
+            let mut res_expr = self.expression(e, body_state);
             s.append(&mut res_expr);
             s
         })
@@ -143,20 +144,20 @@ impl<'a, T: Codegen> State<'a, T> {
     pub fn if_condition(
         &mut self,
         data: &ast::IfStatement<'a>,
-        body_state: BodyState<'a>,
+        body_state: &BodyState<'a>,
     ) -> Vec<StateResult> {
         let mut res = self.body_statement(&data.body, body_state.clone());
         if let Some(data) = &data.else_statement {
             let mut r = self.body_statement(data, body_state.clone());
-            res.append(&mut r)
+            res.append(&mut r);
         }
         if let Some(data) = &data.else_if_statement {
             let mut r = data.iter().fold(vec![], |mut r, if_stmt| {
-                let mut res = self.if_condition(if_stmt, body_state.clone());
+                let mut res = self.if_condition(if_stmt, body_state);
                 r.append(&mut res);
                 r
             });
-            res.append(&mut r)
+            res.append(&mut r);
         }
         res
     }
@@ -164,7 +165,7 @@ impl<'a, T: Codegen> State<'a, T> {
     pub fn loop_statement(
         &mut self,
         data: &Vec<ast::BodyStatement<'a>>,
-        body_state: BodyState<'a>,
+        body_state: &BodyState<'a>,
     ) -> Vec<StateResult> {
         self.body_statement(data, body_state.clone())
     }
@@ -174,7 +175,7 @@ impl<'a, T: Codegen> State<'a, T> {
     pub fn expression(
         &mut self,
         data: &ast::Expression<'a>,
-        body_state: BodyState<'a>,
+        body_state: &BodyState<'a>,
     ) -> Vec<StateResult> {
         let mut res = match &data.expression_value {
             ast::ExpressionValue::ValueName(value) => {
@@ -191,7 +192,7 @@ impl<'a, T: Codegen> State<'a, T> {
             }
             // do nothing for primitive value
             ast::ExpressionValue::PrimitiveValue(_value) => vec![],
-            ast::ExpressionValue::FunctionCall(fn_call) => self.function_call(fn_call, &body_state),
+            ast::ExpressionValue::FunctionCall(fn_call) => self.function_call(fn_call, body_state),
         };
         if let Some(e) = &data.operation {
             let mut res_mut = self.expression(&e.1, body_state);

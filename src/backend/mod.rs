@@ -75,7 +75,9 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     {
         match ty {
             ast::Type::Primitive(ty) => match ty {
-                ast::PrimitiveTypes::I8 | ast::PrimitiveTypes::U8 => self.context.i8_type().into(),
+                ast::PrimitiveTypes::I8 | ast::PrimitiveTypes::U8 | ast::PrimitiveTypes::Char => {
+                    self.context.i8_type().into()
+                }
                 ast::PrimitiveTypes::I16 | ast::PrimitiveTypes::U16 => {
                     self.context.i16_type().into()
                 }
@@ -88,7 +90,6 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 ast::PrimitiveTypes::F32 => self.context.f32_type().into(),
                 ast::PrimitiveTypes::F64 => self.context.f64_type().into(),
                 ast::PrimitiveTypes::Bool => self.context.bool_type().into(),
-                ast::PrimitiveTypes::Char => self.context.i8_type().into(),
             },
             ast::Type::Struct(ty_struct) => {
                 let struct_types = ty_struct
