@@ -4,10 +4,11 @@
 #![allow(clippy::ptr_arg)]
 
 use crate::ast;
-use crate::ast::GetName;
+use crate::ast::{GetName, PrimitiveTypes};
 use crate::codegen::Codegen;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+use std::str::FromStr;
 
 type ValueName = String;
 type InnerType = String;
@@ -28,6 +29,7 @@ pub struct Value {
 #[derive(Debug)]
 pub struct ValueBlockState {
     pub values: HashMap<ValueName, Value>,
+    pub last_register_number: u64,
     pub parent: Option<Rc<ValueBlockState>>,
 }
 
@@ -35,6 +37,7 @@ impl ValueBlockState {
     fn new(parent: Option<Rc<Self>>) -> Self {
         Self {
             values: HashMap::new(),
+            last_register_number: 0,
             parent,
         }
     }
@@ -69,6 +72,11 @@ pub enum StateResult {
     ValueNotFound,
     TypeNotFound,
     FunctionNotFound,
+}
+
+pub enum ExpressionResult<T: FromStr> {
+    PrimitiveValue(PrimitiveTypes, T),
+    Register(u64),
 }
 
 impl<T: Codegen<Backend = T>> State<T> {
@@ -178,9 +186,8 @@ impl<T: Codegen<Backend = T>> State<T> {
         vec![]
     }
 
-    #[allow(clippy::unused_self)]
     pub fn let_binding(
-        &self,
+        &mut self,
         data: &ast::LetBinding<'_>,
         state: &mut ValueBlockState,
     ) -> Vec<StateResult> {
@@ -190,7 +197,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 if val.allocated {
                     // TODO: deallocate
                 }
-                // Increment inner value name counter for shadow variable
+                // Increment inner value name counter for shadowed variable
                 let val_attr: Vec<&str> = val.inner_name.split('.').collect();
                 if val_attr.len() == 2 {
                     let i: u64 = val_attr[1].parse().expect("expect integer");
@@ -212,29 +219,44 @@ impl<T: Codegen<Backend = T>> State<T> {
                 allocated: false,
             },
         );
+        // TODO: fetch let-binding.value
+        // 1. Body::Function
+        //   - alloca, call, store
+        // 2. Body::let - deprecated as nonsense
+        // 3. Body::Expression
+        //   3.1. Expr::PrimitiveValue
+        //      - al3loca, store
+        //   3.2. Expr::FuncCall
+        //      - alloca, call, store
+        //   3.3. Expr::Value
+        //      - alloca, load, store
+        //   3.4. Expr::PrimitiveValue - OP - Expr::PrimitiveValue
+        //      - alloca, tmp = OP val1 val2, store tmp
+        //   3.5. Expr::Value - OP - Expr::PrimitiveValue
+        //      - alloca, tmp1 = load, tmp2 = OP tmp2, val1, store
+        //   3.6. Expr::FuncCall - OP - Expr::PrimitiveValue
+        //      - alloca, tmp1 = call, tmp2 = OP tmp2, val1, store
+        //   3.7. Expr::PrimitiveValue - OP - Expr::Value
+        //      - Same as 3.4
+        //   3.8. Expr::Value - OP - Expr::Value
+        //      - alloca, tmp1 = load, tmp2 = load, tmp3 = OP tmp1 tmp2, store tmp3
+        //   3.9. Expr::FuncCall - OP - Expr::Value
+        //      - alloca, tmp1 = call, tmp2 = Load, tmp3 = OP tmp1 tmp2, store tmp3
+        //   3.10. Expr::FuncCall - OP - Expr::FuncCall
+        //      - alloca, tmp1 = call, tmp2 = call, tmp3 = OP tmp1 tmp2, store tmp3
+        self.codegen = self.codegen.let_binding(data);
         vec![]
     }
 
-    /// Function call do not change state analyzer but use it
     pub fn function_call(
         &mut self,
         data: &ast::FunctionCall<'_>,
-        body_state: &ValueBlockState,
+        _state: &ValueBlockState,
     ) -> Vec<StateResult> {
-        /*
-        let res = if body_state.functions.contains_key(&data.name())
-            || self.global.functions.contains_key(&data.name())
-        {
-            vec![]
-        } else {
-            vec![StateResult::FunctionNotFound]
-        };
-        data.parameters.iter().fold(res, |mut s, e| {
-            let mut res_expr = self.expression(e, body_state);
-            s.append(&mut res_expr);
-            s
-        })
-            */
+        if !self.global.functions.contains_key(&data.name()) {
+            return vec![StateResult::FunctionNotFound];
+        }
+        self.codegen = self.codegen.call(data);
         vec![]
     }
 
@@ -271,31 +293,47 @@ impl<T: Codegen<Backend = T>> State<T> {
         vec![]
     }
 
+    #[allow(clippy::doc_markdown)]
     /// Expression is basic entity for state operation and state usage.
     /// State correctness verified by expressions call.
+    /// Return: PrimitiveValue | TmpRegister
+    ///     1. PrimitiveValue -> PrimitiveValue
+    ///     2. Value -> load -> TmpRegister
+    ///     3. FuncCall -> call -> TmpRegister
+    ///     4. Operations
+    ///         4.1. PrimitiveValue
+    ///         - PrimitiveValue -> tmp = OP val1, val2 -> TmpRegister
+    ///         - Value -> tmp1 = load -> OP val1, tmp1 -> TmpRegister
+    ///         - FuncCAll -> tmp1 = call -> OP val1, tmp1 -> TmpRegister
+    ///         4.2. TmpRegister (with name tmp1)
+    ///         - PrimitiveValue -> tmp2 = OP tmp1, val1 -> TmpRegister
+    ///         - Value -> tmp2 = load -> tmp3 = OP tmp1, tmp2 -> TmpRegister
+    ///         - FuncCall -> tmp2 = call ->  tmp3 = OP tmp1, tmp2 -> TmpRegister
+    ///         4.3. Operations -> recursively invoke 4.2.
     pub fn expression(
         &mut self,
         data: &ast::Expression<'_>,
         body_state: &ValueBlockState,
     ) -> Vec<StateResult> {
-        /*
-        let mut res = match &data.expression_value {
+        let res = match &data.expression_value {
             ast::ExpressionValue::ValueName(value) => {
                 // First check value in body state
                 if body_state.values.contains_key(&value.name())
                     || self.global.constants.contains_key(&value.name())
                 {
                     vec![]
-                } else if self.global.imports.contains_key(&value.name()) {
-                    todo!("implement import modules analyzer for external constants")
                 } else {
                     vec![StateResult::ValueNotFound]
                 }
+                // TODO: load-instruction
             }
-            // do nothing for primitive value
-            ast::ExpressionValue::PrimitiveValue(_value) => vec![],
+            ast::ExpressionValue::PrimitiveValue(_value) => {
+                // TODO: store-instruction: store i32 x, 2
+                vec![]
+            }
             ast::ExpressionValue::FunctionCall(fn_call) => self.function_call(fn_call, body_state),
         };
+        /*
         if let Some(e) = &data.operation {
             let mut res_mut = self.expression(&e.1, body_state);
             res.append(&mut res_mut);

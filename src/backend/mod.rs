@@ -180,6 +180,14 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         }
     }
 
+    fn let_binding(&self, _let_decl: &ast::LetBinding<'_>) -> Self::Backend {
+        todo!()
+    }
+
+    fn call(&self, _call: &ast::FunctionCall<'_>) -> Self::Backend {
+        todo!()
+    }
+
     fn expression(&self, _expression: &ast::Expression) -> &Self {
         self
     }
