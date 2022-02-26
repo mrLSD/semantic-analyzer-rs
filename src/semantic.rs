@@ -1,10 +1,7 @@
 #![allow(dead_code)]
-#![allow(unused_variables)]
 #![allow(clippy::unused_self)]
-#![allow(clippy::ptr_arg)]
 
-use crate::ast;
-use crate::ast::{GetName, PrimitiveValue};
+use crate::ast::{self, ExpressionOperations, GetName, PrimitiveValue};
 use crate::codegen::Codegen;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -167,7 +164,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             let mut res = match body {
                 ast::BodyStatement::LetBinding(bind) => self.let_binding(bind, &mut body_state),
                 ast::BodyStatement::FunctionCall(fn_call) => {
-                    self.function_call(fn_call, &body_state)
+                    self.function_call(fn_call, &mut body_state)
                 }
                 ast::BodyStatement::If(if_condition) => {
                     self.if_condition(if_condition, &body_state)
@@ -251,19 +248,20 @@ impl<T: Codegen<Backend = T>> State<T> {
     pub fn function_call(
         &mut self,
         data: &ast::FunctionCall<'_>,
-        _state: &ValueBlockState,
+        body_state: &mut ValueBlockState,
     ) -> Vec<StateResult> {
         if !self.global.functions.contains_key(&data.name()) {
             return vec![StateResult::FunctionNotFound];
         }
-        self.codegen = self.codegen.call(data);
+        body_state.last_register_number += 1;
+        self.codegen = self.codegen.call(data, body_state.last_register_number);
         vec![]
     }
 
     pub fn if_condition(
         &mut self,
-        data: &ast::IfStatement<'_>,
-        body_state: &ValueBlockState,
+        _data: &ast::IfStatement<'_>,
+        _body_state: &ValueBlockState,
     ) -> Vec<StateResult> {
         /*
         let mut res = self.body_statement(&data.body, body_state.clone());
@@ -286,8 +284,8 @@ impl<T: Codegen<Backend = T>> State<T> {
 
     pub fn loop_statement(
         &mut self,
-        data: &Vec<ast::BodyStatement<'_>>,
-        body_state: &ValueBlockState,
+        _data: &[ast::BodyStatement<'_>],
+        _body_state: &ValueBlockState,
     ) -> Vec<StateResult> {
         // self.body_statement(data, body_state)
         vec![]
@@ -322,14 +320,18 @@ impl<T: Codegen<Backend = T>> State<T> {
                 // First check value in body state
                 if let Some(val) = body_state.values.get(&value.name()) {
                     body_state.last_register_number += 1;
-                    self.codegen = self.codegen.expression_value(val);
+                    self.codegen = self
+                        .codegen
+                        .expression_value(val, body_state.last_register_number);
                     (
                         Some(ExpressionResult::Register(body_state.last_register_number)),
                         vec![],
                     )
                 } else if let Some(const_val) = self.global.constants.get(&value.name()) {
                     body_state.last_register_number += 1;
-                    self.codegen = self.codegen.expression_const(const_val);
+                    self.codegen = self
+                        .codegen
+                        .expression_const(const_val, body_state.last_register_number);
                     (
                         Some(ExpressionResult::Register(body_state.last_register_number)),
                         vec![],
@@ -343,7 +345,6 @@ impl<T: Codegen<Backend = T>> State<T> {
                 vec![],
             ),
             ast::ExpressionValue::FunctionCall(fn_call) => {
-                body_state.last_register_number += 1;
                 let res = self.function_call(fn_call, body_state);
                 (
                     Some(ExpressionResult::Register(body_state.last_register_number)),
@@ -351,11 +352,33 @@ impl<T: Codegen<Backend = T>> State<T> {
                 )
             }
         };
-        /*
-        if let Some(e) = &data.operation {
-            let mut res_mut = self.expression(&e.1, body_state);
-            res.append(&mut res_mut);
-        }  */
-        res
+        if res.0.is_none() {
+            return res;
+        }
+
+        if let Some(expr) = &data.operation {
+            let mut state_res = res.1;
+            let expr_op = self.expression_operation(&res.0.unwrap(), &expr.1, &expr.0, body_state);
+            let mut expr_op_state_res = expr_op.1;
+            state_res.append(&mut expr_op_state_res);
+            if expr_op.0.is_none() {
+                return (None, state_res);
+            }
+            (expr_op.0, state_res)
+        } else {
+            res
+        }
+    }
+
+    /// Expression operation:
+    /// `OP(lhs, rhs)`
+    pub fn expression_operation(
+        &mut self,
+        _lhs: &ExpressionResult,
+        _rhs: &ast::Expression<'_>,
+        _op: &ExpressionOperations,
+        _body_state: &mut ValueBlockState,
+    ) -> (Option<ExpressionResult>, Vec<StateResult>) {
+        (None, vec![])
     }
 }

@@ -32,14 +32,22 @@ impl Codegen for Backend {
         todo!()
     }
 
-    fn call(&self, _call: &ast::FunctionCall<'_>) -> Self::Backend {
+    fn call(&self, _call: &ast::FunctionCall<'_>, _register_number: u64) -> Self::Backend {
         todo!()
     }
 
-    fn expression_value(&self, _expression: &semantic::Value) -> Self::Backend {
+    fn expression_value(
+        &self,
+        _expression: &semantic::Value,
+        _register_number: u64,
+    ) -> Self::Backend {
         todo!()
     }
-    fn expression_const(&self, _expression: &semantic::Constant) -> Self::Backend {
+    fn expression_const(
+        &self,
+        _expression: &semantic::Constant,
+        _register_number: u64,
+    ) -> Self::Backend {
         todo!()
     }
 }
