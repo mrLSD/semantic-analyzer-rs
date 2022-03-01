@@ -93,7 +93,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             s.append(&mut res);
             s
         });
-        // After gathe all functions declarations, fetch only functions body
+        // After getting all functions declarations, fetch only functions body
         data.iter().fold(res, |mut s, main| {
             let mut res = match main {
                 ast::MainStatement::Function(function) => self.function_body(function),
@@ -218,7 +218,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         // 2. Body::let - deprecated as nonsense
         // 3. Body::Expression
         //   3.1. Expr::PrimitiveValue
-        //      - al3loca, store
+        //      - alloca, store
         //   3.2. Expr::FuncCall
         //      - alloca, call, store
         //   3.3. Expr::Value
@@ -370,14 +370,65 @@ impl<T: Codegen<Backend = T>> State<T> {
 
     /// Expression operation:
     /// `OP(lhs, rhs)`
-    #[allow(clippy::unused_self)]
     pub fn expression_operation(
-        &self,
-        _lhs: &ExpressionResult,
-        _rhs: &ast::Expression<'_>,
-        _op: &ExpressionOperations,
-        _body_state: &mut ValueBlockState,
+        &mut self,
+        lhs: &ExpressionResult,
+        rhs: &ast::Expression<'_>,
+        op: &ExpressionOperations,
+        body_state: &mut ValueBlockState,
     ) -> (Option<ExpressionResult>, Vec<StateResult>) {
+        let op_result = match &rhs.expression_value {
+            ast::ExpressionValue::ValueName(value) => {
+                // First check value in body state
+                if let Some(val) = body_state.values.get(&value.name()) {
+                    body_state.last_register_number += 1;
+                    self.codegen = self
+                        .codegen
+                        .expression_value(val, body_state.last_register_number);
+                    (
+                        Some(ExpressionResult::Register(body_state.last_register_number)),
+                        vec![],
+                    )
+                } else if let Some(const_val) = self.global.constants.get(&value.name()) {
+                    body_state.last_register_number += 1;
+                    self.codegen = self
+                        .codegen
+                        .expression_const(const_val, body_state.last_register_number);
+                    (
+                        Some(ExpressionResult::Register(body_state.last_register_number)),
+                        vec![],
+                    )
+                } else {
+                    (None, vec![StateResult::ValueNotFound])
+                }
+            }
+            ast::ExpressionValue::PrimitiveValue(value) => {
+                body_state.last_register_number += 1;
+                let left_value = lhs;
+                let right_value = ExpressionResult::PrimitiveValue(value.clone());
+                self.codegen = self.codegen.expression_operation(
+                    op,
+                    left_value,
+                    &right_value,
+                    body_state.last_register_number,
+                );
+                (
+                    Some(ExpressionResult::Register(body_state.last_register_number)),
+                    vec![],
+                )
+            }
+            ast::ExpressionValue::FunctionCall(fn_call) => {
+                let call_result = self.function_call(fn_call, body_state);
+                (
+                    Some(ExpressionResult::Register(body_state.last_register_number)),
+                    call_result,
+                )
+            }
+        };
+        if op_result.0.is_none() {
+            return op_result;
+        }
+
         (None, vec![])
     }
 }

@@ -16,4 +16,11 @@ pub trait Codegen {
         expression: &semantic::Constant,
         register_number: u64,
     ) -> Self::Backend;
+    fn expression_operation(
+        &self,
+        operation: &ast::ExpressionOperations,
+        left_value: &semantic::ExpressionResult,
+        right_value: &semantic::ExpressionResult,
+        register_number: u64,
+    ) -> Self::Backend;
 }

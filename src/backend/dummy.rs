@@ -50,4 +50,13 @@ impl Codegen for Backend {
     ) -> Self::Backend {
         todo!()
     }
+    fn expression_operation(
+        &self,
+        _operation: &ast::ExpressionOperations,
+        _left_value: &semantic::ExpressionResult,
+        _right_value: &semantic::ExpressionResult,
+        _register_number: u64,
+    ) -> Self::Backend {
+        todo!()
+    }
 }
