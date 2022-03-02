@@ -382,18 +382,34 @@ impl<T: Codegen<Backend = T>> State<T> {
                 // First check value in body state
                 if let Some(val) = body_state.values.get(&value.name()) {
                     body_state.last_register_number += 1;
+                    let left_value = lhs;
+                    let right_value = ExpressionResult::Register(body_state.last_register_number);
                     self.codegen = self
                         .codegen
                         .expression_value(val, body_state.last_register_number);
+                    self.codegen = self.codegen.expression_operation(
+                        op,
+                        left_value,
+                        &right_value,
+                        body_state.last_register_number,
+                    );
                     (
                         Some(ExpressionResult::Register(body_state.last_register_number)),
                         vec![],
                     )
                 } else if let Some(const_val) = self.global.constants.get(&value.name()) {
                     body_state.last_register_number += 1;
+                    let left_value = lhs;
+                    let right_value = ExpressionResult::Register(body_state.last_register_number);
                     self.codegen = self
                         .codegen
                         .expression_const(const_val, body_state.last_register_number);
+                    self.codegen = self.codegen.expression_operation(
+                        op,
+                        left_value,
+                        &right_value,
+                        body_state.last_register_number,
+                    );
                     (
                         Some(ExpressionResult::Register(body_state.last_register_number)),
                         vec![],
@@ -418,7 +434,16 @@ impl<T: Codegen<Backend = T>> State<T> {
                 )
             }
             ast::ExpressionValue::FunctionCall(fn_call) => {
+                body_state.last_register_number += 1;
+                let left_value = lhs;
+                let right_value = ExpressionResult::Register(body_state.last_register_number);
                 let call_result = self.function_call(fn_call, body_state);
+                self.codegen = self.codegen.expression_operation(
+                    op,
+                    left_value,
+                    &right_value,
+                    body_state.last_register_number,
+                );
                 (
                     Some(ExpressionResult::Register(body_state.last_register_number)),
                     call_result,
