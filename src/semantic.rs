@@ -453,7 +453,18 @@ impl<T: Codegen<Backend = T>> State<T> {
         if op_result.0.is_none() {
             return op_result;
         }
-
-        (None, vec![])
+        if let Some(expr) = &rhs.operation {
+            let mut state_res = op_result.1;
+            let expr_op =
+                self.expression_operation(&op_result.0.unwrap(), &expr.1, &expr.0, body_state);
+            let mut expr_op_state_res = expr_op.1;
+            state_res.append(&mut expr_op_state_res);
+            if expr_op.0.is_none() {
+                return (None, state_res);
+            }
+            (expr_op.0, state_res)
+        } else {
+            op_result
+        }
     }
 }
