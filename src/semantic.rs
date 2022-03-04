@@ -2,6 +2,7 @@ use crate::ast::{self, ExpressionOperations, GetName, PrimitiveValue};
 use crate::codegen::Codegen;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+use thiserror::Error;
 
 type ValueName = String;
 type InnerType = String;
@@ -57,7 +58,7 @@ pub struct State<T: Codegen> {
 }
 
 #[derive(Debug, Clone)]
-pub enum StateResult {
+pub enum StateResultOld {
     ConstantAlreadyExist,
     TypeAlreadyExist,
     FunctionAlreadyExist,
@@ -82,7 +83,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         }
     }
 
-    pub fn run(&mut self, data: &ast::Main<'_>) -> Vec<StateResult> {
+    pub fn run(&mut self, data: &ast::Main<'_>) -> StateResult<()> {
         let res = data.iter().fold(vec![], |mut s, main| {
             let mut res = match main {
                 ast::MainStatement::Import(import) => self.import(import),
@@ -105,23 +106,33 @@ impl<T: Codegen<Backend = T>> State<T> {
     }
 
     #[allow(clippy::unused_self)]
-    pub const fn import(&self, _data: &ast::ImportPath<'_>) -> Vec<StateResult> {
+    pub const fn import(&self, _data: &ast::ImportPath<'_>) -> StateResult<()> {
         // TODO: process imports
-        vec![]
+        Ok(())
     }
 
-    pub fn types(&mut self, data: &ast::StructTypes<'_>) -> Vec<StateResult> {
+    pub fn types(&mut self, data: &ast::StructTypes<'_>) -> StateResult<()> {
         if self.global.types.contains(&data.name()) {
-            return vec![StateResult::TypeAlreadyExist];
+            return Err(StateErrorResult::new(
+                StateErrorKind::TypeAlreadyExist,
+                data.name(),
+                0,
+                0,
+            ));
         }
         self.global.types.insert(data.name());
         self.codegen = self.codegen.types(data);
-        vec![]
+        Ok(())
     }
 
-    pub fn constant(&mut self, data: &ast::Constant<'_>) -> Vec<StateResult> {
+    pub fn constant(&mut self, data: &ast::Constant<'_>) -> StateResult<()> {
         if self.global.constants.contains_key(&data.name()) {
-            return vec![StateResult::ConstantAlreadyExist];
+            return Err(StateErrorResult::new(
+                StateErrorKind::ConstantAlreadyExist,
+                data.name(),
+                0,
+                0,
+            ));
         }
         self.global.constants.insert(
             data.name(),
@@ -131,12 +142,17 @@ impl<T: Codegen<Backend = T>> State<T> {
             },
         );
         self.codegen = self.codegen.constant(data);
-        vec![]
+        Ok(())
     }
 
-    pub fn function(&mut self, data: &ast::FunctionStatement<'_>) -> Vec<StateResult> {
+    pub fn function(&mut self, data: &ast::FunctionStatement<'_>) -> StateResult<()> {
         if self.global.functions.contains_key(&data.name()) {
-            return vec![StateResult::FunctionAlreadyExist];
+            return Err(StateErrorResult::new(
+                StateErrorKind::FunctionAlreadyExist,
+                data.name(),
+                0,
+                0,
+            ));
         }
         self.global.functions.insert(
             data.name(),
@@ -151,10 +167,10 @@ impl<T: Codegen<Backend = T>> State<T> {
             },
         );
         self.codegen = self.codegen.function_declaration(data);
-        vec![]
+        Ok(())
     }
 
-    pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) -> Vec<StateResult> {
+    pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) -> StateResult<()> {
         let mut body_state: ValueBlockState = ValueBlockState::new(None);
         data.body.iter().fold(vec![], |mut s, body| {
             let mut res = match body {
@@ -175,8 +191,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             };
             s.append(&mut res);
             s
-        });
-        vec![]
+        })
     }
 
     pub fn let_binding(
@@ -245,13 +260,18 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &ast::FunctionCall<'_>,
         body_state: &mut ValueBlockState,
-    ) -> Vec<StateResult> {
+    ) -> StateResult<()> {
         if !self.global.functions.contains_key(&data.name()) {
-            return vec![StateResult::FunctionNotFound];
+            return Err(StateErrorResult::new(
+                StateErrorKind::FunctionNotFound,
+                data.name(),
+                0,
+                0,
+            ));
         }
         body_state.last_register_number += 1;
         self.codegen = self.codegen.call(data, body_state.last_register_number);
-        vec![]
+        Ok(())
     }
 
     #[allow(clippy::unused_self)]
@@ -259,24 +279,8 @@ impl<T: Codegen<Backend = T>> State<T> {
         &self,
         _data: &ast::IfStatement<'_>,
         _body_state: &ValueBlockState,
-    ) -> Vec<StateResult> {
-        /*
-        let mut res = self.body_statement(&data.body, body_state.clone());
-        if let Some(data) = &data.else_statement {
-            let mut r = self.body_statement(data, body_state.clone());
-            res.append(&mut r);
-        }
-        if let Some(data) = &data.else_if_statement {
-            let mut r = data.iter().fold(vec![], |mut r, if_stmt| {
-                let mut res = self.if_condition(if_stmt, body_state);
-                r.append(&mut res);
-                r
-            });
-            res.append(&mut r);
-        }
-        res
-            */
-        vec![]
+    ) -> StateResult<()> {
+        Ok(())
     }
 
     #[allow(clippy::unused_self)]
@@ -284,9 +288,8 @@ impl<T: Codegen<Backend = T>> State<T> {
         &self,
         _data: &[ast::BodyStatement<'_>],
         _body_state: &ValueBlockState,
-    ) -> Vec<StateResult> {
-        // self.body_statement(data, body_state)
-        vec![]
+    ) -> StateResult<()> {
+        Ok(())
     }
 
     #[allow(clippy::doc_markdown)]
@@ -312,7 +315,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &ast::Expression<'_>,
         body_state: &mut ValueBlockState,
-    ) -> (Option<ExpressionResult>, Vec<StateResult>) {
+    ) -> StateResult<ExpressionResult> {
         let res = match &data.expression_value {
             ast::ExpressionValue::ValueName(value) => {
                 // First check value in body state
@@ -468,3 +471,51 @@ impl<T: Codegen<Backend = T>> State<T> {
         }
     }
 }
+
+#[derive(Debug, Clone)]
+pub enum StateErrorKind {
+    ConstantAlreadyExist,
+    TypeAlreadyExist,
+    FunctionAlreadyExist,
+    ValueNotFound,
+    FunctionNotFound,
+}
+
+#[derive(Debug, Clone)]
+pub struct StateErrorLocation {
+    line: u64,
+    column: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct StateErrorResult {
+    kind: StateErrorKind,
+    value: String,
+    location: StateErrorLocation,
+}
+
+impl StateErrorResult {
+    fn new(kind: StateErrorKind, value: String, line: u64, column: u64) -> Self {
+        Self {
+            kind,
+            value,
+            location: StateErrorLocation { line, column },
+        }
+    }
+}
+
+#[derive(Error, Debug, Clone)]
+pub enum StateError {
+    #[error("State result with {:?} errors", .0.len())]
+    StateResult(Vec<StateErrorResult>),
+}
+
+impl StateError {
+    fn add(&mut self, err: StateErrorResult) {
+        if let Self::StateResult(val) = self {
+            val.push(err);
+        }
+    }
+}
+
+pub type StateResult<T> = std::result::Result<T, StateErrorResult>;
