@@ -198,7 +198,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &ast::LetBinding<'_>,
         state: &mut ValueBlockState,
-    ) -> Vec<StateResult> {
+    ) -> StateResult<()> {
         let inner_name = state.values.get(&data.name()).map_or_else(
             || data.name(),
             |val| {
@@ -253,7 +253,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         //   3.10. Expr::FuncCall - OP - Expr::FuncCall
         //      - alloca, tmp1 = call, tmp2 = call, tmp3 = OP tmp1 tmp2, store tmp3
         self.codegen = self.codegen.let_binding(data);
-        vec![]
+        Ok(())
     }
 
     pub fn function_call(
@@ -371,103 +371,73 @@ impl<T: Codegen<Backend = T>> State<T> {
         }
     }
 
-    /// Expression operation:
+    /// Expression operation semantic logic:
     /// `OP(lhs, rhs)`
     pub fn expression_operation(
         &mut self,
-        lhs: &ExpressionResult,
-        rhs: &ast::Expression<'_>,
+        left_value: &ExpressionResult,
+        right_expression: &ast::Expression<'_>,
         op: &ExpressionOperations,
         body_state: &mut ValueBlockState,
-    ) -> (Option<ExpressionResult>, Vec<StateResult>) {
-        let op_result = match &rhs.expression_value {
+    ) -> StateResult<ExpressionResult> {
+        // Get right value from expression.
+        // If expression return error immediately return error
+        // because next analyzer should use success result/
+        let right_value = match &right_expression.expression_value {
             ast::ExpressionValue::ValueName(value) => {
-                // First check value in body state
-                if let Some(val) = body_state.values.get(&value.name()) {
-                    body_state.last_register_number += 1;
-                    let left_value = lhs;
-                    let right_value = ExpressionResult::Register(body_state.last_register_number);
-                    self.codegen = self
-                        .codegen
-                        .expression_value(val, body_state.last_register_number);
-                    self.codegen = self.codegen.expression_operation(
-                        op,
-                        left_value,
-                        &right_value,
-                        body_state.last_register_number,
-                    );
-                    (
-                        Some(ExpressionResult::Register(body_state.last_register_number)),
-                        vec![],
-                    )
-                } else if let Some(const_val) = self.global.constants.get(&value.name()) {
-                    body_state.last_register_number += 1;
-                    let left_value = lhs;
-                    let right_value = ExpressionResult::Register(body_state.last_register_number);
-                    self.codegen = self
-                        .codegen
-                        .expression_const(const_val, body_state.last_register_number);
-                    self.codegen = self.codegen.expression_operation(
-                        op,
-                        left_value,
-                        &right_value,
-                        body_state.last_register_number,
-                    );
-                    (
-                        Some(ExpressionResult::Register(body_state.last_register_number)),
-                        vec![],
-                    )
+                if !(body_state.values.contains_key(&value.name())
+                    || self.global.constants.contains_key(&value.name()))
+                {
+                    // If value doesn't exist
+                    Err(StateErrorResult::new(
+                        StateErrorKind::ValueNotFound,
+                        data.name(),
+                        0,
+                        0,
+                    ))
                 } else {
-                    (None, vec![StateResult::ValueNotFound])
+                    // Increase register counter before loading value
+                    body_state.last_register_number += 1;
+                    // First check value in body state
+                    if let Some(val) = body_state.values.get(&value.name()) {
+                        // If it's value then Load it to register
+                        self.codegen = self
+                            .codegen
+                            .expression_value(val, body_state.last_register_number);
+                    } else if let Some(const_val) = self.global.constants.get(&value.name()) {
+                        // If value is constant load it to register
+                        self.codegen = self
+                            .codegen
+                            .expression_const(const_val, body_state.last_register_number);
+                    }
+                    Ok(ExpressionResult::Register(body_state.last_register_number))
                 }
             }
             ast::ExpressionValue::PrimitiveValue(value) => {
-                body_state.last_register_number += 1;
-                let left_value = lhs;
-                let right_value = ExpressionResult::PrimitiveValue(value.clone());
-                self.codegen = self.codegen.expression_operation(
-                    op,
-                    left_value,
-                    &right_value,
-                    body_state.last_register_number,
-                );
-                (
-                    Some(ExpressionResult::Register(body_state.last_register_number)),
-                    vec![],
-                )
+                Ok(ExpressionResult::PrimitiveValue(value.clone()))
             }
             ast::ExpressionValue::FunctionCall(fn_call) => {
                 body_state.last_register_number += 1;
-                let left_value = lhs;
-                let right_value = ExpressionResult::Register(body_state.last_register_number);
                 let call_result = self.function_call(fn_call, body_state);
-                self.codegen = self.codegen.expression_operation(
-                    op,
-                    left_value,
-                    &right_value,
-                    body_state.last_register_number,
-                );
-                (
-                    Some(ExpressionResult::Register(body_state.last_register_number)),
-                    call_result,
-                )
+                call_result.map(|_| ExpressionResult::Register(body_state.last_register_number))
             }
-        };
-        if op_result.0.is_none() {
-            return op_result;
-        }
-        if let Some(expr) = &rhs.operation {
-            let mut state_res = op_result.1;
-            let expr_op =
-                self.expression_operation(&op_result.0.unwrap(), &expr.1, &expr.0, body_state);
-            let mut expr_op_state_res = expr_op.1;
-            state_res.append(&mut expr_op_state_res);
-            if expr_op.0.is_none() {
-                return (None, state_res);
-            }
-            (expr_op.0, state_res)
+        }?;
+        // Call expression operation for: OP(left_value, right_value)
+        // and return result of that call as register
+        body_state.last_register_number += 1;
+        self.codegen = self.codegen.expression_operation(
+            op,
+            left_value,
+            &right_value,
+            body_state.last_register_number,
+        );
+        let expression_result = ExpressionResult::Register(body_state.last_register_number);
+
+        // Check is for right value exist next operation
+        if let Some((operation, expr)) = &right_expression.operation {
+            self.expression_operation(&expression_result, &expr, &operation, body_state)
         } else {
-            op_result
+            Ok(expression_result)
         }
     }
 }
