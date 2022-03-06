@@ -316,68 +316,21 @@ impl<T: Codegen<Backend = T>> State<T> {
         data: &ast::Expression<'_>,
         body_state: &mut ValueBlockState,
     ) -> StateResult<ExpressionResult> {
-        let res = match &data.expression_value {
-            ast::ExpressionValue::ValueName(value) => {
-                // First check value in body state
-                if let Some(val) = body_state.values.get(&value.name()) {
-                    body_state.last_register_number += 1;
-                    self.codegen = self
-                        .codegen
-                        .expression_value(val, body_state.last_register_number);
-                    (
-                        Some(ExpressionResult::Register(body_state.last_register_number)),
-                        vec![],
-                    )
-                } else if let Some(const_val) = self.global.constants.get(&value.name()) {
-                    body_state.last_register_number += 1;
-                    self.codegen = self
-                        .codegen
-                        .expression_const(const_val, body_state.last_register_number);
-                    (
-                        Some(ExpressionResult::Register(body_state.last_register_number)),
-                        vec![],
-                    )
-                } else {
-                    (None, vec![StateResult::ValueNotFound])
-                }
-            }
-            ast::ExpressionValue::PrimitiveValue(value) => (
-                Some(ExpressionResult::PrimitiveValue(value.clone())),
-                vec![],
-            ),
-            ast::ExpressionValue::FunctionCall(fn_call) => {
-                let res = self.function_call(fn_call, body_state);
-                (
-                    Some(ExpressionResult::Register(body_state.last_register_number)),
-                    res,
-                )
-            }
-        };
-        if res.0.is_none() {
-            return res;
-        }
-
-        if let Some(expr) = &data.operation {
-            let mut state_res = res.1;
-            let expr_op = self.expression_operation(&res.0.unwrap(), &expr.1, &expr.0, body_state);
-            let mut expr_op_state_res = expr_op.1;
-            state_res.append(&mut expr_op_state_res);
-            if expr_op.0.is_none() {
-                return (None, state_res);
-            }
-            (expr_op.0, state_res)
-        } else {
-            res
-        }
+        // To analyze expression first time, we set:
+        // left_value - as None
+        // operation - as None
+        // And basic expression value is "right_value", becuase
+        // it can contain sub-operations
+        self.expression_operation(None, data, None, body_state)
     }
 
     /// Expression operation semantic logic:
     /// `OP(lhs, rhs)`
     pub fn expression_operation(
         &mut self,
-        left_value: &ExpressionResult,
+        left_value: Option<&ExpressionResult>,
         right_expression: &ast::Expression<'_>,
-        op: &ExpressionOperations,
+        op: Option<&ExpressionOperations>,
         body_state: &mut ValueBlockState,
     ) -> StateResult<ExpressionResult> {
         // Get right value from expression.
@@ -391,7 +344,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                     // If value doesn't exist
                     Err(StateErrorResult::new(
                         StateErrorKind::ValueNotFound,
-                        data.name(),
+                        value.name(),
                         0,
                         0,
                     ))
@@ -422,12 +375,17 @@ impl<T: Codegen<Backend = T>> State<T> {
                 call_result.map(|_| ExpressionResult::Register(body_state.last_register_number))
             }
         }?;
+        // It's special case for "pure" expression - without operation.
+        // For that also left side of expression shouldn't exist
+        if left_value.is_none() || op.is_none() {
+            return Ok(ExpressionResult::Register(body_state.last_register_number));
+        }
         // Call expression operation for: OP(left_value, right_value)
         // and return result of that call as register
         body_state.last_register_number += 1;
         self.codegen = self.codegen.expression_operation(
-            op,
-            left_value,
+            op.unwrap(),
+            left_value.unwrap(),
             &right_value,
             body_state.last_register_number,
         );
@@ -435,7 +393,12 @@ impl<T: Codegen<Backend = T>> State<T> {
 
         // Check is for right value exist next operation
         if let Some((operation, expr)) = &right_expression.operation {
-            self.expression_operation(&expression_result, &expr, &operation, body_state)
+            self.expression_operation(
+                Some(&expression_result),
+                &expr,
+                Some(&operation),
+                body_state,
+            )
         } else {
             Ok(expression_result)
         }
