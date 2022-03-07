@@ -107,7 +107,6 @@ impl<T: Codegen<Backend = T>> State<T> {
 
     #[allow(clippy::unused_self)]
     pub const fn import(&self, _data: &ast::ImportPath<'_>) -> StateResult<()> {
-        // TODO: process imports
         Ok(())
     }
 
@@ -170,9 +169,10 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
-    pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) -> StateResult<()> {
+    pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) -> StateResults<()> {
         let mut body_state: ValueBlockState = ValueBlockState::new(None);
-        data.body.iter().fold(vec![], |mut s, body| {
+        let mut return_is_called = false;
+        let mut result_errors = data.body.iter().fold(vec![], |mut s_err, body| {
             let mut res = match body {
                 ast::BodyStatement::LetBinding(bind) => self.let_binding(bind, &mut body_state),
                 ast::BodyStatement::FunctionCall(fn_call) => {
@@ -185,13 +185,30 @@ impl<T: Codegen<Backend = T>> State<T> {
                     self.loop_statement(loop_statement, &body_state)
                 }
                 ast::BodyStatement::Expression(expression) => {
-                    let res = self.expression(expression, &mut body_state);
-                    res.1
+                    let expr_result = self.expression(expression, &mut body_state);
+                    expr_result.map(|res| {
+                        self.codegen = self.codegen.expression_function_return(&res);
+                    })
                 }
             };
-            s.append(&mut res);
-            s
-        })
+            if let Err(err) = res {
+                s_err.push(err)
+            }
+            s_err
+        });
+        if !return_is_called {
+            result_errors.push(StateErrorResult::new(
+                StateErrorKind::ReturnNotFound,
+                String::new(),
+                0,
+                0,
+            ));
+        }
+        if result_errors.is_empty() {
+            Ok(())
+        } else {
+            Err(result_errors)
+        }
     }
 
     pub fn let_binding(
@@ -412,6 +429,7 @@ pub enum StateErrorKind {
     FunctionAlreadyExist,
     ValueNotFound,
     FunctionNotFound,
+    ReturnNotFound,
 }
 
 #[derive(Debug, Clone)]
@@ -451,4 +469,5 @@ impl StateError {
     }
 }
 
-pub type StateResult<T> = std::result::Result<T, StateErrorResult>;
+pub type StateResult<T> = Result<T, StateErrorResult>;
+pub type StateResults<T> = Result<T, Vec<StateErrorResult>>;

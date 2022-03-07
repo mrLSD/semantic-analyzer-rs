@@ -1,4 +1,5 @@
 use crate::codegen::Codegen;
+use crate::semantic::ExpressionResult;
 use crate::{ast, semantic};
 
 pub struct Backend;
@@ -57,6 +58,9 @@ impl Codegen for Backend {
         _right_value: &semantic::ExpressionResult,
         _register_number: u64,
     ) -> Self::Backend {
+        todo!()
+    }
+    fn expression_function_return(&self, _expr_result: &ExpressionResult) -> Self::Backend {
         todo!()
     }
 }

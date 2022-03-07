@@ -9,6 +9,7 @@ use inkwell::types::{
     ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType,
 };
 // use inkwell::values::BasicValue;
+use crate::semantic::ExpressionResult;
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -212,6 +213,10 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         _right_value: &semantic::ExpressionResult,
         _register_number: u64,
     ) -> Self::Backend {
+        todo!()
+    }
+
+    fn expression_function_return(&self, _expr_result: &ExpressionResult) -> Self::Backend {
         todo!()
     }
 }

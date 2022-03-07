@@ -1,3 +1,4 @@
+use crate::semantic::ExpressionResult;
 use crate::{ast, semantic};
 
 pub trait Codegen {
@@ -23,4 +24,5 @@ pub trait Codegen {
         right_value: &semantic::ExpressionResult,
         register_number: u64,
     ) -> Self::Backend;
+    fn expression_function_return(&self, expr_result: &ExpressionResult) -> Self::Backend;
 }
