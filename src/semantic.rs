@@ -83,26 +83,35 @@ impl<T: Codegen<Backend = T>> State<T> {
         }
     }
 
-    pub fn run(&mut self, data: &ast::Main<'_>) -> StateResult<()> {
-        let res = data.iter().fold(vec![], |mut s, main| {
-            let mut res = match main {
+    pub fn run(&mut self, data: &ast::Main<'_>) -> StateResults<()> {
+        let result_errors = data.iter().fold(vec![], |mut s_err, main| {
+            let res = match main {
                 ast::MainStatement::Import(import) => self.import(import),
                 ast::MainStatement::Constant(constant) => self.constant(constant),
                 ast::MainStatement::Types(types) => self.types(types),
                 ast::MainStatement::Function(function) => self.function(function),
             };
-            s.append(&mut res);
-            s
+            if let Err(err) = res {
+                s_err.push(err)
+            }
+            s_err
         });
         // After getting all functions declarations, fetch only functions body
-        data.iter().fold(res, |mut s, main| {
-            let mut res = match main {
+        let result_errors = data.iter().fold(result_errors, |mut s_err, main| {
+            let res = match main {
                 ast::MainStatement::Function(function) => self.function_body(function),
-                _ => return s,
+                _ => return s_err,
             };
-            s.append(&mut res);
-            s
-        })
+            if let Err(mut err) = res {
+                s_err.append(&mut err)
+            }
+            s_err
+        });
+        if result_errors.is_empty() {
+            Ok(())
+        } else {
+            Err(result_errors)
+        }
     }
 
     #[allow(clippy::unused_self)]
@@ -173,7 +182,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         let mut body_state: ValueBlockState = ValueBlockState::new(None);
         let mut return_is_called = false;
         let mut result_errors = data.body.iter().fold(vec![], |mut s_err, body| {
-            let mut res = match body {
+            let res = match body {
                 ast::BodyStatement::LetBinding(bind) => self.let_binding(bind, &mut body_state),
                 ast::BodyStatement::FunctionCall(fn_call) => {
                     self.function_call(fn_call, &mut body_state)
@@ -410,12 +419,7 @@ impl<T: Codegen<Backend = T>> State<T> {
 
         // Check is for right value exist next operation
         if let Some((operation, expr)) = &right_expression.operation {
-            self.expression_operation(
-                Some(&expression_result),
-                &expr,
-                Some(&operation),
-                body_state,
-            )
+            self.expression_operation(Some(&expression_result), expr, Some(operation), body_state)
         } else {
             Ok(expression_result)
         }
@@ -446,7 +450,7 @@ pub struct StateErrorResult {
 }
 
 impl StateErrorResult {
-    fn new(kind: StateErrorKind, value: String, line: u64, column: u64) -> Self {
+    const fn new(kind: StateErrorKind, value: String, line: u64, column: u64) -> Self {
         Self {
             kind,
             value,
