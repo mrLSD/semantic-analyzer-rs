@@ -8,7 +8,11 @@ pub trait Codegen {
     fn constant(&self, const_decl: &ast::Constant<'_>) -> Self::Backend;
     fn types(&self, type_decl: &ast::StructTypes<'_>) -> Self::Backend;
     fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend;
-    fn let_binding(&self, let_decl: &ast::LetBinding<'_>) -> Self::Backend;
+    fn let_binding(
+        &self,
+        let_decl: &ast::LetBinding<'_>,
+        expr_result: &ExpressionResult,
+    ) -> Self::Backend;
     fn call(&self, call: &ast::FunctionCall<'_>, register_number: u64) -> Self::Backend;
     fn expression_value(&self, expression: &semantic::Value, register_number: u64)
         -> Self::Backend;

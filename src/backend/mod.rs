@@ -182,7 +182,11 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         }
     }
 
-    fn let_binding(&self, _let_decl: &ast::LetBinding<'_>) -> Self::Backend {
+    fn let_binding(
+        &self,
+        _let_decl: &ast::LetBinding<'_>,
+        _expr_result: &ExpressionResult,
+    ) -> Self::Backend {
         todo!()
     }
 

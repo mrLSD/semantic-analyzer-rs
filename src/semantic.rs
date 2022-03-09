@@ -201,7 +201,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 }
             };
             if let Err(err) = res {
-                s_err.push(err)
+                s_err.push(err);
             }
             s_err
         });
@@ -225,6 +225,9 @@ impl<T: Codegen<Backend = T>> State<T> {
         data: &ast::LetBinding<'_>,
         state: &mut ValueBlockState,
     ) -> StateResult<()> {
+        // Call value analytics before putting let-value to state
+        // Put to the block state
+        let expr_result = self.expression(&data.value, state)?;
         let inner_name = state.values.get(&data.name()).map_or_else(
             || data.name(),
             |val| {
@@ -253,32 +256,8 @@ impl<T: Codegen<Backend = T>> State<T> {
                 allocated: false,
             },
         );
-        // TODO: fetch let-binding.value
-        // 1. Body::Function
-        //   - alloca, call, store
-        // 2. Body::let - deprecated as nonsense
-        // 3. Body::Expression
-        //   3.1. Expr::PrimitiveValue
-        //      - alloca, store
-        //   3.2. Expr::FuncCall
-        //      - alloca, call, store
-        //   3.3. Expr::Value
-        //      - alloca, load, store
-        //   3.4. Expr::PrimitiveValue - OP - Expr::PrimitiveValue
-        //      - alloca, tmp = OP val1 val2, store tmp
-        //   3.5. Expr::Value - OP - Expr::PrimitiveValue
-        //      - alloca, tmp1 = load, tmp2 = OP tmp2, val1, store
-        //   3.6. Expr::FuncCall - OP - Expr::PrimitiveValue
-        //      - alloca, tmp1 = call, tmp2 = OP tmp2, val1, store
-        //   3.7. Expr::PrimitiveValue - OP - Expr::Value
-        //      - Same as 3.4
-        //   3.8. Expr::Value - OP - Expr::Value
-        //      - alloca, tmp1 = load, tmp2 = load, tmp3 = OP tmp1 tmp2, store tmp3
-        //   3.9. Expr::FuncCall - OP - Expr::Value
-        //      - alloca, tmp1 = call, tmp2 = Load, tmp3 = OP tmp1 tmp2, store tmp3
-        //   3.10. Expr::FuncCall - OP - Expr::FuncCall
-        //      - alloca, tmp1 = call, tmp2 = call, tmp3 = OP tmp1 tmp2, store tmp3
-        self.codegen = self.codegen.let_binding(data);
+
+        self.codegen = self.codegen.let_binding(data, &expr_result);
         Ok(())
     }
 
@@ -300,7 +279,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
-    #[allow(clippy::unused_self)]
+    #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
     pub const fn if_condition(
         &self,
         _data: &ast::IfStatement<'_>,
@@ -309,7 +288,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
-    #[allow(clippy::unused_self)]
+    #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
     pub const fn loop_statement(
         &self,
         _data: &[ast::BodyStatement<'_>],
@@ -364,17 +343,9 @@ impl<T: Codegen<Backend = T>> State<T> {
         // because next analyzer should use success result/
         let right_value = match &right_expression.expression_value {
             ast::ExpressionValue::ValueName(value) => {
-                if !(body_state.values.contains_key(&value.name())
-                    || self.global.constants.contains_key(&value.name()))
+                if body_state.values.contains_key(&value.name())
+                    || self.global.constants.contains_key(&value.name())
                 {
-                    // If value doesn't exist
-                    Err(StateErrorResult::new(
-                        StateErrorKind::ValueNotFound,
-                        value.name(),
-                        0,
-                        0,
-                    ))
-                } else {
                     // Increase register counter before loading value
                     body_state.last_register_number += 1;
                     // First check value in body state
@@ -390,6 +361,14 @@ impl<T: Codegen<Backend = T>> State<T> {
                             .expression_const(const_val, body_state.last_register_number);
                     }
                     Ok(ExpressionResult::Register(body_state.last_register_number))
+                } else {
+                    // If value doesn't exist
+                    Err(StateErrorResult::new(
+                        StateErrorKind::ValueNotFound,
+                        value.name(),
+                        0,
+                        0,
+                    ))
                 }
             }
             ast::ExpressionValue::PrimitiveValue(value) => {

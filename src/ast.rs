@@ -242,7 +242,7 @@ pub struct Expression<'a> {
 pub struct LetBinding<'a> {
     pub name: ValueName<'a>,
     pub value_type: Option<Type<'a>>,
-    pub value: Box<BodyStatement<'a>>,
+    pub value: Box<Expression<'a>>,
 }
 
 impl GetName for LetBinding<'_> {
