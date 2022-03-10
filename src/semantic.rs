@@ -2,7 +2,6 @@ use crate::ast::{self, ExpressionOperations, GetName, PrimitiveValue};
 use crate::codegen::Codegen;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
-use thiserror::Error;
 
 type ValueName = String;
 type InnerType = String;
@@ -57,15 +56,6 @@ pub struct State<T: Codegen> {
     pub codegen: T,
 }
 
-#[derive(Debug, Clone)]
-pub enum StateResultOld {
-    ConstantAlreadyExist,
-    TypeAlreadyExist,
-    FunctionAlreadyExist,
-    ValueNotFound,
-    FunctionNotFound,
-}
-
 pub enum ExpressionResult {
     PrimitiveValue(PrimitiveValue),
     Register(u64),
@@ -92,7 +82,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::MainStatement::Function(function) => self.function(function),
             };
             if let Err(err) = res {
-                s_err.push(err)
+                s_err.push(err);
             }
             s_err
         });
@@ -103,7 +93,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 _ => return s_err,
             };
             if let Err(mut err) = res {
-                s_err.append(&mut err)
+                s_err.append(&mut err);
             }
             s_err
         });
@@ -114,7 +104,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         }
     }
 
-    #[allow(clippy::unused_self)]
+    #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
     pub const fn import(&self, _data: &ast::ImportPath<'_>) -> StateResult<()> {
         Ok(())
     }
@@ -196,6 +186,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::BodyStatement::Expression(expression) => {
                     let expr_result = self.expression(expression, &mut body_state);
                     expr_result.map(|res| {
+                        return_is_called = true;
                         self.codegen = self.codegen.expression_function_return(&res);
                     })
                 }
@@ -438,17 +429,12 @@ impl StateErrorResult {
     }
 }
 
-#[derive(Error, Debug, Clone)]
-pub enum StateError {
-    #[error("State result with {:?} errors", .0.len())]
-    StateResult(Vec<StateErrorResult>),
-}
-
-impl StateError {
-    fn add(&mut self, err: StateErrorResult) {
-        if let Self::StateResult(val) = self {
-            val.push(err);
-        }
+impl StateErrorResult {
+    pub fn trace_state(&self) -> String {
+        format!(
+            "[{:?}] for value {:?} at: {:?}:{:?}",
+            self.kind, self.value, self.location.line, self.location.column
+        )
     }
 }
 

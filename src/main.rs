@@ -10,5 +10,8 @@ mod semantic;
 fn main() {
     let source: ast::Main = vec![];
     let res = State::new(Backend::new()).run(&source);
-    println!("#> ... {res:?}");
+    println!("#> ...");
+    if let Err(err) = res {
+        let _ = err.iter().map(|trace| println!("{}", trace.trace_state()));
+    }
 }
