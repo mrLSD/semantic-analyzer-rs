@@ -12,6 +12,8 @@ fn main() {
     let res = State::new(Backend::new()).run(&source);
     println!("#> ...");
     if let Err(err) = res {
-        let _ = err.iter().map(|trace| println!("{}", trace.trace_state()));
+        for trace in &err {
+            println!("{}", trace.trace_state());
+        }
     }
 }

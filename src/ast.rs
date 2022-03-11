@@ -263,9 +263,44 @@ impl GetName for FunctionCall<'_> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Condition {
+    Great,
+    Less,
+    Eq,
+    GreatEq,
+    LessEq,
+    NotEq,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LogicCondition {
+    And,
+    Or,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExpressionCondition<'a> {
+    pub left: Expression<'a>,
+    pub condition: Condition,
+    pub right: Expression<'a>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExpressionLogicCondition<'a> {
+    pub left: ExpressionCondition<'a>,
+    pub right: Option<(LogicCondition, Box<ExpressionCondition<'a>>)>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum IfCondition<'a> {
+    Single(Expression<'a>),
+    Logic(ExpressionLogicCondition<'a>),
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfStatement<'a> {
-    pub condition: Expression<'a>,
+    pub condition: IfCondition<'a>,
     pub body: Vec<BodyStatement<'a>>,
     pub else_statement: Option<Vec<BodyStatement<'a>>>,
     pub else_if_statement: Option<Vec<IfStatement<'a>>>,

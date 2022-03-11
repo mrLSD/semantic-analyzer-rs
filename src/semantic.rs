@@ -270,13 +270,42 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
-    #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
-    pub const fn if_condition(
-        &self,
-        _data: &ast::IfStatement<'_>,
-        _body_state: &ValueBlockState,
+    pub fn if_condition(
+        &mut self,
+        data: &ast::IfStatement<'_>,
+        function_body_state: &ValueBlockState,
     ) -> StateResult<()> {
-        Ok(())
+        let if_body_state = function_body_state;
+        let mut if_body_state = if_body_state;
+        let mut result_errors = data.body.iter().fold(vec![], |mut s_err, body| {
+            let res = match body {
+                ast::BodyStatement::LetBinding(bind) => self.let_binding(bind, &mut if_body_state),
+                ast::BodyStatement::FunctionCall(fn_call) => {
+                    self.function_call(fn_call, &mut if_body_state)
+                }
+                ast::BodyStatement::If(if_condition) => {
+                    self.if_condition(if_condition, &if_body_state)
+                }
+                ast::BodyStatement::Loop(loop_statement) => {
+                    self.loop_statement(loop_statement, &if_body_state)
+                }
+                ast::BodyStatement::Expression(expression) => {
+                    let expr_result = self.expression(expression, &mut if_body_state);
+                    expr_result.map(|res| {
+                        self.codegen = self.codegen.expression_function_return(&res);
+                    })
+                }
+            };
+            if let Err(err) = res {
+                s_err.push(err);
+            }
+            s_err
+        });
+        if result_errors.is_empty() {
+            Ok(())
+        } else {
+            Err(result_errors)
+        }
     }
 
     #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
