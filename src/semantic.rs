@@ -1,5 +1,6 @@
 use crate::ast::{self, ExpressionOperations, GetName, PrimitiveValue};
 use crate::codegen::Codegen;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
@@ -23,11 +24,11 @@ pub struct Value {
 pub struct ValueBlockState {
     pub values: HashMap<ValueName, Value>,
     pub last_register_number: u64,
-    pub parent: Option<Rc<ValueBlockState>>,
+    pub parent: Option<Rc<RefCell<ValueBlockState>>>,
 }
 
 impl ValueBlockState {
-    fn new(parent: Option<Rc<Self>>) -> Self {
+    fn new(parent: Option<Rc<RefCell<Self>>>) -> Self {
         Self {
             values: HashMap::new(),
             last_register_number: 0,
@@ -169,30 +170,34 @@ impl<T: Codegen<Backend = T>> State<T> {
     }
 
     pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) -> StateResults<()> {
-        let mut body_state: ValueBlockState = ValueBlockState::new(None);
+        let body_state = Rc::new(RefCell::new(ValueBlockState::new(None)));
         let mut return_is_called = false;
         let mut result_errors = data.body.iter().fold(vec![], |mut s_err, body| {
             let res = match body {
-                ast::BodyStatement::LetBinding(bind) => self.let_binding(bind, &mut body_state),
-                ast::BodyStatement::FunctionCall(fn_call) => {
-                    self.function_call(fn_call, &mut body_state)
+                ast::BodyStatement::LetBinding(bind) => {
+                    self.let_binding(bind, &body_state).map_err(|e| vec![e])
                 }
+                ast::BodyStatement::FunctionCall(fn_call) => self
+                    .function_call(fn_call, &body_state)
+                    .map_err(|e| vec![e]),
                 ast::BodyStatement::If(if_condition) => {
                     self.if_condition(if_condition, &body_state)
                 }
-                ast::BodyStatement::Loop(loop_statement) => {
-                    self.loop_statement(loop_statement, &body_state)
-                }
+                ast::BodyStatement::Loop(loop_statement) => self
+                    .loop_statement(loop_statement, &body_state)
+                    .map_err(|e| vec![e]),
                 ast::BodyStatement::Expression(expression) => {
-                    let expr_result = self.expression(expression, &mut body_state);
-                    expr_result.map(|res| {
-                        return_is_called = true;
-                        self.codegen = self.codegen.expression_function_return(&res);
-                    })
+                    let expr_result = self.expression(expression, &body_state);
+                    expr_result
+                        .map(|res| {
+                            return_is_called = true;
+                            self.codegen = self.codegen.expression_function_return(&res);
+                        })
+                        .map_err(|e| vec![e])
                 }
             };
-            if let Err(err) = res {
-                s_err.push(err);
+            if let Err(mut err) = res {
+                s_err.append(&mut err);
             }
             s_err
         });
@@ -214,12 +219,12 @@ impl<T: Codegen<Backend = T>> State<T> {
     pub fn let_binding(
         &mut self,
         data: &ast::LetBinding<'_>,
-        state: &mut ValueBlockState,
+        state: &Rc<RefCell<ValueBlockState>>,
     ) -> StateResult<()> {
         // Call value analytics before putting let-value to state
         // Put to the block state
         let expr_result = self.expression(&data.value, state)?;
-        let inner_name = state.values.get(&data.name()).map_or_else(
+        let inner_name = state.borrow_mut().values.get(&data.name()).map_or_else(
             || data.name(),
             |val| {
                 if val.allocated {
@@ -235,7 +240,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 }
             },
         );
-        state.values.insert(
+        state.borrow_mut().values.insert(
             data.name(),
             Value {
                 inner_name,
@@ -255,7 +260,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     pub fn function_call(
         &mut self,
         data: &ast::FunctionCall<'_>,
-        body_state: &mut ValueBlockState,
+        body_state: &Rc<RefCell<ValueBlockState>>,
     ) -> StateResult<()> {
         if !self.global.functions.contains_key(&data.name()) {
             return Err(StateErrorResult::new(
@@ -265,39 +270,46 @@ impl<T: Codegen<Backend = T>> State<T> {
                 0,
             ));
         }
-        body_state.last_register_number += 1;
-        self.codegen = self.codegen.call(data, body_state.last_register_number);
+        body_state.borrow_mut().last_register_number += 1;
+        self.codegen = self
+            .codegen
+            .call(data, body_state.borrow().last_register_number);
         Ok(())
     }
 
     pub fn if_condition(
         &mut self,
         data: &ast::IfStatement<'_>,
-        function_body_state: &ValueBlockState,
-    ) -> StateResult<()> {
-        let if_body_state = function_body_state;
-        let mut if_body_state = if_body_state;
-        let mut result_errors = data.body.iter().fold(vec![], |mut s_err, body| {
+        function_body_state: &Rc<RefCell<ValueBlockState>>,
+    ) -> StateResults<()> {
+        let if_body_state = Rc::new(RefCell::new(ValueBlockState::new(Some(
+            function_body_state.clone(),
+        ))));
+        let result_errors = data.body.iter().fold(vec![], |mut s_err, body| {
             let res = match body {
-                ast::BodyStatement::LetBinding(bind) => self.let_binding(bind, &mut if_body_state),
-                ast::BodyStatement::FunctionCall(fn_call) => {
-                    self.function_call(fn_call, &mut if_body_state)
+                ast::BodyStatement::LetBinding(bind) => {
+                    self.let_binding(bind, &if_body_state).map_err(|e| vec![e])
                 }
+                ast::BodyStatement::FunctionCall(fn_call) => self
+                    .function_call(fn_call, &if_body_state)
+                    .map_err(|e| vec![e]),
                 ast::BodyStatement::If(if_condition) => {
                     self.if_condition(if_condition, &if_body_state)
                 }
-                ast::BodyStatement::Loop(loop_statement) => {
-                    self.loop_statement(loop_statement, &if_body_state)
-                }
+                ast::BodyStatement::Loop(loop_statement) => self
+                    .loop_statement(loop_statement, &if_body_state)
+                    .map_err(|e| vec![e]),
                 ast::BodyStatement::Expression(expression) => {
-                    let expr_result = self.expression(expression, &mut if_body_state);
-                    expr_result.map(|res| {
-                        self.codegen = self.codegen.expression_function_return(&res);
-                    })
+                    let expr_result = self.expression(expression, &if_body_state);
+                    expr_result
+                        .map(|res| {
+                            self.codegen = self.codegen.expression_function_return(&res);
+                        })
+                        .map_err(|e| vec![e])
                 }
             };
-            if let Err(err) = res {
-                s_err.push(err);
+            if let Err(mut err) = res {
+                s_err.append(&mut err);
             }
             s_err
         });
@@ -312,7 +324,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     pub const fn loop_statement(
         &self,
         _data: &[ast::BodyStatement<'_>],
-        _body_state: &ValueBlockState,
+        _body_state: &Rc<RefCell<ValueBlockState>>,
     ) -> StateResult<()> {
         Ok(())
     }
@@ -339,7 +351,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     pub fn expression(
         &mut self,
         data: &ast::Expression<'_>,
-        body_state: &mut ValueBlockState,
+        body_state: &Rc<RefCell<ValueBlockState>>,
     ) -> StateResult<ExpressionResult> {
         // To analyze expression first time, we set:
         // left_value - as None
@@ -356,31 +368,33 @@ impl<T: Codegen<Backend = T>> State<T> {
         left_value: Option<&ExpressionResult>,
         right_expression: &ast::Expression<'_>,
         op: Option<&ExpressionOperations>,
-        body_state: &mut ValueBlockState,
+        body_state: &Rc<RefCell<ValueBlockState>>,
     ) -> StateResult<ExpressionResult> {
         // Get right value from expression.
         // If expression return error immediately return error
         // because next analyzer should use success result/
         let right_value = match &right_expression.expression_value {
             ast::ExpressionValue::ValueName(value) => {
-                if body_state.values.contains_key(&value.name())
+                if body_state.borrow_mut().values.contains_key(&value.name())
                     || self.global.constants.contains_key(&value.name())
                 {
                     // Increase register counter before loading value
-                    body_state.last_register_number += 1;
+                    body_state.borrow_mut().last_register_number += 1;
                     // First check value in body state
-                    if let Some(val) = body_state.values.get(&value.name()) {
+                    if let Some(val) = body_state.borrow().values.get(&value.name()) {
                         // If it's value then Load it to register
                         self.codegen = self
                             .codegen
-                            .expression_value(val, body_state.last_register_number);
+                            .expression_value(val, body_state.borrow().last_register_number);
                     } else if let Some(const_val) = self.global.constants.get(&value.name()) {
                         // If value is constant load it to register
                         self.codegen = self
                             .codegen
-                            .expression_const(const_val, body_state.last_register_number);
+                            .expression_const(const_val, body_state.borrow().last_register_number);
                     }
-                    Ok(ExpressionResult::Register(body_state.last_register_number))
+                    Ok(ExpressionResult::Register(
+                        body_state.borrow().last_register_number,
+                    ))
                 } else {
                     // If value doesn't exist
                     Err(StateErrorResult::new(
@@ -395,26 +409,30 @@ impl<T: Codegen<Backend = T>> State<T> {
                 Ok(ExpressionResult::PrimitiveValue(value.clone()))
             }
             ast::ExpressionValue::FunctionCall(fn_call) => {
-                body_state.last_register_number += 1;
+                body_state.borrow_mut().last_register_number += 1;
                 let call_result = self.function_call(fn_call, body_state);
-                call_result.map(|_| ExpressionResult::Register(body_state.last_register_number))
+                call_result
+                    .map(|_| ExpressionResult::Register(body_state.borrow().last_register_number))
             }
         }?;
         // It's special case for "pure" expression - without operation.
         // For that also left side of expression shouldn't exist
         if left_value.is_none() || op.is_none() {
-            return Ok(ExpressionResult::Register(body_state.last_register_number));
+            return Ok(ExpressionResult::Register(
+                body_state.borrow().last_register_number,
+            ));
         }
         // Call expression operation for: OP(left_value, right_value)
         // and return result of that call as register
-        body_state.last_register_number += 1;
+        body_state.borrow_mut().last_register_number += 1;
         self.codegen = self.codegen.expression_operation(
             op.unwrap(),
             left_value.unwrap(),
             &right_value,
-            body_state.last_register_number,
+            body_state.borrow().last_register_number,
         );
-        let expression_result = ExpressionResult::Register(body_state.last_register_number);
+        let expression_result =
+            ExpressionResult::Register(body_state.borrow().last_register_number);
 
         // Check is for right value exist next operation
         if let Some((operation, expr)) = &right_expression.operation {
