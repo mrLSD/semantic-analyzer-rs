@@ -4,6 +4,9 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+pub type StateResult<T> = Result<T, error::StateErrorResult>;
+pub type StateResults<T> = Result<T, Vec<error::StateErrorResult>>;
+
 type ValueName = String;
 type InnerType = String;
 
@@ -112,8 +115,8 @@ impl<T: Codegen<Backend = T>> State<T> {
 
     pub fn types(&mut self, data: &ast::StructTypes<'_>) -> StateResult<()> {
         if self.global.types.contains(&data.name()) {
-            return Err(StateErrorResult::new(
-                StateErrorKind::TypeAlreadyExist,
+            return Err(error::StateErrorResult::new(
+                error::StateErrorKind::TypeAlreadyExist,
                 data.name(),
                 0,
                 0,
@@ -126,8 +129,8 @@ impl<T: Codegen<Backend = T>> State<T> {
 
     pub fn constant(&mut self, data: &ast::Constant<'_>) -> StateResult<()> {
         if self.global.constants.contains_key(&data.name()) {
-            return Err(StateErrorResult::new(
-                StateErrorKind::ConstantAlreadyExist,
+            return Err(error::StateErrorResult::new(
+                error::StateErrorKind::ConstantAlreadyExist,
                 data.name(),
                 0,
                 0,
@@ -146,8 +149,8 @@ impl<T: Codegen<Backend = T>> State<T> {
 
     pub fn function(&mut self, data: &ast::FunctionStatement<'_>) -> StateResult<()> {
         if self.global.functions.contains_key(&data.name()) {
-            return Err(StateErrorResult::new(
-                StateErrorKind::FunctionAlreadyExist,
+            return Err(error::StateErrorResult::new(
+                error::StateErrorKind::FunctionAlreadyExist,
                 data.name(),
                 0,
                 0,
@@ -202,8 +205,8 @@ impl<T: Codegen<Backend = T>> State<T> {
             s_err
         });
         if !return_is_called {
-            result_errors.push(StateErrorResult::new(
-                StateErrorKind::ReturnNotFound,
+            result_errors.push(error::StateErrorResult::new(
+                error::StateErrorKind::ReturnNotFound,
                 String::new(),
                 0,
                 0,
@@ -263,8 +266,8 @@ impl<T: Codegen<Backend = T>> State<T> {
         body_state: &Rc<RefCell<ValueBlockState>>,
     ) -> StateResult<()> {
         if !self.global.functions.contains_key(&data.name()) {
-            return Err(StateErrorResult::new(
-                StateErrorKind::FunctionNotFound,
+            return Err(error::StateErrorResult::new(
+                error::StateErrorKind::FunctionNotFound,
                 data.name(),
                 0,
                 0,
@@ -397,8 +400,8 @@ impl<T: Codegen<Backend = T>> State<T> {
                     ))
                 } else {
                     // If value doesn't exist
-                    Err(StateErrorResult::new(
-                        StateErrorKind::ValueNotFound,
+                    Err(error::StateErrorResult::new(
+                        error::StateErrorKind::ValueNotFound,
                         value.name(),
                         0,
                         0,
@@ -443,47 +446,46 @@ impl<T: Codegen<Backend = T>> State<T> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum StateErrorKind {
-    ConstantAlreadyExist,
-    TypeAlreadyExist,
-    FunctionAlreadyExist,
-    ValueNotFound,
-    FunctionNotFound,
-    ReturnNotFound,
-}
+mod error {
+    #[derive(Debug, Clone)]
+    pub enum StateErrorKind {
+        ConstantAlreadyExist,
+        TypeAlreadyExist,
+        FunctionAlreadyExist,
+        ValueNotFound,
+        FunctionNotFound,
+        ReturnNotFound,
+    }
 
-#[derive(Debug, Clone)]
-pub struct StateErrorLocation {
-    line: u64,
-    column: u64,
-}
+    #[derive(Debug, Clone)]
+    pub struct StateErrorLocation {
+        line: u64,
+        column: u64,
+    }
 
-#[derive(Debug, Clone)]
-pub struct StateErrorResult {
-    kind: StateErrorKind,
-    value: String,
-    location: StateErrorLocation,
-}
+    #[derive(Debug, Clone)]
+    pub struct StateErrorResult {
+        kind: StateErrorKind,
+        value: String,
+        location: StateErrorLocation,
+    }
 
-impl StateErrorResult {
-    const fn new(kind: StateErrorKind, value: String, line: u64, column: u64) -> Self {
-        Self {
-            kind,
-            value,
-            location: StateErrorLocation { line, column },
+    impl StateErrorResult {
+        pub const fn new(kind: StateErrorKind, value: String, line: u64, column: u64) -> Self {
+            Self {
+                kind,
+                value,
+                location: StateErrorLocation { line, column },
+            }
+        }
+    }
+
+    impl StateErrorResult {
+        pub fn trace_state(&self) -> String {
+            format!(
+                "[{:?}] for value {:?} at: {:?}:{:?}",
+                self.kind, self.value, self.location.line, self.location.column
+            )
         }
     }
 }
-
-impl StateErrorResult {
-    pub fn trace_state(&self) -> String {
-        format!(
-            "[{:?}] for value {:?} at: {:?}:{:?}",
-            self.kind, self.value, self.location.line, self.location.column
-        )
-    }
-}
-
-pub type StateResult<T> = Result<T, StateErrorResult>;
-pub type StateResults<T> = Result<T, Vec<StateErrorResult>>;
