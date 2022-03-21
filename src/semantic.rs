@@ -16,7 +16,7 @@ pub struct Constant {
     pub inner_type: InnerType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Value {
     pub inner_name: ValueName,
     pub inner_type: InnerType,
@@ -32,11 +32,33 @@ pub struct ValueBlockState {
 
 impl ValueBlockState {
     fn new(parent: Option<Rc<RefCell<Self>>>) -> Self {
+        // Get last_register_number from parent
+        let last_register_number = parent
+            .clone()
+            .map_or(0, |p| p.borrow().last_register_number);
         Self {
             values: HashMap::new(),
-            last_register_number: 0,
+            last_register_number,
             parent,
         }
+    }
+
+    fn set_register(&mut self, last_register_number: u64) {
+        self.last_register_number = last_register_number;
+    }
+
+    fn inc_register(&mut self) {
+        self.last_register_number += 1;
+    }
+
+    fn get_parent_value_name(&self, name: &ValueName) -> Option<Value> {
+        if let Some(parent) = &self.parent {
+            if parent.borrow().values.get(name).is_some() {
+                return parent.borrow().values.get(name).cloned();
+            }
+            return parent.borrow().get_parent_value_name(name);
+        }
+        None
     }
 }
 
@@ -227,12 +249,18 @@ impl<T: Codegen<Backend = T>> State<T> {
         // Call value analytics before putting let-value to state
         // Put to the block state
         let expr_result = self.expression(&data.value, state)?;
-        let inner_name = state.borrow_mut().values.get(&data.name()).map_or_else(
-            || data.name(),
+        // Find value in current state
+        let inner_value = state.borrow().values.get(&data.name()).map_or_else(
+            || state.borrow().get_parent_value_name(&data.name()),
+            |val| Some(val.clone()),
+        );
+        // Calculate `inner_name`
+        let inner_name = inner_value.map_or_else(
+            || {
+                // if value not found in all states
+                data.name()
+            },
             |val| {
-                if val.allocated {
-                    // TODO: deallocate
-                }
                 // Increment inner value name counter for shadowed variable
                 let val_attr: Vec<&str> = val.inner_name.split('.').collect();
                 if val_attr.len() == 2 {
@@ -273,7 +301,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 0,
             ));
         }
-        body_state.borrow_mut().last_register_number += 1;
+        body_state.borrow_mut().inc_register();
         self.codegen = self
             .codegen
             .call(data, body_state.borrow().last_register_number);
@@ -316,6 +344,10 @@ impl<T: Codegen<Backend = T>> State<T> {
             }
             s_err
         });
+        // Update register for parent state
+        function_body_state
+            .borrow_mut()
+            .set_register(if_body_state.borrow().last_register_number);
         if result_errors.is_empty() {
             Ok(())
         } else {
@@ -382,7 +414,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                     || self.global.constants.contains_key(&value.name())
                 {
                     // Increase register counter before loading value
-                    body_state.borrow_mut().last_register_number += 1;
+                    body_state.borrow_mut().inc_register();
                     // First check value in body state
                     if let Some(val) = body_state.borrow().values.get(&value.name()) {
                         // If it's value then Load it to register
@@ -412,7 +444,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 Ok(ExpressionResult::PrimitiveValue(value.clone()))
             }
             ast::ExpressionValue::FunctionCall(fn_call) => {
-                body_state.borrow_mut().last_register_number += 1;
+                body_state.borrow_mut().inc_register();
                 let call_result = self.function_call(fn_call, body_state);
                 call_result
                     .map(|_| ExpressionResult::Register(body_state.borrow().last_register_number))
@@ -427,7 +459,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         }
         // Call expression operation for: OP(left_value, right_value)
         // and return result of that call as register
-        body_state.borrow_mut().last_register_number += 1;
+        body_state.borrow_mut().inc_register();
         self.codegen = self.codegen.expression_operation(
             op.unwrap(),
             left_value.unwrap(),
