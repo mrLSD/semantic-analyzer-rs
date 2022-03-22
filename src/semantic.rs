@@ -26,6 +26,8 @@ pub struct Value {
 #[derive(Debug)]
 pub struct ValueBlockState {
     pub values: HashMap<ValueName, Value>,
+    // Used to keep all names in the block state as unique
+    pub inner_values_name: HashSet<ValueName>,
     pub last_register_number: u64,
     pub parent: Option<Rc<RefCell<ValueBlockState>>>,
 }
@@ -36,8 +38,12 @@ impl ValueBlockState {
         let last_register_number = parent
             .clone()
             .map_or(0, |p| p.borrow().last_register_number);
+        let inner_values_name = parent
+            .clone()
+            .map_or_else(HashSet::new, |p| p.borrow().inner_values_name.clone());
         Self {
             values: HashMap::new(),
+            inner_values_name,
             last_register_number,
             parent,
         }
@@ -49,6 +55,15 @@ impl ValueBlockState {
 
     fn inc_register(&mut self) {
         self.last_register_number += 1;
+    }
+
+    /// Set `inner_name` to current state and all parent states
+    fn set_inner_name_and_to_parents(&mut self, name: &ValueName) {
+        self.inner_values_name.insert(name.clone());
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().inner_values_name.insert(name.clone());
+            parent.borrow_mut().set_inner_name_and_to_parents(name);
+        }
     }
 
     fn get_parent_value_name(&self, name: &ValueName) -> Option<Value> {
@@ -274,7 +289,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         state.borrow_mut().values.insert(
             data.name(),
             Value {
-                inner_name,
+                inner_name: inner_name.clone(),
                 inner_type: data
                     .clone()
                     .value_type
@@ -283,6 +298,9 @@ impl<T: Codegen<Backend = T>> State<T> {
                 allocated: false,
             },
         );
+        state
+            .borrow_mut()
+            .set_inner_name_and_to_parents(&inner_name);
 
         self.codegen = self.codegen.let_binding(data, &expr_result);
         Ok(())
