@@ -67,10 +67,9 @@ impl ValueBlockState {
     }
 
     fn get_parent_value_name(&self, name: &ValueName) -> Option<Value> {
-        if let Some(parent) = &self.parent {
-            if parent.borrow().values.get(name).is_some() {
-                return parent.borrow().values.get(name).cloned();
-            }
+        if let Some(val) = self.values.get(name) {
+            return Some(val.clone());
+        } else if let Some(parent) = &self.parent {
             return parent.borrow().get_parent_value_name(name);
         }
         None
@@ -265,10 +264,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         // Put to the block state
         let expr_result = self.expression(&data.value, state)?;
         // Find value in current state
-        let inner_value = state.borrow().values.get(&data.name()).map_or_else(
-            || state.borrow().get_parent_value_name(&data.name()),
-            |val| Some(val.clone()),
-        );
+        let inner_value = state.borrow().get_parent_value_name(&data.name());
         // Calculate `inner_name`
         let inner_name = inner_value.map_or_else(
             || {
@@ -319,10 +315,15 @@ impl<T: Codegen<Backend = T>> State<T> {
                 0,
             ));
         }
+        let mut params: Vec<ExpressionResult> = vec![];
+        for expr in &data.parameters {
+            params.push(self.expression(expr, body_state)?);
+        }
+
         body_state.borrow_mut().inc_register();
         self.codegen = self
             .codegen
-            .call(data, body_state.borrow().last_register_number);
+            .call(data, params, body_state.borrow().last_register_number);
         Ok(())
     }
 

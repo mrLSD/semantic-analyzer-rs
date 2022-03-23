@@ -37,7 +37,12 @@ impl Codegen for Backend {
         todo!()
     }
 
-    fn call(&self, _call: &ast::FunctionCall<'_>, _register_number: u64) -> Self::Backend {
+    fn call(
+        &self,
+        _call: &ast::FunctionCall<'_>,
+        _params: Vec<ExpressionResult>,
+        _register_number: u64,
+    ) -> Self::Backend {
         todo!()
     }
 

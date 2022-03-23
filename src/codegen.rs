@@ -13,7 +13,12 @@ pub trait Codegen {
         let_decl: &ast::LetBinding<'_>,
         expr_result: &ExpressionResult,
     ) -> Self::Backend;
-    fn call(&self, call: &ast::FunctionCall<'_>, register_number: u64) -> Self::Backend;
+    fn call(
+        &self,
+        call: &ast::FunctionCall<'_>,
+        params: Vec<ExpressionResult>,
+        register_number: u64,
+    ) -> Self::Backend;
     fn expression_value(&self, expression: &semantic::Value, register_number: u64)
         -> Self::Backend;
     fn expression_const(
