@@ -9,7 +9,7 @@ use inkwell::types::{
     ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType,
 };
 // use inkwell::values::BasicValue;
-use crate::semantic::ExpressionResult;
+use crate::semantic::{ExpressionResult, Value};
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -182,11 +182,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         }
     }
 
-    fn let_binding(
-        &self,
-        _let_decl: &ast::LetBinding<'_>,
-        _expr_result: &ExpressionResult,
-    ) -> Self::Backend {
+    fn let_binding(&self, _let_decl: &Value, _expr_result: &ExpressionResult) -> Self::Backend {
         todo!()
     }
 

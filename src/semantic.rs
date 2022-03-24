@@ -74,6 +74,22 @@ impl ValueBlockState {
         }
         None
     }
+
+    fn get_next_inner_name(&self, val: &str) -> String {
+        // Increment inner value name counter for shadowed variable
+        let val_attr: Vec<&str> = val.split('.').collect();
+        let name = if val_attr.len() == 2 {
+            let i: u64 = val_attr[1].parse().expect("expect integer");
+            format!("{}.{:?}", val_attr[0], i + 1)
+        } else {
+            format!("{}.0", val_attr[0])
+        };
+        if self.inner_values_name.contains(&name) {
+            self.get_next_inner_name(&name)
+        } else {
+            name
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -255,6 +271,17 @@ impl<T: Codegen<Backend = T>> State<T> {
         }
     }
 
+    /// # Let-binding statement
+    /// Analyze let-binding statement:
+    /// 1. Let value bind from expression. First analyse should be
+    /// `expression` for binding value.
+    /// 2. Generate value for current state. Special field `inner_name`
+    /// that used as name for codegen should be unique in current state and
+    /// for all parent states. For that `inner_name` for value incremented.
+    /// 3. Set for the value type and allocation status
+    /// 4. Insert value to current block state
+    /// 5. Store `inner_name` in current and parent states
+    /// 6. Codegen
     pub fn let_binding(
         &mut self,
         data: &ast::LetBinding<'_>,
@@ -263,9 +290,9 @@ impl<T: Codegen<Backend = T>> State<T> {
         // Call value analytics before putting let-value to state
         // Put to the block state
         let expr_result = self.expression(&data.value, state)?;
-        // Find value in current state
+        // Find value in current state and parent states
         let inner_value = state.borrow().get_parent_value_name(&data.name());
-        // Calculate `inner_name`
+        // Calculate `inner_name` as unique for current and all parent states
         let inner_name = inner_value.map_or_else(
             || {
                 // if value not found in all states
@@ -273,32 +300,27 @@ impl<T: Codegen<Backend = T>> State<T> {
             },
             |val| {
                 // Increment inner value name counter for shadowed variable
-                let val_attr: Vec<&str> = val.inner_name.split('.').collect();
-                if val_attr.len() == 2 {
-                    let i: u64 = val_attr[1].parse().expect("expect integer");
-                    format!("{}.{:?}", val_attr[0], i + 1)
-                } else {
-                    format!("{}.0", val_attr[0])
-                }
+                // and check variable inner_name for aldd inner_values in current state
+                state.borrow().get_next_inner_name(&val.inner_name)
             },
         );
-        state.borrow_mut().values.insert(
-            data.name(),
-            Value {
-                inner_name: inner_name.clone(),
-                inner_type: data
-                    .clone()
-                    .value_type
-                    // TODO: resolve type from expression for empty case
-                    .map_or(String::new(), |ty| ty.name()),
-                allocated: false,
-            },
-        );
+        // Insert value to current block state
+        let value = Value {
+            inner_name: inner_name.clone(),
+            inner_type: data
+                .clone()
+                .value_type
+                // TODO: resolve type from expression for empty case
+                .map_or(String::new(), |ty| ty.name()),
+            allocated: false,
+        };
+        state.borrow_mut().values.insert(data.name(), value.clone());
+        // Set `inner_name` to current state and all parent states
         state
             .borrow_mut()
             .set_inner_name_and_to_parents(&inner_name);
 
-        self.codegen = self.codegen.let_binding(data, &expr_result);
+        self.codegen = self.codegen.let_binding(&value, &expr_result);
         Ok(())
     }
 
@@ -429,17 +451,16 @@ impl<T: Codegen<Backend = T>> State<T> {
         // because next analyzer should use success result/
         let right_value = match &right_expression.expression_value {
             ast::ExpressionValue::ValueName(value) => {
-                if body_state.borrow_mut().values.contains_key(&value.name())
-                    || self.global.constants.contains_key(&value.name())
-                {
+                let value_from_state = body_state.borrow_mut().get_parent_value_name(&value.name());
+                if value_from_state.is_some() || self.global.constants.contains_key(&value.name()) {
                     // Increase register counter before loading value
                     body_state.borrow_mut().inc_register();
                     // First check value in body state
-                    if let Some(val) = body_state.borrow().values.get(&value.name()) {
+                    if let Some(val) = value_from_state {
                         // If it's value then Load it to register
                         self.codegen = self
                             .codegen
-                            .expression_value(val, body_state.borrow().last_register_number);
+                            .expression_value(&val, body_state.borrow().last_register_number);
                     } else if let Some(const_val) = self.global.constants.get(&value.name()) {
                         // If value is constant load it to register
                         self.codegen = self

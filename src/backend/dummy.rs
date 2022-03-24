@@ -1,5 +1,5 @@
 use crate::codegen::Codegen;
-use crate::semantic::ExpressionResult;
+use crate::semantic::{ExpressionResult, Value};
 use crate::{ast, semantic};
 
 pub struct Backend;
@@ -29,11 +29,7 @@ impl Codegen for Backend {
         todo!()
     }
 
-    fn let_binding(
-        &self,
-        _let_decl: &ast::LetBinding<'_>,
-        _expr_result: &ExpressionResult,
-    ) -> Self::Backend {
+    fn let_binding(&self, _let_decl: &Value, _expr_result: &ExpressionResult) -> Self::Backend {
         todo!()
     }
 
