@@ -182,7 +182,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         }
     }
 
-    fn let_binding(&self, _let_decl: &Value, _expr_result: &ExpressionResult) -> Self::Backend {
+    fn let_binding(&mut self, _let_decl: &Value, _expr_result: &ExpressionResult) {
         todo!()
     }
 
@@ -195,11 +195,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn expression_value(
-        &self,
-        _expression: &semantic::Value,
-        _register_number: u64,
-    ) -> Self::Backend {
+    fn expression_value(&mut self, _expression: &semantic::Value, _register_number: u64) {
         todo!()
     }
 

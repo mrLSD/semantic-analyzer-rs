@@ -6,6 +6,9 @@ description = "ThatRoze - programming language and compiler"
 license = "MIT"
 edition = "2021"
 
+[lib]
+doctest = false
+
 [dependencies]
 nom_locate = "4.1"
 nom = "7.1.3"

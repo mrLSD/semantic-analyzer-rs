@@ -12,4 +12,6 @@ clippy-15:
 
 fmt:
 	@cargo fmt
-	
+
+test:
+	@cargo test -- --nocapture

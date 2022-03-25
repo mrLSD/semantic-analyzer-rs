@@ -34,6 +34,12 @@ pub struct ParameterName<'a>(Ident<'a>);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValueName<'a>(Ident<'a>);
 
+impl<'a> ValueName<'a> {
+    pub const fn new(name: Ident<'a>) -> Self {
+        Self(name)
+    }
+}
+
 impl GetName for ValueName<'_> {
     fn name(&self) -> String {
         self.0.to_string()

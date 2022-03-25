@@ -33,7 +33,7 @@ pub struct ValueBlockState {
 }
 
 impl ValueBlockState {
-    fn new(parent: Option<Rc<RefCell<Self>>>) -> Self {
+    pub fn new(parent: Option<Rc<RefCell<Self>>>) -> Self {
         // Get last_register_number from parent
         let last_register_number = parent
             .clone()
@@ -112,6 +112,7 @@ pub struct State<T: Codegen> {
     pub codegen: T,
 }
 
+#[derive(Debug)]
 pub enum ExpressionResult {
     PrimitiveValue(PrimitiveValue),
     Register(u64),
@@ -290,6 +291,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         // Call value analytics before putting let-value to state
         // Put to the block state
         let expr_result = self.expression(&data.value, state)?;
+
         // Find value in current state and parent states
         let inner_value = state.borrow().get_parent_value_name(&data.name());
         // Calculate `inner_name` as unique for current and all parent states
@@ -320,7 +322,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             .borrow_mut()
             .set_inner_name_and_to_parents(&inner_name);
 
-        self.codegen = self.codegen.let_binding(&value, &expr_result);
+        self.codegen.let_binding(&value, &expr_result);
         Ok(())
     }
 
@@ -458,8 +460,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                     // First check value in body state
                     if let Some(val) = value_from_state {
                         // If it's value then Load it to register
-                        self.codegen = self
-                            .codegen
+                        self.codegen
                             .expression_value(&val, body_state.borrow().last_register_number);
                     } else if let Some(const_val) = self.global.constants.get(&value.name()) {
                         // If value is constant load it to register
@@ -493,9 +494,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         // It's special case for "pure" expression - without operation.
         // For that also left side of expression shouldn't exist
         if left_value.is_none() || op.is_none() {
-            return Ok(ExpressionResult::Register(
-                body_state.borrow().last_register_number,
-            ));
+            return Ok(right_value);
         }
         // Call expression operation for: OP(left_value, right_value)
         // and return result of that call as register
