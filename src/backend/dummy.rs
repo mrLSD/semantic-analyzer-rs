@@ -70,7 +70,7 @@ impl Codegen for Backend {
         self.set_stack(
             "expression_value",
             format!(
-                "%{register_number:?} = load {}, ptr {}",
+                "%{register_number:?} = load {}, ptr %{}",
                 value.inner_type, value.inner_name
             ),
         );
