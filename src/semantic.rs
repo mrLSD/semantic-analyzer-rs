@@ -111,13 +111,13 @@ impl<'a, T: Codegen> State<'a, T> {
         })
     }
 
+    #[allow(clippy::unused_self)]
     pub fn let_binding(
         &self,
         data: &ast::LetBinding<'a>,
         state: &mut BodyState<'a>,
     ) -> Vec<StateResult> {
         state.values.insert(data.name(), data.clone());
-        let _ = self;
         vec![]
     }
 
