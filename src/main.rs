@@ -8,6 +8,7 @@ mod codegen;
 mod semantic;
 
 fn main() {
-    State::new(Backend::new());
-    println!("#> ...");
+    let source: ast::Main = vec![];
+    let res = State::new(Backend::new()).run(&source);
+    println!("#> ... {:?}", res.len());
 }

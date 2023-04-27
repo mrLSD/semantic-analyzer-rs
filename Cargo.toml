@@ -2,7 +2,7 @@
 name = "z-rose"
 version = "0.1.0"
 authors = ["Evgeny Ukhanov <mrlsd@ya.ru>"]
-description = "Programming language and compiler"
+description = "ThatRoze - programming language and compiler"
 license = "MIT"
 edition = "2021"
 

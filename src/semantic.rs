@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-#![allow(clippy::unused_self)]
-
 use crate::ast::{self, ExpressionOperations, GetName, PrimitiveValue};
 use crate::codegen::Codegen;
 use std::collections::{HashMap, HashSet};
@@ -61,12 +58,10 @@ pub struct State<T: Codegen> {
 
 #[derive(Debug, Clone)]
 pub enum StateResult {
-    Success,
     ConstantAlreadyExist,
     TypeAlreadyExist,
     FunctionAlreadyExist,
     ValueNotFound,
-    TypeNotFound,
     FunctionNotFound,
 }
 
@@ -109,7 +104,8 @@ impl<T: Codegen<Backend = T>> State<T> {
         })
     }
 
-    pub fn import(&mut self, _data: &ast::ImportPath<'_>) -> Vec<StateResult> {
+    #[allow(clippy::unused_self)]
+    pub const fn import(&self, _data: &ast::ImportPath<'_>) -> Vec<StateResult> {
         // TODO: process imports
         vec![]
     }
@@ -258,8 +254,9 @@ impl<T: Codegen<Backend = T>> State<T> {
         vec![]
     }
 
-    pub fn if_condition(
-        &mut self,
+    #[allow(clippy::unused_self)]
+    pub const fn if_condition(
+        &self,
         _data: &ast::IfStatement<'_>,
         _body_state: &ValueBlockState,
     ) -> Vec<StateResult> {
@@ -282,8 +279,9 @@ impl<T: Codegen<Backend = T>> State<T> {
         vec![]
     }
 
-    pub fn loop_statement(
-        &mut self,
+    #[allow(clippy::unused_self)]
+    pub const fn loop_statement(
+        &self,
         _data: &[ast::BodyStatement<'_>],
         _body_state: &ValueBlockState,
     ) -> Vec<StateResult> {
@@ -372,8 +370,9 @@ impl<T: Codegen<Backend = T>> State<T> {
 
     /// Expression operation:
     /// `OP(lhs, rhs)`
+    #[allow(clippy::unused_self)]
     pub fn expression_operation(
-        &mut self,
+        &self,
         _lhs: &ExpressionResult,
         _rhs: &ast::Expression<'_>,
         _op: &ExpressionOperations,
