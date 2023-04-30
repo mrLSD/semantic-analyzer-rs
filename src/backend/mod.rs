@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+pub mod dummy;
+
 use crate::ast;
 use crate::ast::GetName;
 use crate::codegen::Codegen;
