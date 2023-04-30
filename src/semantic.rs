@@ -3,7 +3,44 @@
 
 use crate::ast::{self, GetName};
 use crate::codegen::Codegen;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
+
+type ValueName = String;
+type InnerType = String;
+
+#[derive(Debug)]
+pub struct Constant {
+    pub name: String,
+    pub inner_type: InnerType,
+}
+
+#[derive(Debug)]
+pub struct Value {
+    pub inner_name: ValueName,
+    pub inner_type: InnerType,
+    pub allocated: bool,
+}
+
+#[derive(Debug)]
+pub struct ValueBlockState {
+    pub values: HashMap<ValueName, Value>,
+    pub parent: Rc<ValueBlockState>,
+}
+
+#[derive(Debug)]
+pub struct Function {
+    pub inner_name: String,
+    pub inner_type: InnerType,
+    pub parameters: Vec<InnerType>,
+}
+
+#[derive(Debug)]
+pub struct GState {
+    pub constants: HashMap<String, Constant>,
+    pub types: HashSet<InnerType>,
+    pub functions: HashMap<String, Function>,
+}
 
 #[derive(Debug)]
 pub struct GlobalState<'a> {
@@ -56,6 +93,7 @@ impl<'a, T: Codegen> State<'a, T> {
             let mut res = match main {
                 ast::MainStatement::Import(import) => self.import(import),
                 ast::MainStatement::Constant(constant) => self.constant(constant),
+                ast::MainStatement::Types(_) => todo!(),
                 ast::MainStatement::Function(function) => self.function(function),
             };
             s.append(&mut res);
@@ -95,7 +133,6 @@ impl<'a, T: Codegen> State<'a, T> {
                 ast::BodyStatement::FunctionCall(fn_call) => {
                     self.function_call(fn_call, &body_state)
                 }
-
                 ast::BodyStatement::If(if_condition) => {
                     self.if_condition(if_condition, &body_state)
                 }

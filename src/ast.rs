@@ -218,6 +218,7 @@ pub enum BodyStatement<'a> {
 pub enum MainStatement<'a> {
     Import(ImportPath<'a>),
     Constant(Constant<'a>),
+    Types(StructTypes<'a>),
     Function(FunctionStatement<'a>),
 }
 
