@@ -7,6 +7,10 @@ pub trait GetName {
     fn name(&self) -> String;
 }
 
+pub trait GetType {
+    fn inner_type(&self) -> String;
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImportName<'a>(Ident<'a>);
 
@@ -52,6 +56,25 @@ pub enum PrimitiveTypes {
     Char,
 }
 
+impl GetName for PrimitiveTypes {
+    fn name(&self) -> String {
+        match self {
+            Self::U8 => "u8".to_string(),
+            Self::U16 => "u16".to_string(),
+            Self::U32 => "u32".to_string(),
+            Self::U64 => "u64".to_string(),
+            Self::I8 => "i8".to_string(),
+            Self::I16 => "i16".to_string(),
+            Self::I32 => "i32".to_string(),
+            Self::I64 => "i64".to_string(),
+            Self::F32 => "f32".to_string(),
+            Self::F64 => "f64".to_string(),
+            Self::Bool => "bool".to_string(),
+            Self::Char => "char".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructType<'a> {
     pub attr_name: Ident<'a>,
@@ -69,6 +92,18 @@ pub enum Type<'a> {
     Primitive(PrimitiveTypes),
     Struct(StructTypes<'a>),
     Array(Box<Self>, u32),
+}
+
+impl<'a> GetName for Type<'a> {
+    fn name(&self) -> String {
+        match self {
+            Self::Primitive(primitive) => primitive.name(),
+            Self::Struct(struct_type) => struct_type.name.to_string(),
+            Self::Array(array_type, size) => {
+                format!("[{:?};{:?}]", array_type.name(), size)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -93,6 +128,12 @@ pub struct Constant<'a> {
 impl GetName for Constant<'_> {
     fn name(&self) -> String {
         (*self.name.0.fragment()).to_string()
+    }
+}
+
+impl GetType for Constant<'_> {
+    fn inner_type(&self) -> String {
+        self.constant_type.name()
     }
 }
 

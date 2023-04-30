@@ -1,7 +1,10 @@
 #![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(clippy::unused_self)]
 #![allow(clippy::ptr_arg)]
 
-use crate::ast::{self, GetName};
+use crate::ast;
+use crate::ast::{GetName, GetType};
 use crate::codegen::Codegen;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -36,59 +39,39 @@ pub struct Function {
 }
 
 #[derive(Debug)]
-pub struct GState {
+pub struct GlobalState {
     pub constants: HashMap<String, Constant>,
     pub types: HashSet<InnerType>,
     pub functions: HashMap<String, Function>,
 }
 
 #[derive(Debug)]
-pub struct GlobalState<'a> {
-    pub imports: HashMap<String, ast::ImportPath<'a>>,
-    pub constants: HashMap<String, ast::Constant<'a>>,
-    pub functions: HashMap<String, ast::FunctionStatement<'a>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct BodyState<'a> {
-    pub values: HashMap<String, ast::LetBinding<'a>>,
-    pub functions: HashMap<String, ast::FunctionStatement<'a>>,
-}
-
-#[derive(Debug)]
-pub struct State<'a, T: Codegen> {
-    pub global: GlobalState<'a>,
+pub struct State<T: Codegen> {
+    pub global: GlobalState,
     pub codegen: T,
 }
 
 #[derive(Debug, Clone)]
 pub enum StateResult {
+    Success,
     ValueNotFound,
+    TypeNotFound,
     FunctionNotFound,
 }
 
-impl<'a> BodyState<'a> {
-    pub fn new() -> Self {
-        Self {
-            values: HashMap::new(),
-            functions: HashMap::new(),
-        }
-    }
-}
-
-impl<'a, T: Codegen> State<'a, T> {
+impl<T: Codegen> State<T> {
     pub fn new(codegen: T) -> Self {
         Self {
             global: GlobalState {
                 functions: HashMap::new(),
-                imports: HashMap::new(),
+                types: HashSet::new(),
                 constants: HashMap::new(),
             },
             codegen,
         }
     }
 
-    pub fn main(&mut self, data: &ast::Main<'a>) -> Vec<StateResult> {
+    pub fn run(&mut self, data: &ast::Main<'_>) -> Vec<StateResult> {
         data.iter().fold(vec![], |mut s, main| {
             let mut res = match main {
                 ast::MainStatement::Import(import) => self.import(import),
@@ -102,30 +85,35 @@ impl<'a, T: Codegen> State<'a, T> {
     }
 
     /// Set import module (las element in import path)
-    pub fn import(&mut self, data: &ast::ImportPath<'a>) -> Vec<StateResult> {
-        self.global
-            .imports
-            .insert(data[data.len() - 1].name(), data.clone());
+    pub fn import(&mut self, _data: &ast::ImportPath<'_>) -> Vec<StateResult> {
+        // TODO: process imports
         vec![]
     }
 
-    pub fn constant(&mut self, data: &ast::Constant<'a>) -> Vec<StateResult> {
-        self.global.constants.insert(data.name(), data.clone());
+    pub fn constant(&mut self, data: &ast::Constant<'_>) -> Vec<StateResult> {
+        self.global.constants.insert(
+            data.name(),
+            Constant {
+                name: data.name(),
+                inner_type: data.inner_type(),
+            },
+        );
         vec![]
     }
 
-    pub fn function(&mut self, data: &ast::FunctionStatement<'a>) -> Vec<StateResult> {
-        self.global.functions.insert(data.name(), data.clone());
-        // Init Body state. It's root state
-        let body_state = BodyState::new();
-        self.body_statement(&data.body, body_state)
+    pub fn function(&mut self, data: &ast::FunctionStatement<'_>) -> Vec<StateResult> {
+        // self.global.functions.insert(data.name(), data.clone());
+        // let body_state = BodyState::new();
+        // self.body_statement(&data.body, body_state)
+        vec![]
     }
 
     pub fn body_statement(
         &mut self,
-        data: &Vec<ast::BodyStatement<'a>>,
-        body_state: BodyState<'a>,
+        data: &Vec<ast::BodyStatement<'_>>,
+        body_state: &ValueBlockState,
     ) -> Vec<StateResult> {
+        /*
         let mut body_state = body_state;
         data.iter().fold(vec![], |mut s, body| {
             let mut res = match body {
@@ -146,24 +134,27 @@ impl<'a, T: Codegen> State<'a, T> {
             s.append(&mut res);
             s
         })
+        */
+        vec![]
     }
 
     #[allow(clippy::unused_self)]
     pub fn let_binding(
         &self,
-        data: &ast::LetBinding<'a>,
-        state: &mut BodyState<'a>,
+        data: &ast::LetBinding<'_>,
+        state: &mut ValueBlockState,
     ) -> Vec<StateResult> {
-        state.values.insert(data.name(), data.clone());
+        //state.values.insert(data.name(), data.clone());
         vec![]
     }
 
     /// Function call do not change state analyzer but use it
     pub fn function_call(
         &mut self,
-        data: &ast::FunctionCall<'a>,
-        body_state: &BodyState<'a>,
+        data: &ast::FunctionCall<'_>,
+        body_state: &ValueBlockState,
     ) -> Vec<StateResult> {
+        /*
         let res = if body_state.functions.contains_key(&data.name())
             || self.global.functions.contains_key(&data.name())
         {
@@ -176,13 +167,16 @@ impl<'a, T: Codegen> State<'a, T> {
             s.append(&mut res_expr);
             s
         })
+            */
+        vec![]
     }
 
     pub fn if_condition(
         &mut self,
-        data: &ast::IfStatement<'a>,
-        body_state: &BodyState<'a>,
+        data: &ast::IfStatement<'_>,
+        body_state: &ValueBlockState,
     ) -> Vec<StateResult> {
+        /*
         let mut res = self.body_statement(&data.body, body_state.clone());
         if let Some(data) = &data.else_statement {
             let mut r = self.body_statement(data, body_state.clone());
@@ -197,23 +191,26 @@ impl<'a, T: Codegen> State<'a, T> {
             res.append(&mut r);
         }
         res
+            */
+        vec![]
     }
 
     pub fn loop_statement(
         &mut self,
-        data: &Vec<ast::BodyStatement<'a>>,
-        body_state: &BodyState<'a>,
+        data: &Vec<ast::BodyStatement<'_>>,
+        body_state: &ValueBlockState,
     ) -> Vec<StateResult> {
-        self.body_statement(data, body_state.clone())
+        self.body_statement(data, body_state)
     }
 
     /// Expression is basic entity for state operation and state usage.
     /// State correctness verified by expressions call.
     pub fn expression(
         &mut self,
-        data: &ast::Expression<'a>,
-        body_state: &BodyState<'a>,
+        data: &ast::Expression<'_>,
+        body_state: &ValueBlockState,
     ) -> Vec<StateResult> {
+        /*
         let mut res = match &data.expression_value {
             ast::ExpressionValue::ValueName(value) => {
                 // First check value in body state
@@ -236,5 +233,7 @@ impl<'a, T: Codegen> State<'a, T> {
             res.append(&mut res_mut);
         }
         res
+        */
+        vec![]
     }
 }
