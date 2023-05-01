@@ -117,10 +117,10 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
     ) -> PointerValue<'ctx> {
         let builder = self.context.create_builder();
         let entry = fn_value.get_first_basic_block().unwrap();
-        match entry.get_first_instruction() {
-            Some(first_instr) => builder.position_before(&first_instr),
-            None => builder.position_at_end(entry),
-        }
+        entry.get_first_instruction().map_or_else(
+            || builder.position_at_end(entry),
+            |first_instr| builder.position_before(&first_instr),
+        );
         builder.build_alloca(self.context.f64_type(), name)
     }
 }

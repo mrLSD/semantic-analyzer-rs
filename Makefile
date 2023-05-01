@@ -1,5 +1,5 @@
 clippy:
-	@cargo clippy -- -D clippy::pedantic
+	@cargo clippy -- -D warnings
 	@cargo fmt --check
 
 fmt:

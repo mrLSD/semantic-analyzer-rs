@@ -1,3 +1,4 @@
+#![deny(clippy::pedantic, clippy::nursery)]
 use crate::backend::dummy::Backend;
 use crate::semantic::State;
 

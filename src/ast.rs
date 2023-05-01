@@ -11,7 +11,7 @@ pub trait GetType {
     fn inner_type(&self) -> String;
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImportName<'a>(Ident<'a>);
 
 impl GetName for ImportName<'_> {
@@ -22,16 +22,16 @@ impl GetName for ImportName<'_> {
 
 pub type ImportPath<'a> = Vec<ImportName<'a>>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConstantName<'a>(Ident<'a>);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionName<'a>(Ident<'a>);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParameterName<'a>(Ident<'a>);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValueName<'a>(Ident<'a>);
 
 impl GetName for ValueName<'_> {
@@ -40,7 +40,7 @@ impl GetName for ValueName<'_> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrimitiveTypes {
     U8,
     U16,
@@ -188,7 +188,7 @@ pub enum ExpressionValue<'a> {
     FunctionCall(FunctionCall<'a>),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExpressionOperations {
     Plus,
     Minus,

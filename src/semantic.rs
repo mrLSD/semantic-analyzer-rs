@@ -32,7 +32,7 @@ pub struct ValueBlockState {
 }
 
 impl ValueBlockState {
-    fn new(parent: Option<Rc<ValueBlockState>>) -> Self {
+    fn new(parent: Option<Rc<Self>>) -> Self {
         Self {
             values: HashMap::new(),
             parent,
