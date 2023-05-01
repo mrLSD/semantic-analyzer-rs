@@ -4,7 +4,7 @@
 #![allow(clippy::ptr_arg)]
 
 use crate::ast;
-use crate::ast::{GetName, GetType};
+use crate::ast::GetName;
 use crate::codegen::Codegen;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -28,7 +28,16 @@ pub struct Value {
 #[derive(Debug)]
 pub struct ValueBlockState {
     pub values: HashMap<ValueName, Value>,
-    pub parent: Rc<ValueBlockState>,
+    pub parent: Option<Rc<ValueBlockState>>,
+}
+
+impl ValueBlockState {
+    fn new(parent: Option<Rc<ValueBlockState>>) -> Self {
+        Self {
+            values: HashMap::new(),
+            parent,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -54,6 +63,9 @@ pub struct State<T: Codegen> {
 #[derive(Debug, Clone)]
 pub enum StateResult {
     Success,
+    ConstantAlreadyExist,
+    TypeAlreadyExist,
+    FunctionAlreadyExist,
     ValueNotFound,
     TypeNotFound,
     FunctionNotFound,
@@ -72,47 +84,77 @@ impl<T: Codegen> State<T> {
     }
 
     pub fn run(&mut self, data: &ast::Main<'_>) -> Vec<StateResult> {
-        data.iter().fold(vec![], |mut s, main| {
+        let res = data.iter().fold(vec![], |mut s, main| {
             let mut res = match main {
                 ast::MainStatement::Import(import) => self.import(import),
                 ast::MainStatement::Constant(constant) => self.constant(constant),
-                ast::MainStatement::Types(_) => todo!(),
+                ast::MainStatement::Types(types) => self.types(types),
                 ast::MainStatement::Function(function) => self.function(function),
+            };
+            s.append(&mut res);
+            s
+        });
+        // After gathe all functions declarations, fetch only functions body
+        data.iter().fold(res, |mut s, main| {
+            let mut res = match main {
+                ast::MainStatement::Function(function) => self.function_body(function),
+                _ => return s,
             };
             s.append(&mut res);
             s
         })
     }
 
-    /// Set import module (las element in import path)
     pub fn import(&mut self, _data: &ast::ImportPath<'_>) -> Vec<StateResult> {
         // TODO: process imports
         vec![]
     }
 
+    pub fn types(&mut self, data: &ast::StructTypes<'_>) -> Vec<StateResult> {
+        if self.global.types.contains(&data.name()) {
+            return vec![StateResult::TypeAlreadyExist];
+        }
+        self.global.types.insert(data.name());
+        vec![]
+    }
+
     pub fn constant(&mut self, data: &ast::Constant<'_>) -> Vec<StateResult> {
+        if self.global.constants.contains_key(&data.name()) {
+            return vec![StateResult::ConstantAlreadyExist];
+        }
         self.global.constants.insert(
             data.name(),
             Constant {
                 name: data.name(),
-                inner_type: data.inner_type(),
+                inner_type: data.constant_type.name(),
             },
         );
         vec![]
     }
 
     pub fn function(&mut self, data: &ast::FunctionStatement<'_>) -> Vec<StateResult> {
-        // self.global.functions.insert(data.name(), data.clone());
+        if self.global.functions.contains_key(&data.name()) {
+            return vec![StateResult::FunctionAlreadyExist];
+        }
+        self.global.functions.insert(
+            data.name(),
+            Function {
+                inner_name: data.name(),
+                inner_type: data.result_type.name(),
+                parameters: data
+                    .parameters
+                    .iter()
+                    .map(|p| p.parameter_type.name())
+                    .collect(),
+            },
+        );
         // let body_state = BodyState::new();
         // self.body_statement(&data.body, body_state)
         vec![]
     }
 
-    pub fn body_statement(
-        &mut self,
-        data: &Vec<ast::BodyStatement<'_>>,
-        body_state: &ValueBlockState,
-    ) -> Vec<StateResult> {
+    pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) -> Vec<StateResult> {
+        let _body_state: ValueBlockState = ValueBlockState::new(None);
         /*
         let mut body_state = body_state;
         data.iter().fold(vec![], |mut s, body| {
@@ -200,7 +242,8 @@ impl<T: Codegen> State<T> {
         data: &Vec<ast::BodyStatement<'_>>,
         body_state: &ValueBlockState,
     ) -> Vec<StateResult> {
-        self.body_statement(data, body_state)
+        // self.body_statement(data, body_state)
+        vec![]
     }
 
     /// Expression is basic entity for state operation and state usage.

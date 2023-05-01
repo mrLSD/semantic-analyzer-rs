@@ -87,6 +87,12 @@ pub struct StructTypes<'a> {
     pub types: Vec<StructType<'a>>,
 }
 
+impl<'a> GetName for StructTypes<'a> {
+    fn name(&self) -> String {
+        self.name.to_string()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type<'a> {
     Primitive(PrimitiveTypes),
@@ -131,12 +137,6 @@ impl GetName for Constant<'_> {
     }
 }
 
-impl GetType for Constant<'_> {
-    fn inner_type(&self) -> String {
-        self.constant_type.name()
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionParameter<'a> {
     pub name: ParameterName<'a>,
@@ -153,7 +153,7 @@ impl GetName for FunctionParameter<'_> {
 pub struct FunctionStatement<'a> {
     pub name: FunctionName<'a>,
     pub parameters: Vec<FunctionParameter<'a>>,
-    pub result_type: Vec<Type<'a>>,
+    pub result_type: Type<'a>,
     pub body: Vec<BodyStatement<'a>>,
 }
 
