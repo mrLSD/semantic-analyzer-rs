@@ -54,6 +54,8 @@ pub enum PrimitiveTypes {
     F64,
     Bool,
     Char,
+    String,
+    None,
 }
 
 impl GetName for PrimitiveTypes {
@@ -71,6 +73,8 @@ impl GetName for PrimitiveTypes {
             Self::F64 => "f64".to_string(),
             Self::Bool => "bool".to_string(),
             Self::Char => "char".to_string(),
+            Self::String => "str".to_string(),
+            Self::None => "()".to_string(),
         }
     }
 }
@@ -179,6 +183,27 @@ pub enum PrimitiveValue {
     String(String),
     Char(char),
     None,
+}
+
+impl PrimitiveValue {
+    pub const fn get_type(&self) -> PrimitiveTypes {
+        match self {
+            Self::U8(_) => PrimitiveTypes::U8,
+            Self::U16(_) => PrimitiveTypes::U16,
+            Self::U32(_) => PrimitiveTypes::U32,
+            Self::U64(_) => PrimitiveTypes::U64,
+            Self::I8(_) => PrimitiveTypes::I8,
+            Self::I16(_) => PrimitiveTypes::I16,
+            Self::I32(_) => PrimitiveTypes::I32,
+            Self::I64(_) => PrimitiveTypes::I64,
+            Self::F32(_) => PrimitiveTypes::F32,
+            Self::F64(_) => PrimitiveTypes::F64,
+            Self::Char(_) => PrimitiveTypes::Char,
+            Self::Bool(_) => PrimitiveTypes::Bool,
+            Self::String(_) => PrimitiveTypes::String,
+            Self::None => PrimitiveTypes::None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

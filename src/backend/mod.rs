@@ -2,9 +2,9 @@
 
 pub mod dummy;
 
-use crate::ast;
 use crate::ast::{Constant, GetName, StructTypes};
 use crate::codegen::Codegen;
+use crate::{ast, semantic};
 use inkwell::types::{
     ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType,
 };
@@ -92,6 +92,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 ast::PrimitiveTypes::F32 => self.context.f32_type().into(),
                 ast::PrimitiveTypes::F64 => self.context.f64_type().into(),
                 ast::PrimitiveTypes::Bool => self.context.bool_type().into(),
+                ast::PrimitiveTypes::String | ast::PrimitiveTypes::None => todo!(),
             },
             ast::Type::Struct(ty_struct) => {
                 let struct_types = ty_struct
@@ -188,7 +189,11 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn expression(&self, _expression: &ast::Expression) -> &Self {
-        self
+    fn expression_value(&self, _expression: &semantic::Value) -> Self::Backend {
+        todo!()
+    }
+
+    fn expression_const(&self, _expression: &semantic::Constant) -> Self::Backend {
+        todo!()
     }
 }

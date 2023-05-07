@@ -1,5 +1,5 @@
-use crate::ast;
 use crate::codegen::Codegen;
+use crate::{ast, semantic};
 
 pub struct Backend;
 
@@ -36,7 +36,10 @@ impl Codegen for Backend {
         todo!()
     }
 
-    fn expression(&self, _expression: &ast::Expression) -> &Self {
+    fn expression_value(&self, _expression: &semantic::Value) -> Self::Backend {
+        todo!()
+    }
+    fn expression_const(&self, _expression: &semantic::Constant) -> Self::Backend {
         todo!()
     }
 }

@@ -4,11 +4,10 @@
 #![allow(clippy::ptr_arg)]
 
 use crate::ast;
-use crate::ast::{GetName, PrimitiveTypes};
+use crate::ast::{GetName, PrimitiveValue};
 use crate::codegen::Codegen;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
-use std::str::FromStr;
 
 type ValueName = String;
 type InnerType = String;
@@ -74,8 +73,8 @@ pub enum StateResult {
     FunctionNotFound,
 }
 
-pub enum ExpressionResult<T: FromStr> {
-    PrimitiveValue(PrimitiveTypes, T),
+pub enum ExpressionResult {
+    PrimitiveValue(PrimitiveValue),
     Register(u64),
 }
 
@@ -177,7 +176,8 @@ impl<T: Codegen<Backend = T>> State<T> {
                     self.loop_statement(loop_statement, &body_state)
                 }
                 ast::BodyStatement::Expression(expression) => {
-                    self.expression(expression, &body_state)
+                    let res = self.expression(expression, &mut body_state);
+                    res.1
                 }
             };
             s.append(&mut res);
@@ -294,9 +294,11 @@ impl<T: Codegen<Backend = T>> State<T> {
     }
 
     #[allow(clippy::doc_markdown)]
-    /// Expression is basic entity for state operation and state usage.
+    /// ## Expression
+    /// Is basic entity for state operation and state usage.
     /// State correctness verified by expressions call.
     /// Return: PrimitiveValue | TmpRegister
+    ///
     ///     1. PrimitiveValue -> PrimitiveValue
     ///     2. Value -> load -> TmpRegister
     ///     3. FuncCall -> call -> TmpRegister
@@ -313,33 +315,47 @@ impl<T: Codegen<Backend = T>> State<T> {
     pub fn expression(
         &mut self,
         data: &ast::Expression<'_>,
-        body_state: &ValueBlockState,
-    ) -> Vec<StateResult> {
+        body_state: &mut ValueBlockState,
+    ) -> (Option<ExpressionResult>, Vec<StateResult>) {
         let res = match &data.expression_value {
             ast::ExpressionValue::ValueName(value) => {
                 // First check value in body state
-                if body_state.values.contains_key(&value.name())
-                    || self.global.constants.contains_key(&value.name())
-                {
-                    vec![]
+                if let Some(val) = body_state.values.get(&value.name()) {
+                    body_state.last_register_number += 1;
+                    self.codegen = self.codegen.expression_value(val);
+                    (
+                        Some(ExpressionResult::Register(body_state.last_register_number)),
+                        vec![],
+                    )
+                } else if let Some(const_val) = self.global.constants.get(&value.name()) {
+                    body_state.last_register_number += 1;
+                    self.codegen = self.codegen.expression_const(const_val);
+                    (
+                        Some(ExpressionResult::Register(body_state.last_register_number)),
+                        vec![],
+                    )
                 } else {
-                    vec![StateResult::ValueNotFound]
+                    (None, vec![StateResult::ValueNotFound])
                 }
-                // TODO: load-instruction
             }
-            ast::ExpressionValue::PrimitiveValue(_value) => {
-                // TODO: store-instruction: store i32 x, 2
-                vec![]
+            ast::ExpressionValue::PrimitiveValue(value) => (
+                Some(ExpressionResult::PrimitiveValue(value.clone())),
+                vec![],
+            ),
+            ast::ExpressionValue::FunctionCall(fn_call) => {
+                body_state.last_register_number += 1;
+                let res = self.function_call(fn_call, body_state);
+                (
+                    Some(ExpressionResult::Register(body_state.last_register_number)),
+                    res,
+                )
             }
-            ast::ExpressionValue::FunctionCall(fn_call) => self.function_call(fn_call, body_state),
         };
         /*
         if let Some(e) = &data.operation {
             let mut res_mut = self.expression(&e.1, body_state);
             res.append(&mut res_mut);
-        }
+        }  */
         res
-        */
-        vec![]
     }
 }

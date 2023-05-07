@@ -1,4 +1,4 @@
-use crate::ast;
+use crate::{ast, semantic};
 
 pub trait Codegen {
     type Backend;
@@ -9,5 +9,6 @@ pub trait Codegen {
     fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend;
     fn let_binding(&self, let_decl: &ast::LetBinding<'_>) -> Self::Backend;
     fn call(&self, call: &ast::FunctionCall<'_>) -> Self::Backend;
-    fn expression(&self, expression: &ast::Expression) -> &Self;
+    fn expression_value(&self, expression: &semantic::Value) -> Self::Backend;
+    fn expression_const(&self, expression: &semantic::Constant) -> Self::Backend;
 }
