@@ -71,7 +71,7 @@ pub enum StateResult {
     FunctionNotFound,
 }
 
-impl<T: Codegen> State<T> {
+impl<T: Codegen<Backend = T>> State<T> {
     pub fn new(codegen: T) -> Self {
         Self {
             global: GlobalState {
@@ -115,6 +115,7 @@ impl<T: Codegen> State<T> {
             return vec![StateResult::TypeAlreadyExist];
         }
         self.global.types.insert(data.name());
+        self.codegen = self.codegen.types(data);
         vec![]
     }
 
@@ -129,6 +130,7 @@ impl<T: Codegen> State<T> {
                 inner_type: data.constant_type.name(),
             },
         );
+        self.codegen = self.codegen.constant(data);
         vec![]
     }
 
@@ -148,16 +150,13 @@ impl<T: Codegen> State<T> {
                     .collect(),
             },
         );
-        // let body_state = BodyState::new();
-        // self.body_statement(&data.body, body_state)
+        self.codegen = self.codegen.function_declaration(data);
         vec![]
     }
 
     pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) -> Vec<StateResult> {
-        let _body_state: ValueBlockState = ValueBlockState::new(None);
-        /*
-        let mut body_state = body_state;
-        data.iter().fold(vec![], |mut s, body| {
+        let mut body_state: ValueBlockState = ValueBlockState::new(None);
+        data.body.iter().fold(vec![], |mut s, body| {
             let mut res = match body {
                 ast::BodyStatement::LetBinding(bind) => self.let_binding(bind, &mut body_state),
                 ast::BodyStatement::FunctionCall(fn_call) => {
@@ -175,8 +174,7 @@ impl<T: Codegen> State<T> {
             };
             s.append(&mut res);
             s
-        })
-        */
+        });
         vec![]
     }
 
@@ -186,7 +184,34 @@ impl<T: Codegen> State<T> {
         data: &ast::LetBinding<'_>,
         state: &mut ValueBlockState,
     ) -> Vec<StateResult> {
-        //state.values.insert(data.name(), data.clone());
+        let inner_name = state.values.get(&data.name()).map_or_else(
+            || data.name(),
+            |val| {
+                if val.allocated {
+                    // TODO: deallocate
+                }
+                // Increment inner value name counter for shadow variable
+                let val_attr: Vec<&str> = val.inner_name.split('.').collect();
+                if val_attr.len() == 2 {
+                    let i: u64 = val_attr[1].parse().expect("expect integer");
+                    format!("{}.{:?}", val_attr[0], i + 1)
+                } else {
+                    format!("{}.0", val_attr[0])
+                }
+            },
+        );
+        state.values.insert(
+            data.name(),
+            Value {
+                inner_name,
+                inner_type: data
+                    .clone()
+                    .value_type
+                    // TODO: resolve type from expression for empty case
+                    .map_or(String::new(), |ty| ty.name()),
+                allocated: false,
+            },
+        );
         vec![]
     }
 

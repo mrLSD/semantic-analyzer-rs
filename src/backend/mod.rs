@@ -3,7 +3,7 @@
 pub mod dummy;
 
 use crate::ast;
-use crate::ast::GetName;
+use crate::ast::{Constant, GetName, StructTypes};
 use crate::codegen::Codegen;
 use inkwell::types::{
     ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType,
@@ -135,6 +135,14 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
             .collect::<Vec<BasicMetadataTypeEnum>>();
         let fn_type = self.context.f64_type().fn_type(&param_types, false);
         self.module.add_function(&fn_decl.name(), fn_type, None)
+    }
+
+    fn constant(&self, _const_decl: &Constant<'_>) -> Self::Backend {
+        todo!()
+    }
+
+    fn types(&self, _type_decl: &StructTypes<'_>) -> Self::Backend {
+        todo!()
     }
 
     fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend {

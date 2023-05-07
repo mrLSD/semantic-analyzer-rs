@@ -36,7 +36,7 @@ pub struct ValueName<'a>(Ident<'a>);
 
 impl GetName for ValueName<'_> {
     fn name(&self) -> String {
-        (*self.0.fragment()).to_string()
+        self.0.to_string()
     }
 }
 
@@ -222,7 +222,7 @@ pub struct LetBinding<'a> {
 
 impl GetName for LetBinding<'_> {
     fn name(&self) -> String {
-        (*self.name.0.fragment()).to_string()
+        self.name.0.to_string()
     }
 }
 
