@@ -326,11 +326,22 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
+    /// # Function-call
+    /// Call function with function parameters arguments. Arguments is
+    /// expressions.
+    /// 1. Check is current function name exists in global state of functions
+    /// name.
+    /// 2. Analyse expressions for function parameters
+    /// 3. Generate codegen
+    ///
+    /// ## Errors
+    /// Return error if function name doesn't exist in global state
     pub fn function_call(
         &mut self,
         data: &ast::FunctionCall<'_>,
         body_state: &Rc<RefCell<ValueBlockState>>,
     ) -> StateResult<()> {
+        // Check is function exists in global functions state
         if !self.global.functions.contains_key(&data.name()) {
             return Err(error::StateErrorResult::new(
                 error::StateErrorKind::FunctionNotFound,
@@ -339,11 +350,13 @@ impl<T: Codegen<Backend = T>> State<T> {
                 0,
             ));
         }
+        // Analyse function parameters expressions and set result to array
         let mut params: Vec<ExpressionResult> = vec![];
         for expr in &data.parameters {
             params.push(self.expression(expr, body_state)?);
         }
 
+        // Codegen for function-call
         body_state.borrow_mut().inc_register();
         self.codegen = self
             .codegen
@@ -351,14 +364,38 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
+    /// # If-condition
+    /// Includes all variants for if statements:
+    /// 1. if
+    /// 2. if-else
+    /// 3. if-else-if
+    /// It creates own state, with parent function-state. in that case
+    /// if-state independent form parent state buy csn get access to
+    /// parent state.
     pub fn if_condition(
         &mut self,
         data: &ast::IfStatement<'_>,
         function_body_state: &Rc<RefCell<ValueBlockState>>,
     ) -> StateResults<()> {
+        // Create state for if-body, from parent function state because if-state
+        // can contain sub-state, that for can be independent from parent state
         let if_body_state = Rc::new(RefCell::new(ValueBlockState::new(Some(
             function_body_state.clone(),
         ))));
+        // Analyse if-conditions
+        match &data.condition {
+            ast::IfCondition::Single(expr) => {
+                // Calculate expression
+                let _expr_result = self.expression(expr, function_body_state);
+                // Codegen for if-condition from expression and if-body start
+                // self.codegen.if_condition_expresssion(&expr_result, &function_body_state);
+            }
+            ast::IfCondition::Logic(_expr_logic) => {
+                // 1. Call function for analyse if-condition logic
+                // 2. Codegen for if-condition-logic with if-body start
+            }
+        }
+        // Analyse if-statement body
         let result_errors = data.body.iter().fold(vec![], |mut s_err, body| {
             let res = match body {
                 ast::BodyStatement::LetBinding(bind) => {
@@ -391,6 +428,23 @@ impl<T: Codegen<Backend = T>> State<T> {
         function_body_state
             .borrow_mut()
             .set_register(if_body_state.borrow().last_register_number);
+
+        // if-else gas own state, different from if-state
+        let _if_else_body_state = Rc::new(RefCell::new(ValueBlockState::new(Some(
+            function_body_state.clone(),
+        ))));
+        // Analyse if-else body: data.else_statement
+        // TODO: if-else-body analyse
+        // - update function-body (parent) state
+
+        // Analyse all else-if statements
+        if let Some(else_if_statements) = &data.else_if_statement {
+            for else_if_statement in else_if_statements {
+                // Analyse statement as independent
+                let _res = self.if_condition(else_if_statement, function_body_state);
+            }
+        }
+
         if result_errors.is_empty() {
             Ok(())
         } else {
