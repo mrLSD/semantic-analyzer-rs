@@ -307,9 +307,17 @@ pub enum IfCondition<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfStatement<'a> {
     pub condition: IfCondition<'a>,
-    pub body: Vec<BodyStatement<'a>>,
-    pub else_statement: Option<Vec<BodyStatement<'a>>>,
+    pub body: Vec<IfBodyStatement<'a>>,
+    pub else_statement: Option<Vec<IfBodyStatement<'a>>>,
     pub else_if_statement: Option<Vec<IfStatement<'a>>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct IfLoopStatement<'a> {
+    pub condition: IfCondition<'a>,
+    pub body: Vec<IfLoopBodyStatement<'a>>,
+    pub else_statement: Option<Vec<IfLoopBodyStatement<'a>>>,
+    pub else_if_statement: Option<Vec<IfLoopStatement<'a>>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -317,8 +325,40 @@ pub enum BodyStatement<'a> {
     LetBinding(LetBinding<'a>),
     FunctionCall(FunctionCall<'a>),
     If(IfStatement<'a>),
-    Loop(Vec<BodyStatement<'a>>),
+    Loop(Vec<LoopBodyStatement<'a>>),
     Expression(Expression<'a>),
+    Return(Expression<'a>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum IfBodyStatement<'a> {
+    LetBinding(LetBinding<'a>),
+    FunctionCall(FunctionCall<'a>),
+    If(IfStatement<'a>),
+    Loop(Vec<LoopBodyStatement<'a>>),
+    Return(Expression<'a>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum IfLoopBodyStatement<'a> {
+    LetBinding(LetBinding<'a>),
+    FunctionCall(FunctionCall<'a>),
+    IfLoop(IfLoopStatement<'a>),
+    Loop(Vec<LoopBodyStatement<'a>>),
+    Return(Expression<'a>),
+    Break,
+    Continue,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LoopBodyStatement<'a> {
+    LetBinding(LetBinding<'a>),
+    FunctionCall(FunctionCall<'a>),
+    IfLoop(IfLoopStatement<'a>),
+    Loop(Vec<LoopBodyStatement<'a>>),
+    Return(Expression<'a>),
+    Break,
+    Continue,
 }
 
 #[derive(Debug, Clone, PartialEq)]

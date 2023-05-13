@@ -246,6 +246,17 @@ impl<T: Codegen<Backend = T>> State<T> {
                     let expr_result = self.expression(expression, &body_state);
                     expr_result
                         .map(|res| {
+                            // TODO: Check is previously return was called
+                            return_is_called = true;
+                            self.codegen = self.codegen.expression_function_return(&res);
+                        })
+                        .map_err(|e| vec![e])
+                }
+                ast::BodyStatement::Return(expression) => {
+                    let expr_result = self.expression(expression, &body_state);
+                    expr_result
+                        .map(|res| {
+                            // TODO: Check is previously return was called
                             return_is_called = true;
                             self.codegen = self.codegen.expression_function_return(&res);
                         })
@@ -418,6 +429,16 @@ impl<T: Codegen<Backend = T>> State<T> {
                         })
                         .map_err(|e| vec![e])
                 }
+                ast::BodyStatement::Return(expression) => {
+                    let expr_result = self.expression(expression, &if_body_state);
+                    expr_result
+                        .map(|res| {
+                            // TODO: set return-is-called and pass it
+                            // to main body
+                            self.codegen = self.codegen.expression_function_return(&res);
+                        })
+                        .map_err(|e| vec![e])
+                }
             };
             if let Err(mut err) = res {
                 s_err.append(&mut err);
@@ -455,7 +476,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
     pub const fn loop_statement(
         &self,
-        _data: &[ast::BodyStatement<'_>],
+        _data: &[ast::LoopBodyStatement<'_>],
         _body_state: &Rc<RefCell<ValueBlockState>>,
     ) -> StateResult<()> {
         Ok(())
