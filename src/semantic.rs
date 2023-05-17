@@ -375,6 +375,14 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
+    pub fn condition_expression(
+        &mut self,
+        _data: &ast::ExpressionLogicCondition<'_>,
+        _function_body_state: &Rc<RefCell<ValueBlockState>>,
+    ) -> StateResults<()> {
+        Ok(())
+    }
+
     /// # If-condition
     /// Includes all variants for if statements:
     /// 1. if
