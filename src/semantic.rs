@@ -4,6 +4,10 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+const IF_BEGIN: &str = "if_begin";
+const IF_END: &str = "if_end";
+const IF_ELSE: &str = "if_else";
+
 pub type StateResult<T> = Result<T, error::StateErrorResult>;
 pub type StateResults<T> = Result<T, Vec<error::StateErrorResult>>;
 
@@ -28,6 +32,7 @@ pub struct ValueBlockState {
     pub values: HashMap<ValueName, Value>,
     // Used to keep all names in the block state as unique
     pub inner_values_name: HashSet<ValueName>,
+    pub labels: HashSet<String>,
     pub last_register_number: u64,
     pub parent: Option<Rc<RefCell<ValueBlockState>>>,
 }
@@ -41,9 +46,13 @@ impl ValueBlockState {
         let inner_values_name = parent
             .clone()
             .map_or_else(HashSet::new, |p| p.borrow().inner_values_name.clone());
+        let labels = parent
+            .clone()
+            .map_or_else(HashSet::new, |p| p.borrow().labels.clone());
         Self {
             values: HashMap::new(),
             inner_values_name,
+            labels,
             last_register_number,
             parent,
         }
@@ -51,10 +60,15 @@ impl ValueBlockState {
 
     fn set_register(&mut self, last_register_number: u64) {
         self.last_register_number = last_register_number;
+        // Set `last_register_number` for parents
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().last_register_number = last_register_number;
+            parent.borrow_mut().set_register(last_register_number);
+        }
     }
 
     fn inc_register(&mut self) {
-        self.last_register_number += 1;
+        self.set_register(self.last_register_number + 1);
     }
 
     /// Set `inner_name` to current state and all parent states
@@ -73,6 +87,26 @@ impl ValueBlockState {
             return parent.borrow().get_parent_value_name(name);
         }
         None
+    }
+
+    /// Get and set next label for any condition operations
+    fn get_and_set_next_label(&mut self, label: &str) -> String {
+        if !self.labels.contains(label) {
+            return label.to_string();
+        }
+        let val_attr: Vec<&str> = label.split('.').collect();
+        let name = if val_attr.len() == 2 {
+            let i: u64 = val_attr[1].parse().expect("expect integer");
+            format!("{}.{:?}", val_attr[0], i + 1)
+        } else {
+            format!("{}.0", val_attr[0])
+        };
+        if self.labels.contains(&name) {
+            self.get_and_set_next_label(&name)
+        } else {
+            self.labels.insert(name.clone());
+            name.to_string()
+        }
     }
 
     fn get_next_inner_name(&self, val: &str) -> String {
