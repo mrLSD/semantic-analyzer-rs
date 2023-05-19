@@ -3,7 +3,7 @@ clippy:
 	@cargo fmt --check
 
 clippy-12:
-	@cargo clippy --features=llvm12 -- -D warnings
+	@cargo clippy --features=llvm12 --no-default-features -- -D warnings
 	@cargo fmt --check
 
 clippy-15:
