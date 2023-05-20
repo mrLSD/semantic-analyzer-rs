@@ -2,7 +2,7 @@
 
 pub mod dummy;
 
-use crate::ast::{Constant, GetName, StructTypes};
+use crate::ast::{Condition, Constant, GetName, StructTypes};
 use crate::codegen::Codegen;
 use crate::{ast, semantic};
 use inkwell::types::{
@@ -220,7 +220,17 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     fn expression_function_return(&self, _expr_result: &ExpressionResult) -> Self::Backend {
         todo!()
     }
+
     fn if_condition_expression(&mut self, _expr_result: &ExpressionResult) {
+        todo!();
+    }
+
+    fn condition_expression(
+        &mut self,
+        _left_result: &ExpressionResult,
+        _right_result: &ExpressionResult,
+        _condition: &Condition,
+    ) {
         todo!();
     }
 }

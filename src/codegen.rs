@@ -1,3 +1,4 @@
+use crate::ast::Condition;
 use crate::semantic::{ExpressionResult, Value};
 use crate::{ast, semantic};
 
@@ -30,4 +31,10 @@ pub trait Codegen {
     ) -> Self::Backend;
     fn expression_function_return(&self, expr_result: &ExpressionResult) -> Self::Backend;
     fn if_condition_expression(&mut self, expr_result: &ExpressionResult);
+    fn condition_expression(
+        &mut self,
+        left_result: &ExpressionResult,
+        right_result: &ExpressionResult,
+        condition: &Condition,
+    );
 }

@@ -382,28 +382,33 @@ impl<T: Codegen<Backend = T>> State<T> {
         data: &ast::ExpressionLogicCondition<'_>,
         function_body_state: &Rc<RefCell<ValueBlockState>>,
     ) -> StateResults<()> {
-        let mut state_errors: Vec<error::StateErrorResult> = vec![];
         // Analyse left expression of left condition
         let left_expr = &data.left.left;
-        let left_res = self.expression(left_expr, function_body_state);
-        // Gather errors
-        if let Err(err) = left_res {
-            state_errors.push(err);
-        }
+        let left_res = self
+            .expression(left_expr, function_body_state)
+            .map_err(|err| vec![err])?;
 
         // Analyse right expression of left condition
         let right_expr = &data.left.right;
-        let right_res = self.expression(right_expr, function_body_state);
-        // Gather errors
-        if let Err(err) = right_res {
-            state_errors.push(err);
+        let right_res = self
+            .expression(right_expr, function_body_state)
+            .map_err(|err| vec![err])?;
+
+        // Increase register counter before generate condition
+        function_body_state.borrow_mut().inc_register();
+        // Codegen for condition
+        self.codegen
+            .condition_expression(&left_res, &right_res, &data.left.condition);
+
+        if let Some(right) = &data.right {
+            // Analyse right part of condition
+            self.condition_expression(&right.1, function_body_state)?;
+            // Increase register counter before generate logic condition
+            function_body_state.borrow_mut().inc_register();
+            // TODO: logic condition
         }
 
-        if state_errors.is_empty() {
-            Ok(())
-        } else {
-            Err(state_errors)
-        }
+        Ok(())
     }
 
     /// # If-condition
