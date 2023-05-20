@@ -29,4 +29,5 @@ pub trait Codegen {
         register_number: u64,
     ) -> Self::Backend;
     fn expression_function_return(&self, expr_result: &ExpressionResult) -> Self::Backend;
+    fn if_condition_expression(&mut self, expr_result: &ExpressionResult);
 }

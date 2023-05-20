@@ -313,7 +313,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             },
             |val| {
                 // Increment inner value name counter for shadowed variable
-                // and check variable inner_name for aldd inner_values in current state
+                // and check variable inner_name for and inner_values in current state
                 state.borrow().get_next_inner_name(&val.inner_name)
             },
         );
@@ -375,12 +375,35 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
+    /// # condition-expression
+    /// Analyse condition operations.    
     pub fn condition_expression(
         &mut self,
-        _data: &ast::ExpressionLogicCondition<'_>,
-        _function_body_state: &Rc<RefCell<ValueBlockState>>,
+        data: &ast::ExpressionLogicCondition<'_>,
+        function_body_state: &Rc<RefCell<ValueBlockState>>,
     ) -> StateResults<()> {
-        Ok(())
+        let mut state_errors: Vec<error::StateErrorResult> = vec![];
+        // Analyse left expression of left condition
+        let left_expr = &data.left.left;
+        let left_res = self.expression(left_expr, function_body_state);
+        // Gather errors
+        if let Err(err) = left_res {
+            state_errors.push(err);
+        }
+
+        // Analyse right expression of left condition
+        let right_expr = &data.left.right;
+        let right_res = self.expression(right_expr, function_body_state);
+        // Gather errors
+        if let Err(err) = right_res {
+            state_errors.push(err);
+        }
+
+        if state_errors.is_empty() {
+            Ok(())
+        } else {
+            Err(state_errors)
+        }
     }
 
     /// # If-condition
@@ -404,13 +427,16 @@ impl<T: Codegen<Backend = T>> State<T> {
         // Analyse if-conditions
         match &data.condition {
             ast::IfCondition::Single(expr) => {
-                // Calculate expression
-                let _expr_result = self.expression(expr, function_body_state);
+                // Calculate expression for single if-condition expression
+                let expr_result = self
+                    .expression(expr, function_body_state)
+                    .map_err(|err| vec![err])?;
                 // Codegen for if-condition from expression and if-body start
-                // self.codegen.if_condition_expresssion(&expr_result, &function_body_state);
+                self.codegen.if_condition_expression(&expr_result);
             }
-            ast::IfCondition::Logic(_expr_logic) => {
-                // 1. Call function for analyse if-condition logic
+            ast::IfCondition::Logic(expr_logic) => {
+                // Analyse if-condition logic
+                self.condition_expression(expr_logic, function_body_state)?;
                 // 2. Codegen for if-condition-logic with if-body start
             }
         }
@@ -493,7 +519,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 // Calculate expression
                 let _expr_result = self.expression(expr, function_body_state);
                 // Codegen for if-condition from expression and if-body start
-                // self.codegen.if_condition_expresssion(&expr_result, &function_body_state);
+                // self.codegen.if_condition_expression(&expr_result, &function_body_state);
             }
             ast::IfCondition::Logic(_expr_logic) => {
                 // 1. Call function for analyse if-condition logic
@@ -601,7 +627,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         // To analyze expression first time, we set:
         // left_value - as None
         // operation - as None
-        // And basic expression value is "right_value", becuase
+        // And basic expression value is "right_value", because
         // it can contain sub-operations
         self.expression_operation(None, data, None, body_state)
     }
