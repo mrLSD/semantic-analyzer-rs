@@ -295,7 +295,7 @@ pub struct ExpressionCondition<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExpressionLogicCondition<'a> {
     pub left: ExpressionCondition<'a>,
-    pub right: Option<(LogicCondition, Box<ExpressionCondition<'a>>)>,
+    pub right: Option<(LogicCondition, Box<ExpressionLogicCondition<'a>>)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
