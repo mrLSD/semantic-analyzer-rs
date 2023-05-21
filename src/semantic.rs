@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 const IF_BEGIN: &str = "if_begin";
 const IF_END: &str = "if_end";
-const IF_ELSE: &str = "if_else";
+const _IF_ELSE: &str = "if_else";
 
 pub type StateResult<T> = Result<T, error::StateErrorResult>;
 pub type StateResults<T> = Result<T, Vec<error::StateErrorResult>>;
@@ -463,20 +463,28 @@ impl<T: Codegen<Backend = T>> State<T> {
         let if_body_state = Rc::new(RefCell::new(ValueBlockState::new(Some(
             function_body_state.clone(),
         ))));
+        let label_if_begin = if_body_state.borrow_mut().get_and_set_next_label(IF_BEGIN);
+        let label_if_end = if_body_state.borrow_mut().get_and_set_next_label(IF_END);
         // Analyse if-conditions
         match &data.condition {
             ast::IfCondition::Single(expr) => {
                 // Calculate expression for single if-condition expression
                 let expr_result = self
-                    .expression(expr, function_body_state)
+                    .expression(expr, &if_body_state)
                     .map_err(|err| vec![err])?;
                 // Codegen for if-condition from expression and if-body start
-                self.codegen.if_condition_expression(&expr_result);
+                self.codegen
+                    .if_condition_expression(&expr_result, &label_if_begin, &label_if_end);
             }
             ast::IfCondition::Logic(expr_logic) => {
                 // Analyse if-condition logic
-                self.condition_expression(expr_logic, function_body_state)?;
-                // 2. Codegen for if-condition-logic with if-body start
+                self.condition_expression(expr_logic, &if_body_state)?;
+                // Codegen for if-condition-logic with if-body start
+                self.codegen.if_condition_logic(
+                    &label_if_begin,
+                    &label_if_end,
+                    if_body_state.borrow().last_register_number,
+                );
             }
         }
         // Analyse if-statement body
@@ -510,10 +518,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             }
             s_err
         });
-        // Update register for parent state
-        function_body_state
-            .borrow_mut()
-            .set_register(if_body_state.borrow().last_register_number);
+        self.codegen.if_end(&label_if_end);
 
         // if-else gas own state, different from if-state
         let _if_else_body_state = Rc::new(RefCell::new(ValueBlockState::new(Some(

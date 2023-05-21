@@ -96,9 +96,6 @@ impl Codegen for Backend {
     fn expression_function_return(&self, _expr_result: &ExpressionResult) -> Self::Backend {
         todo!()
     }
-    fn if_condition_expression(&mut self, _expr_result: &ExpressionResult) {
-        todo!();
-    }
 
     fn condition_expression(
         &mut self,
@@ -106,6 +103,25 @@ impl Codegen for Backend {
         _right_result: &ExpressionResult,
         _condition: &Condition,
     ) {
+        todo!();
+    }
+    fn if_condition_expression(
+        &mut self,
+        _expr_result: &ExpressionResult,
+        _label_if_begin: &str,
+        _label_if_end: &str,
+    ) {
+        todo!();
+    }
+    fn if_condition_logic(
+        &mut self,
+        _label_if_begin: &str,
+        _label_if_end: &str,
+        _register_number: u64,
+    ) {
+        todo!();
+    }
+    fn if_end(&mut self, _label_if_end: &str) {
         todo!();
     }
 }

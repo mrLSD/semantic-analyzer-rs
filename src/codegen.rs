@@ -30,11 +30,23 @@ pub trait Codegen {
         register_number: u64,
     ) -> Self::Backend;
     fn expression_function_return(&self, expr_result: &ExpressionResult) -> Self::Backend;
-    fn if_condition_expression(&mut self, expr_result: &ExpressionResult);
     fn condition_expression(
         &mut self,
         left_result: &ExpressionResult,
         right_result: &ExpressionResult,
         condition: &Condition,
     );
+    fn if_condition_expression(
+        &mut self,
+        expr_result: &ExpressionResult,
+        label_if_begin: &str,
+        label_if_end: &str,
+    );
+    fn if_condition_logic(
+        &mut self,
+        label_if_begin: &str,
+        label_if_end: &str,
+        register_number: u64,
+    );
+    fn if_end(&mut self, label_if_end: &str);
 }

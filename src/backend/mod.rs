@@ -221,7 +221,24 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn if_condition_expression(&mut self, _expr_result: &ExpressionResult) {
+    fn if_condition_expression(
+        &mut self,
+        _expr_result: &ExpressionResult,
+        _label_if_begin: &str,
+        _label_if_end: &str,
+    ) {
+        todo!();
+    }
+    fn if_condition_logic(
+        &mut self,
+        _label_if_begin: &str,
+        _label_if_end: &str,
+        _register_number: u64,
+    ) {
+        todo!();
+    }
+
+    fn if_end(&mut self, _label_if_end: &str) {
         todo!();
     }
 
