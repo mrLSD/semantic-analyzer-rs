@@ -1,4 +1,4 @@
-# <sup>z</sup>rose Programming Language
+# <sup>z</sup>Rose Programming Language
 
 The ThatRose is an open source programming language that makes it easy to 
 build fast, reliable, and efficient software.
@@ -14,14 +14,15 @@ Compiled general-purpose programming language, statically typed with LLVM backen
 The main focus of the language is simplicity, reliability, speed, maintainability.
 
 ThatRose in research stage:
-[x] EBNF representation
-[x] Syntax parser to AST
-[] Semantic analyzer **[in progress]**
-[] LLVM Codegen
-[] Memory model
-[] Type system
-[] std libraries
-[] package management
+
+- [x] EBNF representation
+- [x] Syntax parser to AST
+- [ ] Semantic analyzer **[in progress]**
+- [ ] LLVM Codegen
+- [ ] Memory model
+- [ ] Type system
+- [ ] std libraries
+- [ ] package management
 
 Current implementation based on Rust language. For backend currently
 used **LLVM 15**.
