@@ -4,10 +4,9 @@ use crate::{ast, semantic};
 
 pub trait Codegen {
     type Backend;
-
-    fn function_declaration(&self, fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend;
-    fn constant(&self, const_decl: &ast::Constant<'_>) -> Self::Backend;
-    fn types(&self, type_decl: &ast::StructTypes<'_>) -> Self::Backend;
+    fn function_declaration(&self, _fn_decl: &ast::FunctionStatement<'_>);
+    fn constant(&self, const_decl: &ast::Constant<'_>);
+    fn types(&self, type_decl: &ast::StructTypes<'_>);
     fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend;
     fn let_binding(&mut self, let_decl: &Value, expr_result: &ExpressionResult);
     fn call(

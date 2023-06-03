@@ -2,12 +2,10 @@
 
 pub mod dummy;
 
-use crate::ast::{Condition, Constant, GetName, StructTypes};
+use crate::ast::{Condition, Constant, StructTypes};
 use crate::codegen::Codegen;
 use crate::{ast, semantic};
-use inkwell::types::{
-    ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType,
-};
+use inkwell::types::{ArrayType, BasicType, BasicTypeEnum, FloatType, IntType, StructType};
 // use inkwell::values::BasicValue;
 use crate::semantic::{ExpressionResult, Value};
 use inkwell::{
@@ -129,57 +127,20 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
 impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     type Backend = FunctionValue<'ctx>;
-    fn function_declaration(&self, fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend {
-        let param_types = fn_decl
-            .parameters
-            .iter()
-            .map(|param| self.get_type(&param.parameter_type))
-            .collect::<Vec<BasicMetadataTypeEnum>>();
-        let fn_type = self.context.f64_type().fn_type(&param_types, false);
-        self.module.add_function(&fn_decl.name(), fn_type, None)
-    }
-
-    fn constant(&self, _const_decl: &Constant<'_>) -> Self::Backend {
+    fn function_declaration(&self, _fn_decl: &ast::FunctionStatement<'_>) {
         todo!()
     }
 
-    fn types(&self, _type_decl: &StructTypes<'_>) -> Self::Backend {
+    fn constant(&self, _const_decl: &Constant<'_>) {
         todo!()
     }
 
-    fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend {
-        let fn_value = self.function_declaration(fn_decl);
+    fn types(&self, _type_decl: &StructTypes<'_>) {
+        todo!()
+    }
 
-        // Set functions parameters value name
-        for (i, arg) in fn_value.get_param_iter().enumerate() {
-            arg.set_name(fn_decl.parameters[i].name().as_str());
-        }
-
-        // Check empty body
-        if fn_decl.body.is_empty() {
-            return fn_value;
-        }
-
-        let entry = self.context.append_basic_block(fn_value, "entry");
-        self.builder.position_at_end(entry);
-
-        // Allocate variables
-        for (i, arg) in fn_value.get_param_iter().enumerate() {
-            let arg_name = fn_decl.parameters[i].name();
-            let alloca = self.create_entry_block_alloca(fn_value, arg_name.as_str());
-            self.builder.build_store(alloca, arg);
-            self.variables.insert(arg_name, alloca);
-        }
-
-        if fn_value.verify(true) {
-            self.fpm.run_on(&fn_value);
-            fn_value
-        } else {
-            unsafe {
-                fn_value.delete();
-            }
-            panic!("Wrong function");
-        }
+    fn function_statement(&mut self, _fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend {
+        todo!()
     }
 
     fn let_binding(&mut self, _let_decl: &Value, _expr_result: &ExpressionResult) {

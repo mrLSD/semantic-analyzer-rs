@@ -24,15 +24,15 @@ impl Backend {
 impl Codegen for Backend {
     type Backend = Self;
 
-    fn function_declaration(&self, _fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend {
+    fn function_declaration(&self, _fn_decl: &ast::FunctionStatement<'_>) {
         todo!()
     }
 
-    fn constant(&self, _const_decl: &ast::Constant<'_>) -> Self::Backend {
+    fn constant(&self, _const_decl: &ast::Constant<'_>) {
         todo!()
     }
 
-    fn types(&self, _type_decl: &ast::StructTypes<'_>) -> Self::Backend {
+    fn types(&self, _type_decl: &ast::StructTypes<'_>) {
         todo!()
     }
 

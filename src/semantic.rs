@@ -62,7 +62,6 @@ impl ValueBlockState {
         self.last_register_number = last_register_number;
         // Set `last_register_number` for parents
         if let Some(parent) = &self.parent {
-            parent.borrow_mut().last_register_number = last_register_number;
             parent.borrow_mut().set_register(last_register_number);
         }
     }
@@ -75,7 +74,6 @@ impl ValueBlockState {
     fn set_inner_name_and_to_parents(&mut self, name: &ValueName) {
         self.inner_values_name.insert(name.clone());
         if let Some(parent) = &self.parent {
-            parent.borrow_mut().inner_values_name.insert(name.clone());
             parent.borrow_mut().set_inner_name_and_to_parents(name);
         }
     }
@@ -92,6 +90,7 @@ impl ValueBlockState {
     /// Get and set next label for any condition operations
     fn get_and_set_next_label(&mut self, label: &str) -> String {
         if !self.labels.contains(label) {
+            self.labels.insert(label.to_string());
             return label.to_string();
         }
         let val_attr: Vec<&str> = label.split('.').collect();
@@ -210,7 +209,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             ));
         }
         self.global.types.insert(data.name());
-        self.codegen = self.codegen.types(data);
+        self.codegen.types(data);
         Ok(())
     }
 
@@ -230,7 +229,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 inner_type: data.constant_type.name(),
             },
         );
-        self.codegen = self.codegen.constant(data);
+        self.codegen.constant(data);
         Ok(())
     }
 
@@ -255,7 +254,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                     .collect(),
             },
         );
-        self.codegen = self.codegen.function_declaration(data);
+        self.codegen.function_declaration(data);
         Ok(())
     }
 
