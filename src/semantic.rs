@@ -14,12 +14,16 @@ pub type StateResults<T> = Result<T, Vec<error::StateErrorResult>>;
 type ValueName = String;
 type InnerType = String;
 
+/// # Constant
+/// Can contain: name, type
 #[derive(Debug)]
 pub struct Constant {
     pub name: String,
     pub inner_type: InnerType,
 }
 
+/// # Values
+/// Can contain inner data: name, type, memory allocation status
 #[derive(Debug, Clone)]
 pub struct Value {
     pub inner_name: ValueName,
@@ -27,28 +31,36 @@ pub struct Value {
     pub allocated: bool,
 }
 
+/// Block state
 #[derive(Debug)]
-pub struct ValueBlockState {
+pub struct BlockState {
+    /// State values
     pub values: HashMap<ValueName, Value>,
-    // Used to keep all names in the block state as unique
+    /// Used to keep all names in the block state as unique
     pub inner_values_name: HashSet<ValueName>,
+    /// State labels for conditional operations
     pub labels: HashSet<String>,
+    /// Last register for unique register representation
     pub last_register_number: u64,
-    pub parent: Option<Rc<RefCell<ValueBlockState>>>,
+    /// Parent state
+    pub parent: Option<Rc<RefCell<BlockState>>>,
 }
 
-impl ValueBlockState {
+impl BlockState {
+    /// Init block state with optional `parent` state
     pub fn new(parent: Option<Rc<RefCell<Self>>>) -> Self {
-        // Get last_register_number from parent
-        let last_register_number = parent
-            .clone()
-            .map_or(0, |p| p.borrow().last_register_number);
-        let inner_values_name = parent
-            .clone()
-            .map_or_else(HashSet::new, |p| p.borrow().inner_values_name.clone());
-        let labels = parent
-            .clone()
-            .map_or_else(HashSet::new, |p| p.borrow().labels.clone());
+        // Get values from parent
+        let (last_register_number, inner_values_name, labels) = parent.clone().map_or_else(
+            || (0, HashSet::new(), HashSet::new()),
+            |p| {
+                let parent = p.borrow();
+                (
+                    parent.last_register_number,
+                    parent.inner_values_name.clone(),
+                    parent.labels.clone(),
+                )
+            },
+        );
         Self {
             values: HashMap::new(),
             inner_values_name,
@@ -58,6 +70,7 @@ impl ValueBlockState {
         }
     }
 
+    /// Set `last_register_number` for current and parent state
     fn set_register(&mut self, last_register_number: u64) {
         self.last_register_number = last_register_number;
         // Set `last_register_number` for parents
@@ -66,6 +79,7 @@ impl ValueBlockState {
         }
     }
 
+    /// Increment register
     fn inc_register(&mut self) {
         self.set_register(self.last_register_number + 1);
     }
@@ -259,7 +273,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     }
 
     pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) -> StateResults<()> {
-        let body_state = Rc::new(RefCell::new(ValueBlockState::new(None)));
+        let body_state = Rc::new(RefCell::new(BlockState::new(None)));
         let mut return_is_called = false;
         let mut result_errors = data.body.iter().fold(vec![], |mut s_err, body| {
             let res = match body {
@@ -330,7 +344,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     pub fn let_binding(
         &mut self,
         data: &ast::LetBinding<'_>,
-        state: &Rc<RefCell<ValueBlockState>>,
+        state: &Rc<RefCell<BlockState>>,
     ) -> StateResult<()> {
         // Call value analytics before putting let-value to state
         // Put to the block state
@@ -383,7 +397,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     pub fn function_call(
         &mut self,
         data: &ast::FunctionCall<'_>,
-        body_state: &Rc<RefCell<ValueBlockState>>,
+        body_state: &Rc<RefCell<BlockState>>,
     ) -> StateResult<()> {
         // Check is function exists in global functions state
         if !self.global.functions.contains_key(&data.name()) {
@@ -412,7 +426,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     pub fn condition_expression(
         &mut self,
         data: &ast::ExpressionLogicCondition<'_>,
-        function_body_state: &Rc<RefCell<ValueBlockState>>,
+        function_body_state: &Rc<RefCell<BlockState>>,
     ) -> StateResults<()> {
         // Analyse left expression of left condition
         let left_expr = &data.left.left;
@@ -454,11 +468,11 @@ impl<T: Codegen<Backend = T>> State<T> {
     pub fn if_condition(
         &mut self,
         data: &ast::IfStatement<'_>,
-        function_body_state: &Rc<RefCell<ValueBlockState>>,
+        function_body_state: &Rc<RefCell<BlockState>>,
     ) -> StateResults<()> {
         // Create state for if-body, from parent function state because if-state
         // can contain sub-state, that for can be independent from parent state
-        let if_body_state = Rc::new(RefCell::new(ValueBlockState::new(Some(
+        let if_body_state = Rc::new(RefCell::new(BlockState::new(Some(
             function_body_state.clone(),
         ))));
         let label_if_begin = if_body_state.borrow_mut().get_and_set_next_label(IF_BEGIN);
@@ -519,7 +533,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         self.codegen.if_end(&label_if_end);
 
         // if-else gas own state, different from if-state
-        let _if_else_body_state = Rc::new(RefCell::new(ValueBlockState::new(Some(
+        let _if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
             function_body_state.clone(),
         ))));
         // Analyse if-else body: data.else_statement
@@ -548,11 +562,11 @@ impl<T: Codegen<Backend = T>> State<T> {
     pub fn if_loop_condition(
         &mut self,
         data: &ast::IfLoopStatement<'_>,
-        function_body_state: &Rc<RefCell<ValueBlockState>>,
+        function_body_state: &Rc<RefCell<BlockState>>,
     ) -> StateResults<()> {
         // Create state for if-body, from parent function state because if-state
         // can contain sub-state, that for can be independent from parent state
-        let if_body_state = Rc::new(RefCell::new(ValueBlockState::new(Some(
+        let if_body_state = Rc::new(RefCell::new(BlockState::new(Some(
             function_body_state.clone(),
         ))));
         // Analyse if-conditions
@@ -611,7 +625,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             .set_register(if_body_state.borrow().last_register_number);
 
         // if-else gas own state, different from if-state
-        let _if_else_body_state = Rc::new(RefCell::new(ValueBlockState::new(Some(
+        let _if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
             function_body_state.clone(),
         ))));
         // Analyse if-else body: data.else_statement
@@ -637,7 +651,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     pub const fn loop_statement(
         &self,
         _data: &[ast::LoopBodyStatement<'_>],
-        _body_state: &Rc<RefCell<ValueBlockState>>,
+        _body_state: &Rc<RefCell<BlockState>>,
     ) -> StateResult<()> {
         Ok(())
     }
@@ -664,7 +678,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     pub fn expression(
         &mut self,
         data: &ast::Expression<'_>,
-        body_state: &Rc<RefCell<ValueBlockState>>,
+        body_state: &Rc<RefCell<BlockState>>,
     ) -> StateResult<ExpressionResult> {
         // To analyze expression first time, we set:
         // left_value - as None
@@ -681,7 +695,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         left_value: Option<&ExpressionResult>,
         right_expression: &ast::Expression<'_>,
         op: Option<&ExpressionOperations>,
-        body_state: &Rc<RefCell<ValueBlockState>>,
+        body_state: &Rc<RefCell<BlockState>>,
     ) -> StateResult<ExpressionResult> {
         // Get right value from expression.
         // If expression return error immediately return error
