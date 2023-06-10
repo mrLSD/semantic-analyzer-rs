@@ -12,7 +12,9 @@ pub type StateResult<T> = Result<T, error::StateErrorResult>;
 pub type StateResults<T> = Result<T, Vec<error::StateErrorResult>>;
 
 type ValueName = String;
+type InnerValueName = String;
 type InnerType = String;
+type LabelName = String;
 
 /// # Constant
 /// Can contain: name, type
@@ -31,13 +33,27 @@ pub struct Value {
     pub allocated: bool,
 }
 
-/// Block state
+/// # Block state
+/// - `values` - contains unique values map for current state but not unique
+///   for parent states. The map contains key-value: `value_name` (unique
+///   only for current state); and `Value` itself - value parameters.   
+/// - `inner_values_name` - is entity that represent inner value name - it
+///   can be different from `Value` name because it should be unique for all
+///   parent states. For example, of 3 values with name `x`, inner value
+///   name will be: [`x`, `x.0`, `x.1`]. It mean, inner value name can
+///   contain `value counter` as end of the name.
+/// - `labels` - labels set, for conditional operation. Unique for current
+///   and all paren states.
+/// - `last_register_number` - represent register counter for current and
+///   all parent states for `Codegen`. Register represented as `u64` and
+///   should be linearly incremented.
+/// - `parent` - represent parent states.  
 #[derive(Debug)]
 pub struct BlockState {
     /// State values
     pub values: HashMap<ValueName, Value>,
-    /// Used to keep all names in the block state as unique
-    pub inner_values_name: HashSet<ValueName>,
+    /// Used to keep all names in the block state (and parent) as unique
+    pub inner_values_name: HashSet<InnerValueName>,
     /// State labels for conditional operations
     pub labels: HashSet<String>,
     /// Last register for unique register representation
@@ -70,7 +86,7 @@ impl BlockState {
         }
     }
 
-    /// Set `last_register_number` for current and parent state
+    /// Set `last_register_number` for current and parent states
     fn set_register(&mut self, last_register_number: u64) {
         self.last_register_number = last_register_number;
         // Set `last_register_number` for parents
@@ -84,53 +100,77 @@ impl BlockState {
         self.set_register(self.last_register_number + 1);
     }
 
-    /// Set `inner_name` to current state and all parent states
-    fn set_inner_name_and_to_parents(&mut self, name: &ValueName) {
+    /// Set value inner name to current state and parent states
+    fn set_inner_value_name(&mut self, name: &ValueName) {
         self.inner_values_name.insert(name.clone());
         if let Some(parent) = &self.parent {
-            parent.borrow_mut().set_inner_name_and_to_parents(name);
+            parent.borrow_mut().set_inner_value_name(name);
         }
     }
 
-    fn get_parent_value_name(&self, name: &ValueName) -> Option<Value> {
+    /// Get `Value` by value name from current state.
+    /// If not found on current state - recursively find in parent states.
+    fn get_value_name(&self, name: &ValueName) -> Option<Value> {
         if let Some(val) = self.values.get(name) {
             return Some(val.clone());
         } else if let Some(parent) = &self.parent {
-            return parent.borrow().get_parent_value_name(name);
+            return parent.borrow().get_value_name(name);
         }
         None
     }
 
-    /// Get and set next label for any condition operations
-    fn get_and_set_next_label(&mut self, label: &str) -> String {
-        if !self.labels.contains(label) {
-            self.labels.insert(label.to_string());
-            return label.to_string();
+    /// Check is label name exist in current and parent states
+    fn is_label_name_exist(&self, name: &LabelName) -> bool {
+        if self.labels.contains(name) {
+            return true;
+        } else if let Some(parent) = &self.parent {
+            return parent.borrow().is_label_name_exist(name);
         }
-        let val_attr: Vec<&str> = label.split('.').collect();
-        let name = if val_attr.len() == 2 {
-            let i: u64 = val_attr[1].parse().expect("expect integer");
-            format!("{}.{:?}", val_attr[0], i + 1)
-        } else {
-            format!("{}.0", val_attr[0])
-        };
-        if self.labels.contains(&name) {
-            self.get_and_set_next_label(&name)
-        } else {
-            self.labels.insert(name.clone());
-            name.to_string()
+        false
+    }
+
+    /// Set label name to current and all parent states
+    fn set_label_name(&mut self, name: &LabelName) {
+        self.labels.insert(name.clone());
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().set_label_name(name);
         }
     }
 
-    fn get_next_inner_name(&self, val: &str) -> String {
-        // Increment inner value name counter for shadowed variable
-        let val_attr: Vec<&str> = val.split('.').collect();
-        let name = if val_attr.len() == 2 {
+    /// Set attribute counter - increment, if counter exist.
+    fn set_attr_counter(val: &String) -> String {
+        let attr: Vec<&str> = val.split('.').collect();
+        if attr.len() == 2 {
             let i: u64 = val_attr[1].parse().expect("expect integer");
             format!("{}.{:?}", val_attr[0], i + 1)
         } else {
             format!("{}.0", val_attr[0])
-        };
+        }
+    }
+
+    /// Get and set next label for condition operations
+    /// - If label doesn't exist in State - just insert to State and
+    ///   self return
+    /// - if label exists, get label counter
+    fn get_and_set_next_label(&mut self, label: &LabelName) -> LabelName {
+        // Check is label exists. If doesn't set it to State and return self
+        if !self.is_label_name_exist(label) {
+            self.set_label_name(label);
+            return label.clone();
+        }
+        // If label exists, split and get number of label counter
+        let name = Self::set_attr_counter(label);
+        if self.is_label_name_exist(&name) {
+            self.get_and_set_next_label(&name)
+        } else {
+            self.set_label_name(&name);
+            name
+        }
+    }
+
+    fn get_next_inner_name(&self, val: &InnerValueName) -> String {
+        // Increment inner value name counter for shadowed variable
+        let name = Self::set_attr_counter(val);
         if self.inner_values_name.contains(&name) {
             self.get_next_inner_name(&name)
         } else {
@@ -332,13 +372,14 @@ impl<T: Codegen<Backend = T>> State<T> {
 
     /// # Let-binding statement
     /// Analyze let-binding statement:
-    /// 1. Let value bind from expression. First analyse should be
-    /// `expression` for binding value.
+    /// 1. Let value bind from expression. First should be analysed
+    ///    `expression` for binding value.
     /// 2. Generate value for current state. Special field `inner_name`
-    /// that used as name for codegen should be unique in current state and
-    /// for all parent states. For that `inner_name` for value incremented.
-    /// 3. Set for the value type and allocation status
-    /// 4. Insert value to current block state
+    ///    that used as name for `Codegen` should be unique in current
+    ///    state and for all parent states. For that `inner_name` the
+    ///    inner value name counter incremented.
+    /// 3. Set `Value` parameters: inner_name,  type and allocation status
+    /// 4. Insert value to current values state map: value `name` -> `Data`
     /// 5. Store `inner_name` in current and parent states
     /// 6. Codegen
     pub fn let_binding(
@@ -347,13 +388,12 @@ impl<T: Codegen<Backend = T>> State<T> {
         state: &Rc<RefCell<BlockState>>,
     ) -> StateResult<()> {
         // Call value analytics before putting let-value to state
-        // Put to the block state
         let expr_result = self.expression(&data.value, state)?;
 
         // Find value in current state and parent states
-        let inner_value = state.borrow().get_parent_value_name(&data.name());
+        let value = state.borrow().get_value_name(&data.name());
         // Calculate `inner_name` as unique for current and all parent states
-        let inner_name = inner_value.map_or_else(
+        let inner_name = value.map_or_else(
             || {
                 // if value not found in all states
                 data.name()
@@ -364,7 +404,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 state.borrow().get_next_inner_name(&val.inner_name)
             },
         );
-        // Insert value to current block state
+        // Set value parameters
         let value = Value {
             inner_name: inner_name.clone(),
             inner_type: data
@@ -374,11 +414,10 @@ impl<T: Codegen<Backend = T>> State<T> {
                 .map_or(String::new(), |ty| ty.name()),
             allocated: false,
         };
+        // Value inserted only to current state by Value name and Value data
         state.borrow_mut().values.insert(data.name(), value.clone());
         // Set `inner_name` to current state and all parent states
-        state
-            .borrow_mut()
-            .set_inner_name_and_to_parents(&inner_name);
+        state.borrow_mut().set_inner_value_name(&inner_name);
 
         self.codegen.let_binding(&value, &expr_result);
         Ok(())
@@ -702,7 +741,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         // because next analyzer should use success result/
         let right_value = match &right_expression.expression_value {
             ast::ExpressionValue::ValueName(value) => {
-                let value_from_state = body_state.borrow_mut().get_parent_value_name(&value.name());
+                let value_from_state = body_state.borrow_mut().get_value_name(&value.name());
                 if value_from_state.is_some() || self.global.constants.contains_key(&value.name()) {
                     // Increase register counter before loading value
                     body_state.borrow_mut().inc_register();
