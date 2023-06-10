@@ -7,28 +7,24 @@ pub trait Codegen {
     fn function_declaration(&self, _fn_decl: &ast::FunctionStatement<'_>);
     fn constant(&self, const_decl: &ast::Constant<'_>);
     fn types(&self, type_decl: &ast::StructTypes<'_>);
-    fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend;
+    fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>);
     fn let_binding(&mut self, let_decl: &Value, expr_result: &ExpressionResult);
     fn call(
         &self,
         call: &ast::FunctionCall<'_>,
         params: Vec<ExpressionResult>,
         register_number: u64,
-    ) -> Self::Backend;
+    );
     fn expression_value(&mut self, expression: &Value, register_number: u64);
-    fn expression_const(
-        &self,
-        expression: &semantic::Constant,
-        register_number: u64,
-    ) -> Self::Backend;
+    fn expression_const(&self, expression: &semantic::Constant, register_number: u64);
     fn expression_operation(
         &self,
         operation: &ast::ExpressionOperations,
         left_value: &semantic::ExpressionResult,
         right_value: &semantic::ExpressionResult,
         register_number: u64,
-    ) -> Self::Backend;
-    fn expression_function_return(&self, expr_result: &ExpressionResult) -> Self::Backend;
+    );
+    fn expression_function_return(&self, expr_result: &ExpressionResult);
     fn condition_expression(
         &mut self,
         left_result: &ExpressionResult,

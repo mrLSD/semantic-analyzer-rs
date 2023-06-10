@@ -139,7 +139,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn function_statement(&mut self, _fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend {
+    fn function_statement(&mut self, _fn_decl: &ast::FunctionStatement<'_>) {
         todo!()
     }
 
@@ -152,7 +152,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         _call: &ast::FunctionCall<'_>,
         _params: Vec<ExpressionResult>,
         _register_number: u64,
-    ) -> Self::Backend {
+    ) {
         todo!()
     }
 
@@ -160,11 +160,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn expression_const(
-        &self,
-        _expression: &semantic::Constant,
-        _register_number: u64,
-    ) -> Self::Backend {
+    fn expression_const(&self, _expression: &semantic::Constant, _register_number: u64) {
         todo!()
     }
 
@@ -174,11 +170,11 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         _left_value: &semantic::ExpressionResult,
         _right_value: &semantic::ExpressionResult,
         _register_number: u64,
-    ) -> Self::Backend {
+    ) {
         todo!()
     }
 
-    fn expression_function_return(&self, _expr_result: &ExpressionResult) -> Self::Backend {
+    fn expression_function_return(&self, _expr_result: &ExpressionResult) {
         todo!()
     }
 

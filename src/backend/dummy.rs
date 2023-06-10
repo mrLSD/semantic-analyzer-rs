@@ -36,7 +36,7 @@ impl Codegen for Backend {
         todo!()
     }
 
-    fn function_statement(&mut self, _fn_decl: &ast::FunctionStatement<'_>) -> Self::Backend {
+    fn function_statement(&mut self, _fn_decl: &ast::FunctionStatement<'_>) {
         todo!()
     }
 
@@ -63,7 +63,7 @@ impl Codegen for Backend {
         _call: &ast::FunctionCall<'_>,
         _params: Vec<ExpressionResult>,
         _register_number: u64,
-    ) -> Self::Backend {
+    ) {
         todo!()
     }
 
@@ -77,11 +77,7 @@ impl Codegen for Backend {
         );
     }
 
-    fn expression_const(
-        &self,
-        _expression: &semantic::Constant,
-        _register_number: u64,
-    ) -> Self::Backend {
+    fn expression_const(&self, _expression: &semantic::Constant, _register_number: u64) {
         todo!()
     }
     fn expression_operation(
@@ -90,10 +86,10 @@ impl Codegen for Backend {
         _left_value: &semantic::ExpressionResult,
         _right_value: &semantic::ExpressionResult,
         _register_number: u64,
-    ) -> Self::Backend {
+    ) {
         todo!()
     }
-    fn expression_function_return(&self, _expr_result: &ExpressionResult) -> Self::Backend {
+    fn expression_function_return(&self, _expr_result: &ExpressionResult) {
         todo!()
     }
 

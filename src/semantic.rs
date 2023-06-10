@@ -281,7 +281,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                         .map(|res| {
                             // TODO: Check is previously return was called
                             return_is_called = true;
-                            self.codegen = self.codegen.expression_function_return(&res);
+                            self.codegen.expression_function_return(&res);
                         })
                         .map_err(|e| vec![e])
                 }
@@ -291,7 +291,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                         .map(|res| {
                             // TODO: Check is previously return was called
                             return_is_called = true;
-                            self.codegen = self.codegen.expression_function_return(&res);
+                            self.codegen.expression_function_return(&res);
                         })
                         .map_err(|e| vec![e])
                 }
@@ -402,8 +402,7 @@ impl<T: Codegen<Backend = T>> State<T> {
 
         // Codegen for function-call
         body_state.borrow_mut().inc_register();
-        self.codegen = self
-            .codegen
+        self.codegen
             .call(data, params, body_state.borrow().last_register_number);
         Ok(())
     }
@@ -507,7 +506,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                         .map(|res| {
                             // TODO: set return-is-called and pass it
                             // to main body
-                            self.codegen = self.codegen.expression_function_return(&res);
+                            self.codegen.expression_function_return(&res);
                         })
                         .map_err(|e| vec![e])
                 }
@@ -590,7 +589,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                         .map(|res| {
                             // TODO: set return-is-called and pass it
                             // to main body
-                            self.codegen = self.codegen.expression_function_return(&res);
+                            self.codegen.expression_function_return(&res);
                         })
                         .map_err(|e| vec![e])
                 }
@@ -700,8 +699,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                             .expression_value(&val, body_state.borrow().last_register_number);
                     } else if let Some(const_val) = self.global.constants.get(&value.name()) {
                         // If value is constant load it to register
-                        self.codegen = self
-                            .codegen
+                        self.codegen
                             .expression_const(const_val, body_state.borrow().last_register_number);
                     }
                     Ok(ExpressionResult::Register(
@@ -735,7 +733,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         // Call expression operation for: OP(left_value, right_value)
         // and return result of that call as register
         body_state.borrow_mut().inc_register();
-        self.codegen = self.codegen.expression_operation(
+        self.codegen.expression_operation(
             op.unwrap(),
             left_value.unwrap(),
             &right_value,
