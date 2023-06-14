@@ -20,8 +20,8 @@ pub trait Codegen {
     fn expression_operation(
         &self,
         operation: &ast::ExpressionOperations,
-        left_value: &semantic::ExpressionResult,
-        right_value: &semantic::ExpressionResult,
+        left_value: &ExpressionResult,
+        right_value: &ExpressionResult,
         register_number: u64,
     );
     fn expression_function_return(&self, expr_result: &ExpressionResult);
@@ -34,14 +34,14 @@ pub trait Codegen {
     fn if_condition_expression(
         &mut self,
         expr_result: &ExpressionResult,
-        label_if_begin: &str,
-        label_if_end: &str,
+        label_if_begin: &LabelName,
+        label_if_end: &LabelName,
     );
     fn if_condition_logic(
         &mut self,
-        label_if_begin: &str,
-        label_if_end: &str,
+        label_if_begin: &LabelName,
+        label_if_end: &LabelName,
         register_number: u64,
     );
-    fn if_end(&mut self, label_if_end: &str);
+    fn if_end(&mut self, label_if_end: &LabelName);
 }

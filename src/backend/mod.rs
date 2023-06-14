@@ -156,7 +156,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn expression_value(&mut self, _expression: &semantic::Value, _register_number: u64) {
+    fn expression_value(&mut self, _expression: &Value, _register_number: u64) {
         todo!()
     }
 
@@ -167,8 +167,8 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     fn expression_operation(
         &self,
         _operation: &ast::ExpressionOperations,
-        _left_value: &semantic::ExpressionResult,
-        _right_value: &semantic::ExpressionResult,
+        _left_value: &ExpressionResult,
+        _right_value: &ExpressionResult,
         _register_number: u64,
     ) {
         todo!()
@@ -181,21 +181,21 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     fn if_condition_expression(
         &mut self,
         _expr_result: &ExpressionResult,
-        _label_if_begin: &str,
-        _label_if_end: &str,
+        _label_if_begin: &LabelName,
+        _label_if_end: &LabelName,
     ) {
         todo!();
     }
     fn if_condition_logic(
         &mut self,
-        _label_if_begin: &str,
-        _label_if_end: &str,
+        _label_if_begin: &LabelName,
+        _label_if_end: &LabelName,
         _register_number: u64,
     ) {
         todo!();
     }
 
-    fn if_end(&mut self, _label_if_end: &str) {
+    fn if_end(&mut self, _label_if_end: &LabelName) {
         todo!();
     }
 

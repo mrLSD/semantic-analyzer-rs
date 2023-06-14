@@ -25,42 +25,42 @@ pub type StateResult<T> = Result<T, error::StateErrorResult>;
 pub type StateResults<T> = Result<T, Vec<error::StateErrorResult>>;
 
 /// Value name type
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 struct ValueName(String);
 
-trait Get {
-    fn get(&self) -> &String;
-}
-
-impl Get for ValueName {
-    fn get(&self) -> &String {
-        &self.0
+impl From<String> for ValueName {
+    fn from(value: String) -> Self {
+        Self(value)
     }
 }
 
 /// Inner value name type
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 struct InnerValueName(String);
 
-impl Get for InnerValueName {
-    fn get(&self) -> &String {
-        &self.0
+impl From<String> for InnerValueName {
+    fn from(value: String) -> Self {
+        Self(value)
     }
 }
 
 /// Inner Type - type representation
+#[derive(Debug, Clone)]
 struct InnerType(String);
 
-impl Get for InnerType {
-    fn get(&self) -> &String {
-        &self.0
+impl From<String> for InnerType {
+    fn from(value: String) -> Self {
+        Self(value)
     }
 }
 
 /// Label name type
+#[derive(Debug, Clone)]
 struct LabelName(String);
 
-impl Get for LabelName {
-    fn get(&self) -> &String {
-        &self.0
+impl From<String> for LabelName {
+    fn from(value: String) -> Self {
+        Self(value)
     }
 }
 
@@ -76,7 +76,7 @@ pub struct Constant {
 /// Can contain inner data: name, type, memory allocation status
 #[derive(Debug, Clone)]
 pub struct Value {
-    pub inner_name: ValueName,
+    pub inner_name: InnerValueName,
     pub inner_type: InnerType,
     pub allocated: bool,
 }
@@ -103,7 +103,7 @@ pub struct BlockState {
     /// Used to keep all names in the block state (and parent) as unique
     pub inner_values_name: HashSet<InnerValueName>,
     /// State labels for conditional operations
-    pub labels: HashSet<String>,
+    pub labels: HashSet<LabelName>,
     /// Last register for unique register representation
     pub last_register_number: u64,
     /// Parent state
@@ -149,7 +149,7 @@ impl BlockState {
     }
 
     /// Set value inner name to current state and parent states
-    fn set_inner_value_name(&mut self, name: &ValueName) {
+    fn set_inner_value_name(&mut self, name: &InnerValueName) {
         self.inner_values_name.insert(name.clone());
         if let Some(parent) = &self.parent {
             parent.borrow_mut().set_inner_value_name(name);
@@ -217,7 +217,7 @@ impl BlockState {
             return label.clone();
         }
         // If label exists, split and get number of label counter
-        let name = Self::set_attr_counter(label);
+        let name: LabelName = Self::set_attr_counter(label.into()).into();
         if self.is_label_name_exist(&name) {
             self.get_and_set_next_label(&name)
         } else {
@@ -226,10 +226,12 @@ impl BlockState {
         }
     }
 
-    fn get_next_inner_name(&self, val: &InnerValueName) -> String {
+    /// Get next `inner_value_name` by name counter for current and
+    /// parent states. The `inner_value_name` should always be unique.
+    fn get_next_inner_name(&self, val: &InnerValueName) -> InnerValueName {
         // Increment inner value name counter for shadowed variable
-        let name = Self::set_attr_counter(val);
-        if self.inner_values_name.contains(&name) {
+        let name: InnerValueName = Self::set_attr_counter(val.into()).into();
+        if self.is_inner_value_name_exist(&name) {
             self.get_next_inner_name(&name)
         } else {
             name
@@ -237,6 +239,15 @@ impl BlockState {
     }
 }
 
+/// # Function
+/// Function declaration analyze contains:
+/// - function name
+/// - function type
+/// - parameters of functions (with types only)
+///
+/// It used to detect functions in state and
+/// their parameters to use in normal execution
+/// floq.
 #[derive(Debug)]
 pub struct Function {
     pub inner_name: String,
@@ -244,6 +255,13 @@ pub struct Function {
     pub parameters: Vec<InnerType>,
 }
 
+/// # GlobalState
+/// Global state can contains state of:
+/// - Constants
+/// - Types
+/// - Functions
+/// The visibility of Global state limited by
+/// current module.
 #[derive(Debug)]
 pub struct GlobalState {
     pub constants: HashMap<String, Constant>,
@@ -251,12 +269,20 @@ pub struct GlobalState {
     pub functions: HashMap<String, Function>,
 }
 
+/// # State
+/// Basic entity that contains `Global State`
+/// and `Codegen` tree.
 #[derive(Debug)]
 pub struct State<T: Codegen> {
     pub global: GlobalState,
     pub codegen: T,
 }
 
+/// # ExpressionResult
+/// Result of expression analyze has to kind:
+/// - Primitive value
+/// - Register that contain result of expression
+///   evaluation or call.
 #[derive(Debug)]
 pub enum ExpressionResult {
     PrimitiveValue(PrimitiveValue),
@@ -264,6 +290,7 @@ pub enum ExpressionResult {
 }
 
 impl<T: Codegen<Backend = T>> State<T> {
+    /// Init new `State`
     pub fn new(codegen: T) -> Self {
         Self {
             global: GlobalState {
@@ -312,7 +339,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     }
 
     pub fn types(&mut self, data: &ast::StructTypes<'_>) -> StateResult<()> {
-        if self.global.types.contains(&data.name()) {
+        if self.global.types.contains(&data.into()) {
             return Err(error::StateErrorResult::new(
                 error::StateErrorKind::TypeAlreadyExist,
                 data.name(),
@@ -320,7 +347,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 0,
             ));
         }
-        self.global.types.insert(data.name());
+        self.global.types.insert(data.into());
         self.codegen.types(data);
         Ok(())
     }
@@ -338,7 +365,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             data.name(),
             Constant {
                 name: data.name(),
-                inner_type: data.constant_type.name(),
+                inner_type: data.constant_type.into(),
             },
         );
         self.codegen.constant(data);
@@ -358,7 +385,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             data.name(),
             Function {
                 inner_name: data.name(),
-                inner_type: data.result_type.name(),
+                inner_type: data.result_type.into(),
                 parameters: data
                     .parameters
                     .iter()
@@ -449,12 +476,12 @@ impl<T: Codegen<Backend = T>> State<T> {
         let expr_result = self.expression(&data.value, state)?;
 
         // Find value in current state and parent states
-        let value = state.borrow().get_value_name(&data.name());
+        let value = state.borrow().get_value_name(&data.into());
         // Calculate `inner_name` as unique for current and all parent states
         let inner_name = value.map_or_else(
             || {
                 // if value not found in all states
-                data.name()
+                data.name().into()
             },
             |val| {
                 // Increment inner value name counter for shadowed variable
@@ -469,13 +496,13 @@ impl<T: Codegen<Backend = T>> State<T> {
                 .clone()
                 .value_type
                 // TODO: resolve type from expression for empty case
-                .map_or(String::new(), |ty| ty.name()),
+                .map_or(String::new().into(), |ty| ty.name().into()),
             allocated: false,
         };
         // Value inserted only to current state by Value name and Value data
-        state.borrow_mut().values.insert(data.name(), value.clone());
+        state.borrow_mut().values.insert(data.into(), value.clone());
         // Set `inner_name` to current state and all parent states
-        state.borrow_mut().set_inner_value_name(&inner_name);
+        state.borrow_mut().set_inner_value_name(&inner_name.into());
 
         self.codegen.let_binding(&value, &expr_result);
         Ok(())
@@ -572,8 +599,12 @@ impl<T: Codegen<Backend = T>> State<T> {
         let if_body_state = Rc::new(RefCell::new(BlockState::new(Some(
             function_body_state.clone(),
         ))));
-        let label_if_begin = if_body_state.borrow_mut().get_and_set_next_label(IF_BEGIN);
-        let label_if_end = if_body_state.borrow_mut().get_and_set_next_label(IF_END);
+        let label_if_begin = if_body_state
+            .borrow_mut()
+            .get_and_set_next_label(IF_BEGIN.into());
+        let label_if_end = if_body_state
+            .borrow_mut()
+            .get_and_set_next_label(IF_END.into());
         // Analyse if-conditions
         match &data.condition {
             ast::IfCondition::Single(expr) => {
@@ -799,7 +830,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         // because next analyzer should use success result/
         let right_value = match &right_expression.expression_value {
             ast::ExpressionValue::ValueName(value) => {
-                let value_from_state = body_state.borrow_mut().get_value_name(&value.name());
+                let value_from_state = body_state.borrow_mut().get_value_name(value);
                 if value_from_state.is_some() || self.global.constants.contains_key(&value.name()) {
                     // Increase register counter before loading value
                     body_state.borrow_mut().inc_register();

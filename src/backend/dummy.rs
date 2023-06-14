@@ -104,20 +104,20 @@ impl Codegen for Backend {
     fn if_condition_expression(
         &mut self,
         _expr_result: &ExpressionResult,
-        _label_if_begin: &str,
-        _label_if_end: &str,
+        _label_if_begin: &LabelName,
+        _label_if_end: &LabelName,
     ) {
         todo!();
     }
     fn if_condition_logic(
         &mut self,
-        _label_if_begin: &str,
-        _label_if_end: &str,
+        _label_if_begin: &LabelName,
+        _label_if_end: &LabelName,
         _register_number: u64,
     ) {
         todo!();
     }
-    fn if_end(&mut self, _label_if_end: &str) {
+    fn if_end(&mut self, _label_if_end: &LabelName) {
         todo!();
     }
 }
