@@ -1,6 +1,6 @@
 use crate::ast::Condition;
 use crate::codegen::Codegen;
-use crate::semantic::{ExpressionResult, Value};
+use crate::semantic::{ExpressionResult, LabelName, Value};
 use crate::{ast, semantic};
 
 pub struct Backend {
@@ -43,7 +43,11 @@ impl Codegen for Backend {
     fn let_binding(&mut self, let_decl: &Value, expr_result: &ExpressionResult) {
         self.set_stack(
             "let_binding",
-            format!("%{} = alloca {}", let_decl.inner_name, let_decl.inner_type),
+            format!(
+                "%{} = alloca {}",
+                let_decl.inner_name.to_string(),
+                let_decl.inner_type.to_string()
+            ),
         );
         let val = match expr_result {
             ExpressionResult::PrimitiveValue(v) => format!("{v:?}"),
@@ -53,7 +57,8 @@ impl Codegen for Backend {
             "let_binding",
             format!(
                 "store {} {val}, ptr %{}",
-                let_decl.inner_type, let_decl.inner_name
+                let_decl.inner_type.to_string(),
+                let_decl.inner_name.to_string()
             ),
         );
     }
@@ -72,7 +77,8 @@ impl Codegen for Backend {
             "expression_value",
             format!(
                 "%{register_number:?} = load {}, ptr %{}",
-                value.inner_type, value.inner_name
+                value.inner_type.to_string(),
+                value.inner_name.to_string()
             ),
         );
     }
@@ -83,8 +89,8 @@ impl Codegen for Backend {
     fn expression_operation(
         &self,
         _operation: &ast::ExpressionOperations,
-        _left_value: &semantic::ExpressionResult,
-        _right_value: &semantic::ExpressionResult,
+        _left_value: &ExpressionResult,
+        _right_value: &ExpressionResult,
         _register_number: u64,
     ) {
         todo!()

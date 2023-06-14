@@ -1,5 +1,5 @@
 use crate::ast::Condition;
-use crate::semantic::{ExpressionResult, Value};
+use crate::semantic::{ExpressionResult, LabelName, Value};
 use crate::{ast, semantic};
 
 pub trait Codegen {

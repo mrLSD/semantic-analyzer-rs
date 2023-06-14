@@ -7,7 +7,7 @@ use crate::codegen::Codegen;
 use crate::{ast, semantic};
 use inkwell::types::{ArrayType, BasicType, BasicTypeEnum, FloatType, IntType, StructType};
 // use inkwell::values::BasicValue;
-use crate::semantic::{ExpressionResult, Value};
+use crate::semantic::{ExpressionResult, LabelName, Value};
 use inkwell::{
     builder::Builder,
     context::Context,
