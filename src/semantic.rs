@@ -1,3 +1,16 @@
+//! # Semantic analyzer
+//! Semantic analyzer provide algorithms to analyze AST for different
+//! rules and generate `Codegen`. AST represent tree n0des of language
+//! constructions and fully cover all flow of the program represented through
+//! AST.
+//!
+//! Semantic contains basic entities:
+//! - `Global State` - global state of semantic analyzer.
+//! - `Block State` - state for functions and sub blocks for it.
+//! - `Codegen` - generated code as result of semantic analyzing.
+//!
+//! Codegen is result of Semantic analyzer and contains prepared data tree
+//! of generated code for next step - compilation generated raw program code.
 use crate::ast::{self, ExpressionOperations, GetName, PrimitiveValue};
 use crate::codegen::Codegen;
 use std::cell::RefCell;
@@ -11,10 +24,45 @@ const _IF_ELSE: &str = "if_else";
 pub type StateResult<T> = Result<T, error::StateErrorResult>;
 pub type StateResults<T> = Result<T, Vec<error::StateErrorResult>>;
 
-type ValueName = String;
-type InnerValueName = String;
-type InnerType = String;
-type LabelName = String;
+/// Value name type
+struct ValueName(String);
+
+trait Get {
+    fn get(&self) -> &String;
+}
+
+impl Get for ValueName {
+    fn get(&self) -> &String {
+        &self.0
+    }
+}
+
+/// Inner value name type
+struct InnerValueName(String);
+
+impl Get for InnerValueName {
+    fn get(&self) -> &String {
+        &self.0
+    }
+}
+
+/// Inner Type - type representation
+struct InnerType(String);
+
+impl Get for InnerType {
+    fn get(&self) -> &String {
+        &self.0
+    }
+}
+
+/// Label name type
+struct LabelName(String);
+
+impl Get for LabelName {
+    fn get(&self) -> &String {
+        &self.0
+    }
+}
 
 /// # Constant
 /// Can contain: name, type
@@ -106,6 +154,16 @@ impl BlockState {
         if let Some(parent) = &self.parent {
             parent.borrow_mut().set_inner_value_name(name);
         }
+    }
+
+    /// Check is `inner_value_name` exist in current and parent states
+    fn is_inner_value_name_exist(&self, name: &InnerValueName) -> bool {
+        if self.inner_values_name.contains(name) {
+            return true;
+        } else if let Some(parent) = &self.parent {
+            return parent.borrow().is_inner_value_name_exist(name);
+        }
+        false
     }
 
     /// Get `Value` by value name from current state.

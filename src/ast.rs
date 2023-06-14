@@ -1,6 +1,11 @@
+//! # AST
+//! Abstract Syntax Tree representation contains tree node that
+//! represent full cycle of the program, and represent
+//! `turing-complete` state machine.
 #![allow(dead_code)]
 use nom_locate::LocatedSpan;
 
+/// Basic `Ident` entity
 pub type Ident<'a> = LocatedSpan<&'a str>;
 
 pub trait GetName {
@@ -11,6 +16,7 @@ pub trait GetType {
     fn inner_type(&self) -> String;
 }
 
+/// Specific import name
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImportName<'a>(Ident<'a>);
 
@@ -20,6 +26,7 @@ impl GetName for ImportName<'_> {
     }
 }
 
+/// Imports with full path of import
 pub type ImportPath<'a> = Vec<ImportName<'a>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
