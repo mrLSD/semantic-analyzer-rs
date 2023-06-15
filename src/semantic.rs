@@ -265,7 +265,7 @@ impl BlockState {
 ///
 /// It used to detect functions in state and
 /// their parameters to use in normal execution
-/// floq.
+/// flog.
 #[derive(Debug)]
 pub struct Function {
     pub inner_name: String,
@@ -320,7 +320,11 @@ impl<T: Codegen<Backend = T>> State<T> {
         }
     }
 
+    /// Run semantic analyzer that covers all flow
     pub fn run(&mut self, data: &ast::Main<'_>) -> StateResults<()> {
+        // Execute each kind of analyzing and return errors data.
+        // For functions - fetch only declaration for fast-forward
+        // identification for using it in functions body.
         let result_errors = data.iter().fold(vec![], |mut s_err, main| {
             let res = match main {
                 ast::MainStatement::Import(import) => self.import(import),
@@ -549,7 +553,9 @@ impl<T: Codegen<Backend = T>> State<T> {
     /// 1. Check is current function name exists in global state of functions
     /// name.
     /// 2. Analyse expressions for function parameters
-    /// 3. Generate codegen
+    /// 3. Inc register
+    /// 4. Generate codegen
+    /// Codegen store always result to register even for void result.
     ///
     /// ## Errors
     /// Return error if function name doesn't exist in global state
@@ -575,6 +581,7 @@ impl<T: Codegen<Backend = T>> State<T> {
 
         // Codegen for function-call
         body_state.borrow_mut().inc_register();
+        // Store always result to register even for void result
         self.codegen
             .call(data, params, body_state.borrow().last_register_number);
         Ok(())
@@ -824,8 +831,9 @@ impl<T: Codegen<Backend = T>> State<T> {
     /// ## Expression
     /// Is basic entity for state operation and state usage.
     /// State correctness verified by expressions call.
-    /// Return: PrimitiveValue | TmpRegister
+    /// Return: `PrimitiveValue` | `TmpRegister`
     ///
+    ///  Possible algorithm conditions:
     ///     1. PrimitiveValue -> PrimitiveValue
     ///     2. Value -> load -> TmpRegister
     ///     3. FuncCall -> call -> TmpRegister
@@ -847,8 +855,9 @@ impl<T: Codegen<Backend = T>> State<T> {
         // To analyze expression first time, we set:
         // left_value - as None
         // operation - as None
-        // And basic expression value is "right_value", because
-        // it can contain sub-operations
+        // And basic expression value is `right_value`, because
+        // it can contain sub-operations (`left_value` don't contain
+        // and contain Expression result)
         self.expression_operation(None, data, None, body_state)
     }
 
@@ -863,10 +872,13 @@ impl<T: Codegen<Backend = T>> State<T> {
     ) -> StateResult<ExpressionResult> {
         // Get right value from expression.
         // If expression return error immediately return error
-        // because next analyzer should use success result/
+        // because next analyzer should use success result.
         let right_value = match &right_expression.expression_value {
+            // Check is expression Value entity
             ast::ExpressionValue::ValueName(value) => {
+                // Get value from block state
                 let value_from_state = body_state.borrow_mut().get_value_name(&value.name().into());
+                // Check is value exist in State or as Constant
                 if value_from_state.is_some() || self.global.constants.contains_key(&value.name()) {
                     // Increase register counter before loading value
                     body_state.borrow_mut().inc_register();
@@ -880,6 +892,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                         self.codegen
                             .expression_const(const_val, body_state.borrow().last_register_number);
                     }
+                    // Return result as register
                     Ok(ExpressionResult::Register(
                         body_state.borrow().last_register_number,
                     ))
@@ -893,18 +906,24 @@ impl<T: Codegen<Backend = T>> State<T> {
                     ))
                 }
             }
+            // Check is expression primitive value
             ast::ExpressionValue::PrimitiveValue(value) => {
+                // Just return primitive value itself
                 Ok(ExpressionResult::PrimitiveValue(value.clone()))
             }
+            // Check is expression Function call entity
             ast::ExpressionValue::FunctionCall(fn_call) => {
-                body_state.borrow_mut().inc_register();
+                // We shouldn't increment register, because it's
+                // inside `self.function_call`.
+                // And result of function always stored in register.
                 let call_result = self.function_call(fn_call, body_state);
+                // Return result as register
                 call_result
                     .map(|_| ExpressionResult::Register(body_state.borrow().last_register_number))
             }
         }?;
         // It's special case for "pure" expression - without operation.
-        // For that also left side of expression shouldn't exist
+        // For that check also left side of expression shouldn't exist
         if left_value.is_none() || op.is_none() {
             return Ok(right_value);
         }
@@ -922,6 +941,8 @@ impl<T: Codegen<Backend = T>> State<T> {
 
         // Check is for right value exist next operation
         if let Some((operation, expr)) = &right_expression.operation {
+            // Recursively call, where current Execution result set as left
+            // side expression
             self.expression_operation(Some(&expression_result), expr, Some(operation), body_state)
         } else {
             Ok(expression_result)
