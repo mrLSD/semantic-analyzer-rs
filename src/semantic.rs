@@ -21,6 +21,7 @@ const IF_BEGIN: &str = "if_begin";
 const IF_END: &str = "if_end";
 const _IF_ELSE: &str = "if_else";
 
+/// State result type - for single results
 pub type StateResult<T> = Result<T, error::StateErrorResult>;
 pub type StateResults<T> = Result<T, Vec<error::StateErrorResult>>;
 
@@ -82,11 +83,43 @@ impl ToString for LabelName {
     }
 }
 
+/// Function name type
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct FunctionName(String);
+
+impl From<String> for FunctionName {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl ToString for FunctionName {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
+/// Constant name type
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct ConstantName(String);
+
+impl From<String> for ConstantName {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl ToString for ConstantName {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
 /// # Constant
 /// Can contain: name, type
 #[derive(Debug)]
 pub struct Constant {
-    pub name: String,
+    pub name: ConstantName,
     pub inner_type: InnerType,
 }
 
@@ -268,7 +301,7 @@ impl BlockState {
 /// flog.
 #[derive(Debug)]
 pub struct Function {
-    pub inner_name: String,
+    pub inner_name: FunctionName,
     pub inner_type: InnerType,
     pub parameters: Vec<InnerType>,
 }
@@ -282,9 +315,9 @@ pub struct Function {
 /// current module.
 #[derive(Debug)]
 pub struct GlobalState {
-    pub constants: HashMap<String, Constant>,
+    pub constants: HashMap<ConstantName, Constant>,
     pub types: HashSet<InnerType>,
-    pub functions: HashMap<String, Function>,
+    pub functions: HashMap<FunctionName, Function>,
 }
 
 /// # State
@@ -378,7 +411,7 @@ impl<T: Codegen<Backend = T>> State<T> {
 
     /// Constant analyzer. Add it got Global State
     pub fn constant(&mut self, data: &ast::Constant<'_>) -> StateResult<()> {
-        if self.global.constants.contains_key(&data.name()) {
+        if self.global.constants.contains_key(&data.name().into()) {
             return Err(error::StateErrorResult::new(
                 error::StateErrorKind::ConstantAlreadyExist,
                 data.name(),
@@ -387,9 +420,9 @@ impl<T: Codegen<Backend = T>> State<T> {
             ));
         }
         self.global.constants.insert(
-            data.name(),
+            data.name().into(),
             Constant {
-                name: data.name(),
+                name: data.name().into(),
                 inner_type: data.constant_type.name().into(),
             },
         );
@@ -399,7 +432,7 @@ impl<T: Codegen<Backend = T>> State<T> {
 
     /// Function declaration analyze. Add it to Global State/
     pub fn function_declaration(&mut self, data: &ast::FunctionStatement<'_>) -> StateResult<()> {
-        if self.global.functions.contains_key(&data.name()) {
+        if self.global.functions.contains_key(&data.name().into()) {
             return Err(error::StateErrorResult::new(
                 error::StateErrorKind::FunctionAlreadyExist,
                 data.name(),
@@ -408,9 +441,9 @@ impl<T: Codegen<Backend = T>> State<T> {
             ));
         }
         self.global.functions.insert(
-            data.name(),
+            data.name().into(),
             Function {
-                inner_name: data.name(),
+                inner_name: data.name().into(),
                 inner_type: data.result_type.name().into(),
                 parameters: data
                     .parameters
@@ -565,7 +598,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         body_state: &Rc<RefCell<BlockState>>,
     ) -> StateResult<()> {
         // Check is function exists in global functions state
-        if !self.global.functions.contains_key(&data.name()) {
+        if !self.global.functions.contains_key(&data.name().into()) {
             return Err(error::StateErrorResult::new(
                 error::StateErrorKind::FunctionNotFound,
                 data.name(),
@@ -879,7 +912,9 @@ impl<T: Codegen<Backend = T>> State<T> {
                 // Get value from block state
                 let value_from_state = body_state.borrow_mut().get_value_name(&value.name().into());
                 // Check is value exist in State or as Constant
-                if value_from_state.is_some() || self.global.constants.contains_key(&value.name()) {
+                if value_from_state.is_some()
+                    || self.global.constants.contains_key(&value.name().into())
+                {
                     // Increase register counter before loading value
                     body_state.borrow_mut().inc_register();
                     // First check value in body state
@@ -887,7 +922,8 @@ impl<T: Codegen<Backend = T>> State<T> {
                         // If it's value then Load it to register
                         self.codegen
                             .expression_value(&val, body_state.borrow().last_register_number);
-                    } else if let Some(const_val) = self.global.constants.get(&value.name()) {
+                    } else if let Some(const_val) = self.global.constants.get(&value.name().into())
+                    {
                         // If value is constant load it to register
                         self.codegen
                             .expression_const(const_val, body_state.borrow().last_register_number);
