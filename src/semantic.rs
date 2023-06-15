@@ -326,7 +326,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::MainStatement::Import(import) => self.import(import),
                 ast::MainStatement::Constant(constant) => self.constant(constant),
                 ast::MainStatement::Types(types) => self.types(types),
-                ast::MainStatement::Function(function) => self.function(function),
+                ast::MainStatement::Function(function) => self.function_declaration(function),
             };
             if let Err(err) = res {
                 s_err.push(err);
@@ -351,11 +351,13 @@ impl<T: Codegen<Backend = T>> State<T> {
         }
     }
 
+    /// Import analyzer
     #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
     pub const fn import(&self, _data: &ast::ImportPath<'_>) -> StateResult<()> {
         Ok(())
     }
 
+    /// Types declaration analyzer. Add types to Global State.
     pub fn types(&mut self, data: &ast::StructTypes<'_>) -> StateResult<()> {
         if self.global.types.contains(&data.name().into()) {
             return Err(error::StateErrorResult::new(
@@ -370,6 +372,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
+    /// Constant analyzer. Add it got Global State
     pub fn constant(&mut self, data: &ast::Constant<'_>) -> StateResult<()> {
         if self.global.constants.contains_key(&data.name()) {
             return Err(error::StateErrorResult::new(
@@ -390,7 +393,8 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
-    pub fn function(&mut self, data: &ast::FunctionStatement<'_>) -> StateResult<()> {
+    /// Function declaration analyze. Add it to Global State/
+    pub fn function_declaration(&mut self, data: &ast::FunctionStatement<'_>) -> StateResult<()> {
         if self.global.functions.contains_key(&data.name()) {
             return Err(error::StateErrorResult::new(
                 error::StateErrorKind::FunctionAlreadyExist,
@@ -415,9 +419,16 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
+    /// Function body analyze.
+    /// It is basic execution entity for program flow.
+    /// It's operate sub analyze for function elements. It's contain
+    /// Body State for current and child states.
     pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) -> StateResults<()> {
+        // Init empty function body state
         let body_state = Rc::new(RefCell::new(BlockState::new(None)));
+        // Flag to indicate is function return called
         let mut return_is_called = false;
+        // Fetch function elements and gather errors
         let mut result_errors = data.body.iter().fold(vec![], |mut s_err, body| {
             let res = match body {
                 ast::BodyStatement::LetBinding(bind) => {
@@ -453,11 +464,13 @@ impl<T: Codegen<Backend = T>> State<T> {
                         .map_err(|e| vec![e])
                 }
             };
+            // Collect errors
             if let Err(mut err) = res {
                 s_err.append(&mut err);
             }
             s_err
         });
+        // Check is function contain return
         if !return_is_called {
             result_errors.push(error::StateErrorResult::new(
                 error::StateErrorKind::ReturnNotFound,
@@ -498,8 +511,9 @@ impl<T: Codegen<Backend = T>> State<T> {
         // Calculate `inner_name` as unique for current and all parent states
         let inner_name = value.map_or_else(
             || {
-                // if value not found in all states
-                data.name().into()
+                // if value not found in all states check and set
+                // `inner_value` from value name
+                state.borrow().get_next_inner_name(&data.name().into())
             },
             |val| {
                 // Increment inner value name counter for shadowed variable
