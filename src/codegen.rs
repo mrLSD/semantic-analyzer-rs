@@ -1,4 +1,4 @@
-use crate::ast::Condition;
+use crate::ast::{Condition, LogicCondition};
 use crate::semantic::{ExpressionResult, LabelName, Value};
 use crate::{ast, semantic};
 
@@ -30,6 +30,14 @@ pub trait Codegen {
         left_result: &ExpressionResult,
         right_result: &ExpressionResult,
         condition: &Condition,
+        register_number: u64,
+    );
+    fn logic_condition(
+        &mut self,
+        left_condition_register: u64,
+        right_condition_register: u64,
+        logic_condition: &LogicCondition,
+        register_number: u64,
     );
     fn if_condition_expression(
         &mut self,

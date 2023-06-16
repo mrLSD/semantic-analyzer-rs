@@ -641,16 +641,35 @@ impl<T: Codegen<Backend = T>> State<T> {
 
         // Increase register counter before generate condition
         function_body_state.borrow_mut().inc_register();
-        // Codegen for condition
-        self.codegen
-            .condition_expression(&left_res, &right_res, &data.left.condition);
+        // Codegen for left condition and set result to register
+        self.codegen.condition_expression(
+            &left_res,
+            &right_res,
+            &data.left.condition,
+            function_body_state.borrow().last_register_number,
+        );
 
+        // Analyze right condition
         if let Some(right) = &data.right {
-            // Analyse right part of condition
+            // Get register form left operation
+            let left_register_number = function_body_state.borrow().last_register_number;
+            // Analyse recursively right part of condition
             self.condition_expression(&right.1, function_body_state)?;
+
+            // Get register form right operation of right side analyzing
+            let right_register_number = function_body_state.borrow().last_register_number;
             // Increase register counter before generate logic condition
             function_body_state.borrow_mut().inc_register();
-            // TODO: logic condition
+
+            // Codegen for logical condition for: left [LOGIC-OP] right
+            // The result generated from registers, and stored to
+            // new register
+            self.codegen.logic_condition(
+                left_register_number,
+                right_register_number,
+                &right.0,
+                function_body_state.borrow().last_register_number,
+            );
         }
 
         Ok(())

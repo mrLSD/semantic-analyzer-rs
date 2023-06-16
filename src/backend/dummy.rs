@@ -1,4 +1,4 @@
-use crate::ast::Condition;
+use crate::ast::{Condition, LogicCondition};
 use crate::codegen::Codegen;
 use crate::semantic::{ExpressionResult, LabelName, Value};
 use crate::{ast, semantic};
@@ -104,9 +104,21 @@ impl Codegen for Backend {
         _left_result: &ExpressionResult,
         _right_result: &ExpressionResult,
         _condition: &Condition,
+        _register_number: u64,
     ) {
         todo!();
     }
+
+    fn logic_condition(
+        &mut self,
+        _left_condition_register: u64,
+        _right_condition_register: u64,
+        _logic_condition: &LogicCondition,
+        _register_number: u64,
+    ) {
+        todo!()
+    }
+
     fn if_condition_expression(
         &mut self,
         _expr_result: &ExpressionResult,

@@ -2,7 +2,7 @@
 
 pub mod dummy;
 
-use crate::ast::{Condition, Constant, StructTypes};
+use crate::ast::{Condition, Constant, LogicCondition, StructTypes};
 use crate::codegen::Codegen;
 use crate::{ast, semantic};
 use inkwell::types::{ArrayType, BasicType, BasicTypeEnum, FloatType, IntType, StructType};
@@ -204,7 +204,18 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         _left_result: &ExpressionResult,
         _right_result: &ExpressionResult,
         _condition: &Condition,
+        _register_number: u64,
     ) {
         todo!();
+    }
+
+    fn logic_condition(
+        &mut self,
+        _left_condition_register: u64,
+        _right_condition_register: u64,
+        _logic_condition: &LogicCondition,
+        _register_number: u64,
+    ) {
+        todo!()
     }
 }
