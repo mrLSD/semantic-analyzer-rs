@@ -146,6 +146,8 @@ pub struct Value {
 /// - `last_register_number` - represent register counter for current and
 ///   all parent states for `Codegen`. Register represented as `u64` and
 ///   should be linearly incremented.
+/// - `manual_return` - flag indicated, that return was invoked from
+/// other state, for example: if-flow, loop-flow
 /// - `parent` - represent parent states.  
 #[derive(Debug)]
 pub struct BlockState {
@@ -157,6 +159,8 @@ pub struct BlockState {
     pub labels: HashSet<LabelName>,
     /// Last register for unique register representation
     pub last_register_number: u64,
+    /// Manual return from other states
+    pub manual_return: bool,
     /// Parent state
     pub parent: Option<Rc<RefCell<BlockState>>>,
 }
@@ -165,22 +169,25 @@ impl BlockState {
     /// Init block state with optional `parent` state
     pub fn new(parent: Option<Rc<RefCell<Self>>>) -> Self {
         // Get values from parent
-        let (last_register_number, inner_values_name, labels) = parent.clone().map_or_else(
-            || (0, HashSet::new(), HashSet::new()),
-            |p| {
-                let parent = p.borrow();
-                (
-                    parent.last_register_number,
-                    parent.inner_values_name.clone(),
-                    parent.labels.clone(),
-                )
-            },
-        );
+        let (last_register_number, inner_values_name, labels, manual_return) =
+            parent.clone().map_or_else(
+                || (0, HashSet::new(), HashSet::new(), false),
+                |p| {
+                    let parent = p.borrow();
+                    (
+                        parent.last_register_number,
+                        parent.inner_values_name.clone(),
+                        parent.labels.clone(),
+                        parent.manual_return,
+                    )
+                },
+            );
         Self {
             values: HashMap::new(),
             inner_values_name,
             labels,
             last_register_number,
+            manual_return,
             parent,
         }
     }
@@ -286,6 +293,14 @@ impl BlockState {
             self.get_next_inner_name(&name)
         } else {
             name
+        }
+    }
+
+    /// Set return status flag for current and parent states
+    fn set_return(&mut self) {
+        self.manual_return = true;
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().set_return();
         }
     }
 }
@@ -676,24 +691,26 @@ impl<T: Codegen<Backend = T>> State<T> {
     }
 
     /// # If-condition
-    /// Includes all variants for if statements:
+    /// Analyzing izncludes all variants for if statements:
     /// 1. if
     /// 2. if-else
     /// 3. if-else-if
     /// It creates own state, with parent function-state. in that case
-    /// if-state independent form parent state buy csn get access to
+    /// if-state independent from parent state, but csn get access to
     /// parent state.
     pub fn if_condition(
         &mut self,
         data: &ast::IfStatement<'_>,
         function_body_state: &Rc<RefCell<BlockState>>,
     ) -> StateResults<()> {
-        // Create state for if-body, from parent function state because if-state
-        // can contain sub-state, that for can be independent from parent state
+        // Create state for if-body, from parent function state because
+        // if-state can contain sub-state, that can be independent from parent
+        // state
         let if_body_state = Rc::new(RefCell::new(BlockState::new(Some(
             function_body_state.clone(),
         ))));
 
+        // Get labels name for if-begin, and if-end
         let label_if_begin = if_body_state
             .borrow_mut()
             .get_and_set_next_label(&IF_BEGIN.to_string().into());
@@ -702,6 +719,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             .get_and_set_next_label(&IF_END.to_string().into());
         // Analyse if-conditions
         match &data.condition {
+            // if condition represented just as expression
             ast::IfCondition::Single(expr) => {
                 // Calculate expression for single if-condition expression
                 let expr_result = self
@@ -711,6 +729,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 self.codegen
                     .if_condition_expression(&expr_result, &label_if_begin, &label_if_end);
             }
+            // If condition contains logic condition expression
             ast::IfCondition::Logic(expr_logic) => {
                 // Analyse if-condition logic
                 self.condition_expression(expr_logic, &if_body_state)?;
@@ -722,7 +741,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 );
             }
         }
-        // Analyse if-statement body
+        // Analyze if-statement body
         let result_errors = data.body.iter().fold(vec![], |mut s_err, body| {
             let res = match body {
                 ast::IfBodyStatement::LetBinding(bind) => {
@@ -741,9 +760,11 @@ impl<T: Codegen<Backend = T>> State<T> {
                     let expr_result = self.expression(expression, &if_body_state);
                     expr_result
                         .map(|res| {
-                            // TODO: set return-is-called and pass it
-                            // to main body
+                            // Set return label in codegen and set return
+                            // status to indicate function, that it's manual
+                            // return
                             self.codegen.expression_function_return(&res);
+                            function_body_state.borrow_mut().set_return();
                         })
                         .map_err(|e| vec![e])
                 }
@@ -753,9 +774,8 @@ impl<T: Codegen<Backend = T>> State<T> {
             }
             s_err
         });
-        self.codegen.if_end(&label_if_end);
 
-        // if-else gas own state, different from if-state
+        // if-else has own state, different from if-state
         let _if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
             function_body_state.clone(),
         ))));
@@ -770,6 +790,9 @@ impl<T: Codegen<Backend = T>> State<T> {
                 let _res = self.if_condition(else_if_statement, function_body_state);
             }
         }
+
+        // Codegen for if-end statement -return to program flow
+        self.codegen.if_end(&label_if_end);
 
         if result_errors.is_empty() {
             Ok(())
