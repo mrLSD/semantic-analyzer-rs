@@ -509,8 +509,11 @@ impl<T: Codegen<Backend = T>> State<T> {
                     let expr_result = self.expression(expression, &body_state);
                     expr_result
                         .map(|res| {
-                            // TODO: Check is previously return was called
                             return_is_called = true;
+                            // Check is state contain flag of manual
+                            // return from other states, for example:
+                            // if-flow, loop-flow
+                            if body_state.borrow().manual_return {}
                             self.codegen.expression_function_return(&res);
                         })
                         .map_err(|e| vec![e])
