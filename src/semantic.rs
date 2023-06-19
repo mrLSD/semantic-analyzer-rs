@@ -513,8 +513,16 @@ impl<T: Codegen<Backend = T>> State<T> {
                             // Check is state contain flag of manual
                             // return from other states, for example:
                             // if-flow, loop-flow
-                            if body_state.borrow().manual_return {}
-                            self.codegen.expression_function_return(&res);
+                            if body_state.borrow().manual_return {
+                                // First we put expression return calculation for case when
+                                // before in the state was return statement. So construct
+                                // return expression and jump to return label, set return
+                                // label and invoke after that read `return` value from all
+                                // previouse returns and invoke return instruction itself.
+                                self.codegen.expression_function_return_with_label(&res);
+                            } else {
+                                self.codegen.expression_function_return(&res);
+                            }
                         })
                         .map_err(|e| vec![e])
                 }
@@ -763,10 +771,10 @@ impl<T: Codegen<Backend = T>> State<T> {
                     let expr_result = self.expression(expression, &if_body_state);
                     expr_result
                         .map(|res| {
-                            // Set return label in codegen and set return
+                            // Jump to return label in codegen and set return
                             // status to indicate function, that it's manual
                             // return
-                            self.codegen.expression_function_return(&res);
+                            self.codegen.if_function_return(&res);
                             function_body_state.borrow_mut().set_return();
                         })
                         .map_err(|e| vec![e])
