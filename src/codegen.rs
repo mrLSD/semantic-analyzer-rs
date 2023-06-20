@@ -26,6 +26,7 @@ pub trait Codegen {
     );
     fn expression_function_return(&self, expr_result: &ExpressionResult);
     fn if_function_return(&self, expr_result: &ExpressionResult);
+    fn set_label(&self, label: &LabelName);
     fn expression_function_return_with_label(&self, expr_result: &ExpressionResult);
     fn condition_expression(
         &mut self,
@@ -53,5 +54,5 @@ pub trait Codegen {
         label_if_end: &LabelName,
         register_number: u64,
     );
-    fn if_end(&mut self, label_if_end: &LabelName);
+    fn jump_to(&mut self, label: &LabelName);
 }

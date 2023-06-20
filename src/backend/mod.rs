@@ -199,11 +199,12 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     ) {
         todo!();
     }
-
-    fn if_end(&mut self, _label_if_end: &LabelName) {
+    fn jump_to(&mut self, _label: &LabelName) {
         todo!();
     }
-
+    fn set_label(&self, _label: &LabelName) {
+        todo!()
+    }
     fn condition_expression(
         &mut self,
         _left_result: &ExpressionResult,

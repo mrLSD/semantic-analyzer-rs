@@ -316,7 +316,7 @@ pub struct IfStatement<'a> {
     pub condition: IfCondition<'a>,
     pub body: Vec<IfBodyStatement<'a>>,
     pub else_statement: Option<Vec<IfBodyStatement<'a>>>,
-    pub else_if_statement: Option<Vec<IfStatement<'a>>>,
+    pub else_if_statement: Option<Box<IfStatement<'a>>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

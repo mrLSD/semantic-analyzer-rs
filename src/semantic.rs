@@ -835,11 +835,19 @@ impl<T: Codegen<Backend = T>> State<T> {
                 }
             }
         }
+
+        //== If condition main body
+        // Set if-begin label
+        self.codegen.set_label(&label_if_begin);
         // Analyze if-statement body
         self.if_condition_body(&data.body, &if_body_state)?;
+        // Codegen for jump to if-end statement -return to program flow
+        self.codegen.jump_to(&label_if_end);
 
+        // Check else statements: else, else-if
         if is_else {
-            // TODO: else label
+            // Set if-else label
+            self.codegen.set_label(&label_if_else);
             // if-else has own state, different from if-state
             let if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
                 function_body_state.clone(),
@@ -847,22 +855,16 @@ impl<T: Codegen<Backend = T>> State<T> {
             // Analyse if-else body: data.else_statement
             if let Some(else_body) = &data.else_statement {
                 self.if_condition_body(else_body, &if_else_body_state)?;
-                // TODO: jump to end
-            } else {
-                // Analyse all else-if statements
-                if let Some(else_if_statements) = &data.else_if_statement {
-                    for else_if_statement in else_if_statements {
-                        // Analyse statement as independent
-                        let _res = self.if_condition(else_if_statement, function_body_state);
-                    }
-                }
+                // Codegen for jump to if-end statement -return to program flow
+                self.codegen.jump_to(&label_if_end);
+            } else if let Some(else_if_statement) = &data.else_if_statement {
+                // Analyse  else-if statement
+                self.if_condition(else_if_statement, function_body_state)?;
             }
-        } else {
-            // TODO: jump to end
         }
 
-        // Codegen for if-end statement -return to program flow
-        self.codegen.if_end(&label_if_end);
+        // End label for all if statement
+        self.codegen.set_label(&label_if_end);
 
         Ok(())
     }
