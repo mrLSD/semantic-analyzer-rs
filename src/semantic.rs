@@ -13,13 +13,14 @@
 //! of generated code for next step - compilation generated raw program code.
 use crate::ast::{self, ExpressionOperations, GetName, PrimitiveValue};
 use crate::codegen::Codegen;
+use crate::semantic::error::{StateErrorKind, StateErrorResult};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 const IF_BEGIN: &str = "if_begin";
 const IF_END: &str = "if_end";
-const _IF_ELSE: &str = "if_else";
+const IF_ELSE: &str = "if_else";
 
 /// State result type - for single results
 pub type StateResult<T> = Result<T, error::StateErrorResult>;
@@ -690,6 +691,53 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
+    /// # If-condition body
+    /// Analyze body for ant if condition:
+    /// - if, else, if-else
+    pub fn if_condition_body(
+        &mut self,
+        body: &[ast::IfBodyStatement<'_>],
+        if_body_state: &Rc<RefCell<BlockState>>,
+    ) -> StateResults<()> {
+        let result_errors = body.iter().fold(vec![], |mut s_err, body| {
+            let res = match body {
+                ast::IfBodyStatement::LetBinding(bind) => {
+                    self.let_binding(bind, if_body_state).map_err(|e| vec![e])
+                }
+                ast::IfBodyStatement::FunctionCall(fn_call) => self
+                    .function_call(fn_call, if_body_state)
+                    .map_err(|e| vec![e]),
+                ast::IfBodyStatement::If(if_condition) => {
+                    self.if_condition(if_condition, if_body_state)
+                }
+                ast::IfBodyStatement::Loop(loop_statement) => self
+                    .loop_statement(loop_statement, if_body_state)
+                    .map_err(|e| vec![e]),
+                ast::IfBodyStatement::Return(expression) => {
+                    let expr_result = self.expression(expression, if_body_state);
+                    expr_result
+                        .map(|res| {
+                            // Set return label in codegen and set return
+                            // status to indicate function, that it's manual
+                            // return
+                            self.codegen.expression_function_return(&res);
+                            if_body_state.borrow_mut().set_return();
+                        })
+                        .map_err(|e| vec![e])
+                }
+            };
+            if let Err(mut err) = res {
+                s_err.append(&mut err);
+            }
+            s_err
+        });
+        if result_errors.is_empty() {
+            Ok(())
+        } else {
+            Err(result_errors)
+        }
+    }
+
     /// # If-condition
     /// Analyzing izncludes all variants for if statements:
     /// 1. if
@@ -698,11 +746,22 @@ impl<T: Codegen<Backend = T>> State<T> {
     /// It creates own state, with parent function-state. in that case
     /// if-state independent from parent state, but csn get access to
     /// parent state.
+    /// If condition can't contain `else` and `if-else` on the
+    /// same time.
     pub fn if_condition(
         &mut self,
         data: &ast::IfStatement<'_>,
         function_body_state: &Rc<RefCell<BlockState>>,
     ) -> StateResults<()> {
+        // It can't containt `else` and `if-else` on the same time
+        if data.else_if_statement.is_some() && data.else_if_statement.is_some() {
+            return Err(vec![StateErrorResult::new(
+                StateErrorKind::IfElseDuplicated,
+                String::from("if-condition"),
+                0,
+                0,
+            )]);
+        }
         // Create state for if-body, from parent function state because
         // if-state can contain sub-state, that can be independent from parent
         // state
@@ -714,9 +773,14 @@ impl<T: Codegen<Backend = T>> State<T> {
         let label_if_begin = if_body_state
             .borrow_mut()
             .get_and_set_next_label(&IF_BEGIN.to_string().into());
+        let label_if_else = if_body_state
+            .borrow_mut()
+            .get_and_set_next_label(&IF_ELSE.to_string().into());
         let label_if_end = if_body_state
             .borrow_mut()
             .get_and_set_next_label(&IF_END.to_string().into());
+        let is_else = data.else_if_statement.is_some() || data.else_if_statement.is_some();
+
         // Analyse if-conditions
         match &data.condition {
             // if condition represented just as expression
@@ -726,79 +790,65 @@ impl<T: Codegen<Backend = T>> State<T> {
                     .expression(expr, &if_body_state)
                     .map_err(|err| vec![err])?;
                 // Codegen for if-condition from expression and if-body start
-                self.codegen
-                    .if_condition_expression(&expr_result, &label_if_begin, &label_if_end);
+                if is_else {
+                    self.codegen.if_condition_expression(
+                        &expr_result,
+                        &label_if_begin,
+                        &label_if_else,
+                    );
+                } else {
+                    self.codegen.if_condition_expression(
+                        &expr_result,
+                        &label_if_begin,
+                        &label_if_end,
+                    );
+                }
             }
             // If condition contains logic condition expression
             ast::IfCondition::Logic(expr_logic) => {
                 // Analyse if-condition logic
                 self.condition_expression(expr_logic, &if_body_state)?;
                 // Codegen for if-condition-logic with if-body start
-                self.codegen.if_condition_logic(
-                    &label_if_begin,
-                    &label_if_end,
-                    if_body_state.borrow().last_register_number,
-                );
+                if is_else {
+                    self.codegen.if_condition_logic(
+                        &label_if_begin,
+                        &label_if_else,
+                        if_body_state.borrow().last_register_number,
+                    );
+                } else {
+                    self.codegen.if_condition_logic(
+                        &label_if_begin,
+                        &label_if_end,
+                        if_body_state.borrow().last_register_number,
+                    );
+                }
             }
         }
         // Analyze if-statement body
-        let result_errors = data.body.iter().fold(vec![], |mut s_err, body| {
-            let res = match body {
-                ast::IfBodyStatement::LetBinding(bind) => {
-                    self.let_binding(bind, &if_body_state).map_err(|e| vec![e])
-                }
-                ast::IfBodyStatement::FunctionCall(fn_call) => self
-                    .function_call(fn_call, &if_body_state)
-                    .map_err(|e| vec![e]),
-                ast::IfBodyStatement::If(if_condition) => {
-                    self.if_condition(if_condition, &if_body_state)
-                }
-                ast::IfBodyStatement::Loop(loop_statement) => self
-                    .loop_statement(loop_statement, &if_body_state)
-                    .map_err(|e| vec![e]),
-                ast::IfBodyStatement::Return(expression) => {
-                    let expr_result = self.expression(expression, &if_body_state);
-                    expr_result
-                        .map(|res| {
-                            // Set return label in codegen and set return
-                            // status to indicate function, that it's manual
-                            // return
-                            self.codegen.expression_function_return(&res);
-                            function_body_state.borrow_mut().set_return();
-                        })
-                        .map_err(|e| vec![e])
-                }
-            };
-            if let Err(mut err) = res {
-                s_err.append(&mut err);
-            }
-            s_err
-        });
+        self.if_condition_body(&data.body, &if_body_state)?;
 
-        // if-else has own state, different from if-state
-        let _if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
-            function_body_state.clone(),
-        ))));
-        // Analyse if-else body: data.else_statement
-        // TODO: if-else-body analyse
-        // - update function-body (parent) state
+        if is_else {
+            // if-else has own state, different from if-state
+            let _if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
+                function_body_state.clone(),
+            ))));
+            // Analyse if-else body: data.else_statement
+            // TODO: if-else-body analyse
+            // - update function-body (parent) state
 
-        // Analyse all else-if statements
-        if let Some(else_if_statements) = &data.else_if_statement {
-            for else_if_statement in else_if_statements {
-                // Analyse statement as independent
-                let _res = self.if_condition(else_if_statement, function_body_state);
+            // Analyse all else-if statements
+            if let Some(else_if_statements) = &data.else_if_statement {
+                for else_if_statement in else_if_statements {
+                    // Analyse statement as independent
+                    let _res = self.if_condition(else_if_statement, function_body_state);
+                }
             }
         }
 
         // Codegen for if-end statement -return to program flow
         self.codegen.if_end(&label_if_end);
 
-        if result_errors.is_empty() {
-            Ok(())
-        } else {
-            Err(result_errors)
-        }
+        Ok(())
     }
 
     #[allow(dead_code)]
@@ -1037,6 +1087,7 @@ mod error {
         ValueNotFound,
         FunctionNotFound,
         ReturnNotFound,
+        IfElseDuplicated,
     }
 
     #[derive(Debug, Clone)]
