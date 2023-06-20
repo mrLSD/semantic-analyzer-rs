@@ -13,7 +13,6 @@
 //! of generated code for next step - compilation generated raw program code.
 use crate::ast::{self, ExpressionOperations, GetName, PrimitiveValue};
 use crate::codegen::Codegen;
-use crate::semantic::error::{StateErrorKind, StateErrorResult};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -491,7 +490,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                     .function_call(fn_call, &body_state)
                     .map_err(|e| vec![e]),
                 ast::BodyStatement::If(if_condition) => {
-                    self.if_condition(if_condition, &body_state)
+                    self.if_condition(if_condition, &body_state, None)
                 }
                 ast::BodyStatement::Loop(loop_statement) => self
                     .loop_statement(loop_statement, &body_state)
@@ -519,7 +518,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                                 // before in the state was return statement. So construct
                                 // return expression and jump to return label, set return
                                 // label and invoke after that read `return` value from all
-                                // previouse returns and invoke return instruction itself.
+                                // previous returns and invoke return instruction itself.
                                 self.codegen.expression_function_return_with_label(&res);
                             } else {
                                 self.codegen.expression_function_return(&res);
@@ -719,7 +718,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                     .function_call(fn_call, if_body_state)
                     .map_err(|e| vec![e]),
                 ast::IfBodyStatement::If(if_condition) => {
-                    self.if_condition(if_condition, if_body_state)
+                    self.if_condition(if_condition, if_body_state, None)
                 }
                 ast::IfBodyStatement::Loop(loop_statement) => self
                     .loop_statement(loop_statement, if_body_state)
@@ -750,7 +749,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     }
 
     /// # If-condition
-    /// Analyzing izncludes all variants for if statements:
+    /// Analyzing includes all variants for if statements:
     /// 1. if
     /// 2. if-else
     /// 3. if-else-if
@@ -759,15 +758,21 @@ impl<T: Codegen<Backend = T>> State<T> {
     /// parent state.
     /// If condition can't contain `else` and `if-else` on the
     /// same time.
+    ///
+    /// Special case for `label_end` - it should be set from previous
+    /// context, and main goal is to end all of if-condition nodes in
+    /// the same flow with same `if-end` label. It's especially important
+    /// for `else-if` condition.
     pub fn if_condition(
         &mut self,
         data: &ast::IfStatement<'_>,
         function_body_state: &Rc<RefCell<BlockState>>,
+        label_end: Option<LabelName>,
     ) -> StateResults<()> {
-        // It can't containt `else` and `if-else` on the same time
+        // It can't contain `else` and `if-else` on the same time
         if data.else_if_statement.is_some() && data.else_if_statement.is_some() {
-            return Err(vec![StateErrorResult::new(
-                StateErrorKind::IfElseDuplicated,
+            return Err(vec![error::StateErrorResult::new(
+                error::StateErrorKind::IfElseDuplicated,
                 String::from("if-condition"),
                 0,
                 0,
@@ -787,9 +792,15 @@ impl<T: Codegen<Backend = T>> State<T> {
         let label_if_else = if_body_state
             .borrow_mut()
             .get_and_set_next_label(&IF_ELSE.to_string().into());
-        let label_if_end = if_body_state
-            .borrow_mut()
-            .get_and_set_next_label(&IF_END.to_string().into());
+        // Set if-end label from previous context, if exist
+        let label_if_end = label_end.map_or_else(
+            || {
+                if_body_state
+                    .borrow_mut()
+                    .get_and_set_next_label(&IF_END.to_string().into())
+            },
+            |label| label,
+        );
         let is_else = data.else_if_statement.is_some() || data.else_if_statement.is_some();
 
         // Analyse if-conditions
@@ -859,7 +870,11 @@ impl<T: Codegen<Backend = T>> State<T> {
                 self.codegen.jump_to(&label_if_end);
             } else if let Some(else_if_statement) = &data.else_if_statement {
                 // Analyse  else-if statement
-                self.if_condition(else_if_statement, function_body_state)?;
+                self.if_condition(
+                    else_if_statement,
+                    function_body_state,
+                    Some(label_if_end.clone()),
+                )?;
             }
         }
 
