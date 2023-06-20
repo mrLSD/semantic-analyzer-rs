@@ -177,7 +177,12 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     fn expression_function_return(&self, _expr_result: &ExpressionResult) {
         todo!()
     }
-
+    fn if_function_return(&self, _expr_result: &ExpressionResult) {
+        todo!()
+    }
+    fn expression_function_return_with_label(&self, _expr_result: &ExpressionResult) {
+        todo!()
+    }
     fn if_condition_expression(
         &mut self,
         _expr_result: &ExpressionResult,

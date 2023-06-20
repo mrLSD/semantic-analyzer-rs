@@ -95,10 +95,15 @@ impl Codegen for Backend {
     ) {
         todo!()
     }
+    fn expression_function_return_with_label(&self, _expr_result: &ExpressionResult) {
+        todo!()
+    }
+    fn if_function_return(&self, _expr_result: &ExpressionResult) {
+        todo!()
+    }
     fn expression_function_return(&self, _expr_result: &ExpressionResult) {
         todo!()
     }
-
     fn condition_expression(
         &mut self,
         _left_result: &ExpressionResult,
