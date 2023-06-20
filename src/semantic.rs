@@ -828,21 +828,26 @@ impl<T: Codegen<Backend = T>> State<T> {
         self.if_condition_body(&data.body, &if_body_state)?;
 
         if is_else {
+            // TODO: else label
             // if-else has own state, different from if-state
-            let _if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
+            let if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
                 function_body_state.clone(),
             ))));
             // Analyse if-else body: data.else_statement
-            // TODO: if-else-body analyse
-            // - update function-body (parent) state
-
-            // Analyse all else-if statements
-            if let Some(else_if_statements) = &data.else_if_statement {
-                for else_if_statement in else_if_statements {
-                    // Analyse statement as independent
-                    let _res = self.if_condition(else_if_statement, function_body_state);
+            if let Some(else_body) = &data.else_statement {
+                self.if_condition_body(else_body, &if_else_body_state)?;
+                // TODO: jump to end
+            } else {
+                // Analyse all else-if statements
+                if let Some(else_if_statements) = &data.else_if_statement {
+                    for else_if_statement in else_if_statements {
+                        // Analyse statement as independent
+                        let _res = self.if_condition(else_if_statement, function_body_state);
+                    }
                 }
             }
+        } else {
+            // TODO: jump to end
         }
 
         // Codegen for if-end statement -return to program flow
