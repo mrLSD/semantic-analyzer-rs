@@ -13,6 +13,7 @@
 //! of generated code for next step - compilation generated raw program code.
 use crate::ast::{self, ExpressionOperations, GetName, PrimitiveValue};
 use crate::codegen::Codegen;
+use crate::semantic::error::{StateErrorKind, StateErrorResult};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -124,12 +125,15 @@ pub struct Constant {
 }
 
 /// # Values
-/// Can contain inner data: name, type, memory allocation status
+/// Can contain inner data: name, type, memory allocation status:
+/// - alloca - stack allocation
+/// - malloc - malloc allocation
 #[derive(Debug, Clone)]
 pub struct Value {
     pub inner_name: InnerValueName,
     pub inner_type: InnerType,
-    pub allocated: bool,
+    pub alloca: bool,
+    pub malloc: bool,
 }
 
 /// # Block state
@@ -592,7 +596,8 @@ impl<T: Codegen<Backend = T>> State<T> {
                 .value_type
                 // TODO: resolve type from expression for empty case
                 .map_or(String::new().into(), |ty| ty.name().into()),
-            allocated: false,
+            alloca: false,
+            malloc: false,
         };
         // Value inserted only to current state by Value name and Value data
         state
@@ -601,6 +606,34 @@ impl<T: Codegen<Backend = T>> State<T> {
             .insert(data.name().into(), value.clone());
         // Set `inner_name` to current state and all parent states
         state.borrow_mut().set_inner_value_name(&inner_name);
+
+        self.codegen.let_binding(&value, &expr_result);
+        Ok(())
+    }
+
+    /// # Binding statement
+    /// Analyze binding statement for mutable variables:
+    /// 1. Bind from expression. First should be analysed
+    ///    `expression` for binding value.
+    /// 2. Read value for current state.
+    /// 3. Update value to current values state map: value `name` -> `Data`
+    /// 4. Codegen with Store action
+    pub fn binding(
+        &mut self,
+        data: &ast::LetBinding<'_>,
+        state: &Rc<RefCell<BlockState>>,
+    ) -> StateResult<()> {
+        // Call value analytics before putting let-value to state
+        let expr_result = self.expression(&data.value, state)?;
+
+        // Find value in current state and parent states
+        let value = state
+            .borrow()
+            .get_value_name(&data.name().into())
+            .map
+            .ok_or_else(|| {
+                StateErrorResult::new(StateErrorKind::ValueNotFound, data.name(), 0, 0)
+            })?;
 
         self.codegen.let_binding(&value, &expr_result);
         Ok(())
