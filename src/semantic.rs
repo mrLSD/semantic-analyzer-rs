@@ -490,6 +490,9 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::BodyStatement::LetBinding(bind) => {
                     self.let_binding(bind, &body_state).map_err(|e| vec![e])
                 }
+                ast::BodyStatement::Binding(bind) => {
+                    self.binding(bind, &body_state).map_err(|e| vec![e])
+                }
                 ast::BodyStatement::FunctionCall(fn_call) => self
                     .function_call(fn_call, &body_state)
                     .map_err(|e| vec![e]),
@@ -620,7 +623,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     /// 4. Codegen with Store action
     pub fn binding(
         &mut self,
-        data: &ast::LetBinding<'_>,
+        data: &ast::Binding<'_>,
         state: &Rc<RefCell<BlockState>>,
     ) -> StateResult<()> {
         // Call value analytics before putting let-value to state
@@ -630,12 +633,20 @@ impl<T: Codegen<Backend = T>> State<T> {
         let value = state
             .borrow()
             .get_value_name(&data.name().into())
-            .map
             .ok_or_else(|| {
                 StateErrorResult::new(StateErrorKind::ValueNotFound, data.name(), 0, 0)
             })?;
+        // Check is value mutable
+        if !(value.alloca || value.malloc) {
+            return Err(StateErrorResult::new(
+                error::StateErrorKind::ValueIsNotMutable,
+                data.name(),
+                0,
+                0,
+            ));
+        }
 
-        self.codegen.let_binding(&value, &expr_result);
+        self.codegen.binding(&value, &expr_result);
         Ok(())
     }
 
@@ -746,6 +757,9 @@ impl<T: Codegen<Backend = T>> State<T> {
             let res = match body {
                 ast::IfBodyStatement::LetBinding(bind) => {
                     self.let_binding(bind, if_body_state).map_err(|e| vec![e])
+                }
+                ast::IfBodyStatement::Binding(bind) => {
+                    self.binding(bind, if_body_state).map_err(|e| vec![e])
                 }
                 ast::IfBodyStatement::FunctionCall(fn_call) => self
                     .function_call(fn_call, if_body_state)
@@ -950,6 +964,9 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::IfLoopBodyStatement::LetBinding(bind) => {
                     self.let_binding(bind, &if_body_state).map_err(|e| vec![e])
                 }
+                ast::IfLoopBodyStatement::Binding(bind) => {
+                    self.binding(bind, &if_body_state).map_err(|e| vec![e])
+                }
                 ast::IfLoopBodyStatement::FunctionCall(fn_call) => self
                     .function_call(fn_call, &if_body_state)
                     .map_err(|e| vec![e]),
@@ -1151,6 +1168,7 @@ mod error {
         TypeAlreadyExist,
         FunctionAlreadyExist,
         ValueNotFound,
+        ValueIsNotMutable,
         FunctionNotFound,
         ReturnNotFound,
         IfElseDuplicated,

@@ -62,6 +62,9 @@ impl Codegen for Backend {
             ),
         );
     }
+    fn binding(&mut self, _val: &Value, _expr_result: &ExpressionResult) {
+        todo!()
+    }
 
     fn call(
         &self,

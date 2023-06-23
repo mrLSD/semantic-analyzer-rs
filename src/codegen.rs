@@ -9,6 +9,7 @@ pub trait Codegen {
     fn types(&self, type_decl: &ast::StructTypes<'_>);
     fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>);
     fn let_binding(&mut self, let_decl: &Value, expr_result: &ExpressionResult);
+    fn binding(&mut self, val: &Value, expr_result: &ExpressionResult);
     fn call(
         &self,
         call: &ast::FunctionCall<'_>,

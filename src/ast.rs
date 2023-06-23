@@ -265,6 +265,18 @@ impl GetName for LetBinding<'_> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Binding<'a> {
+    pub name: ValueName<'a>,
+    pub value: Box<Expression<'a>>,
+}
+
+impl GetName for Binding<'_> {
+    fn name(&self) -> String {
+        self.name.0.to_string()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall<'a> {
     pub name: FunctionName<'a>,
     pub parameters: Vec<Expression<'a>>,
@@ -330,6 +342,7 @@ pub struct IfLoopStatement<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum BodyStatement<'a> {
     LetBinding(LetBinding<'a>),
+    Binding(Binding<'a>),
     FunctionCall(FunctionCall<'a>),
     If(IfStatement<'a>),
     Loop(Vec<LoopBodyStatement<'a>>),
@@ -340,6 +353,7 @@ pub enum BodyStatement<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum IfBodyStatement<'a> {
     LetBinding(LetBinding<'a>),
+    Binding(Binding<'a>),
     FunctionCall(FunctionCall<'a>),
     If(IfStatement<'a>),
     Loop(Vec<LoopBodyStatement<'a>>),
@@ -349,6 +363,7 @@ pub enum IfBodyStatement<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum IfLoopBodyStatement<'a> {
     LetBinding(LetBinding<'a>),
+    Binding(Binding<'a>),
     FunctionCall(FunctionCall<'a>),
     IfLoop(IfLoopStatement<'a>),
     Loop(Vec<LoopBodyStatement<'a>>),

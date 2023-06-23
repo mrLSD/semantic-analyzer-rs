@@ -146,6 +146,9 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     fn let_binding(&mut self, _let_decl: &Value, _expr_result: &ExpressionResult) {
         todo!()
     }
+    fn binding(&mut self, _val: &Value, _expr_result: &ExpressionResult) {
+        todo!()
+    }
 
     fn call(
         &self,
