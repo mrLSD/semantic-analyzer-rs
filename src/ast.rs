@@ -336,7 +336,7 @@ pub struct IfLoopStatement<'a> {
     pub condition: IfCondition<'a>,
     pub body: Vec<IfLoopBodyStatement<'a>>,
     pub else_statement: Option<Vec<IfLoopBodyStatement<'a>>>,
-    pub else_if_statement: Option<Vec<IfLoopStatement<'a>>>,
+    pub else_if_statement: Option<Box<IfLoopStatement<'a>>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

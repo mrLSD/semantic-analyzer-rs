@@ -13,7 +13,6 @@
 //! of generated code for next step - compilation generated raw program code.
 use crate::ast::{self, ExpressionOperations, GetName, PrimitiveValue};
 use crate::codegen::Codegen;
-use crate::semantic::error::{StateErrorKind, StateErrorResult};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -634,11 +633,16 @@ impl<T: Codegen<Backend = T>> State<T> {
             .borrow()
             .get_value_name(&data.name().into())
             .ok_or_else(|| {
-                StateErrorResult::new(StateErrorKind::ValueNotFound, data.name(), 0, 0)
+                error::StateErrorResult::new(
+                    error::StateErrorKind::ValueNotFound,
+                    data.name(),
+                    0,
+                    0,
+                )
             })?;
         // Check is value mutable
         if !(value.alloca || value.malloc) {
-            return Err(StateErrorResult::new(
+            return Err(error::StateErrorResult::new(
                 error::StateErrorKind::ValueIsNotMutable,
                 data.name(),
                 0,
@@ -795,6 +799,68 @@ impl<T: Codegen<Backend = T>> State<T> {
         }
     }
 
+    /// # If-condition loop body
+    /// Analyze body for ant if condition:
+    /// - if, else, if-else
+    pub fn if_condition_loop_body(
+        &mut self,
+        body: &[ast::IfLoopBodyStatement<'_>],
+        if_body_state: &Rc<RefCell<BlockState>>,
+        label_loop_start: LabelName,
+        label_loop_end: Option<LabelName>,
+    ) -> StateResults<()> {
+        let result_errors = body.iter().fold(vec![], |mut s_err, body| {
+            let res = match body {
+                ast::IfLoopBodyStatement::LetBinding(bind) => {
+                    self.let_binding(bind, if_body_state).map_err(|e| vec![e])
+                }
+                ast::IfLoopBodyStatement::Binding(bind) => {
+                    self.binding(bind, if_body_state).map_err(|e| vec![e])
+                }
+                ast::IfLoopBodyStatement::FunctionCall(fn_call) => self
+                    .function_call(fn_call, if_body_state)
+                    .map_err(|e| vec![e]),
+                ast::IfLoopBodyStatement::IfLoop(_if_condition) => self.if_loop_condition(
+                    if_condition,
+                    if_body_state,
+                    label_loop_start,
+                    label_loop_end,
+                    None,
+                ),
+                ast::IfLoopBodyStatement::Loop(loop_statement) => self
+                    .loop_statement(loop_statement, if_body_state)
+                    .map_err(|e| vec![e]),
+                ast::IfLoopBodyStatement::Return(expression) => {
+                    let expr_result = self.expression(expression, if_body_state);
+                    expr_result
+                        .map(|res| {
+                            // Jump to return label in codegen and set return
+                            // status to indicate function, that it's manual
+                            // return
+                            self.codegen.if_function_return(&res);
+                            if_body_state.borrow_mut().set_return();
+                        })
+                        .map_err(|e| vec![e])
+                }
+                ast::IfLoopBodyStatement::Continue => {
+                    todo!()
+                }
+                ast::IfLoopBodyStatement::Break => {
+                    todo!()
+                }
+            };
+            if let Err(mut err) = res {
+                s_err.append(&mut err);
+            }
+            s_err
+        });
+        if result_errors.is_empty() {
+            Ok(())
+        } else {
+            Err(result_errors)
+        }
+    }
+
     /// # If-condition
     /// Analyzing includes all variants for if statements:
     /// 1. if
@@ -931,99 +997,129 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
-    #[allow(dead_code)]
     /// # IF-loop-statement
     /// If flow used only for loops. It's same as basic if-condition flow
     /// but also additional flow for: break, continue
     pub fn if_loop_condition(
         &mut self,
         data: &ast::IfLoopStatement<'_>,
-        function_body_state: &Rc<RefCell<BlockState>>,
+        loop_body_state: &Rc<RefCell<BlockState>>,
+        label_loop_start: LabelName,
+        label_loop_end: LabelName,
+        label_loop_if_end: Option<LabelName>,
     ) -> StateResults<()> {
-        // Create state for if-body, from parent function state because if-state
-        // can contain sub-state, that for can be independent from parent state
-        let if_body_state = Rc::new(RefCell::new(BlockState::new(Some(
-            function_body_state.clone(),
-        ))));
-        // Analyse if-conditions
-        match &data.condition {
-            ast::IfCondition::Single(expr) => {
-                // Calculate expression
-                let _expr_result = self.expression(expr, function_body_state);
-                // Codegen for if-condition from expression and if-body start
-                // self.codegen.if_condition_expression(&expr_result, &function_body_state);
-            }
-            ast::IfCondition::Logic(_expr_logic) => {
-                // 1. Call function for analyse if-condition logic
-                // 2. Codegen for if-condition-logic with if-body start
-            }
+        // It can't contain `else` and `if-else` on the same time
+        if data.else_if_statement.is_some() && data.else_if_statement.is_some() {
+            return Err(vec![error::StateErrorResult::new(
+                error::StateErrorKind::IfElseDuplicated,
+                String::from("if-condition"),
+                0,
+                0,
+            )]);
         }
-        // Analyse if-statement body
-        let result_errors = data.body.iter().fold(vec![], |mut s_err, body| {
-            let res = match body {
-                ast::IfLoopBodyStatement::LetBinding(bind) => {
-                    self.let_binding(bind, &if_body_state).map_err(|e| vec![e])
-                }
-                ast::IfLoopBodyStatement::Binding(bind) => {
-                    self.binding(bind, &if_body_state).map_err(|e| vec![e])
-                }
-                ast::IfLoopBodyStatement::FunctionCall(fn_call) => self
-                    .function_call(fn_call, &if_body_state)
-                    .map_err(|e| vec![e]),
-                ast::IfLoopBodyStatement::IfLoop(if_condition) => {
-                    self.if_loop_condition(if_condition, &if_body_state)
-                }
-                ast::IfLoopBodyStatement::Loop(loop_statement) => self
-                    .loop_statement(loop_statement, &if_body_state)
-                    .map_err(|e| vec![e]),
-                ast::IfLoopBodyStatement::Return(expression) => {
-                    let expr_result = self.expression(expression, &if_body_state);
-                    expr_result
-                        .map(|res| {
-                            // TODO: set return-is-called and pass it
-                            // to main body
-                            self.codegen.expression_function_return(&res);
-                        })
-                        .map_err(|e| vec![e])
-                }
-                ast::IfLoopBodyStatement::Break => {
-                    todo!();
-                }
-                ast::IfLoopBodyStatement::Continue => {
-                    todo!();
-                }
-            };
-            if let Err(mut err) = res {
-                s_err.append(&mut err);
-            }
-            s_err
-        });
-        // Update register for parent state
-        function_body_state
+        // Create state for if-body, from parent loop state because
+        // if-state can contain sub-state, that can be independent from parent
+        // state
+        let if_body_state = Rc::new(RefCell::new(BlockState::new(Some(loop_body_state.clone()))));
+
+        // Get labels name for if-begin, and if-end
+        let label_if_begin = if_body_state
             .borrow_mut()
-            .set_register(if_body_state.borrow().last_register_number);
+            .get_and_set_next_label(&IF_BEGIN.to_string().into());
+        let label_if_else = if_body_state
+            .borrow_mut()
+            .get_and_set_next_label(&IF_ELSE.to_string().into());
+        // Set if-end label from previous context, if exist
+        let label_if_end = label_loop_if_end.map_or_else(
+            || {
+                if_body_state
+                    .borrow_mut()
+                    .get_and_set_next_label(&IF_END.to_string().into())
+            },
+            |label| label,
+        );
+        let is_else = data.else_if_statement.is_some() || data.else_if_statement.is_some();
 
-        // if-else gas own state, different from if-state
-        let _if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
-            function_body_state.clone(),
-        ))));
-        // Analyse if-else body: data.else_statement
-        // TODO: if-else-body analyse
-        // - update function-body (parent) state
-
-        // Analyse all else-if statements
-        if let Some(else_if_statements) = &data.else_if_statement {
-            for else_if_statement in else_if_statements {
-                // Analyse statement as independent
-                let _res = self.if_loop_condition(else_if_statement, function_body_state);
+        // Analyse if-conditions for the loop
+        match &data.condition {
+            // if condition represented just as expression
+            ast::IfCondition::Single(expr) => {
+                // Calculate expression for single if-condition expression
+                let expr_result = self
+                    .expression(expr, &if_body_state)
+                    .map_err(|err| vec![err])?;
+                // Codegen for if-condition from expression and if-body start
+                if is_else {
+                    self.codegen.if_condition_expression(
+                        &expr_result,
+                        &label_if_begin,
+                        &label_if_else,
+                    );
+                } else {
+                    self.codegen.if_condition_expression(
+                        &expr_result,
+                        &label_if_begin,
+                        &label_if_end,
+                    );
+                }
+            }
+            // If condition contains logic condition expression
+            ast::IfCondition::Logic(expr_logic) => {
+                // Analyse if-condition logic
+                self.condition_expression(expr_logic, &if_body_state)?;
+                // Codegen for if-condition-logic with if-body start
+                if is_else {
+                    self.codegen.if_condition_logic(
+                        &label_if_begin,
+                        &label_if_else,
+                        if_body_state.borrow().last_register_number,
+                    );
+                } else {
+                    self.codegen.if_condition_logic(
+                        &label_if_begin,
+                        &label_if_end,
+                        if_body_state.borrow().last_register_number,
+                    );
+                }
             }
         }
 
-        if result_errors.is_empty() {
-            Ok(())
-        } else {
-            Err(result_errors)
+        //== If condition main body for loop
+        // Set if-begin label
+        self.codegen.set_label(&label_if_begin);
+        // Analyze if-statement body
+        self.if_condition_loop_body(&data.body, &if_body_state, label_loop_start, label_loop_end)?;
+        // Codegen for jump to if-end statement -return to program flow
+        self.codegen.jump_to(&label_if_end);
+
+        // Check else statements: else, else-if
+        if is_else {
+            // Set if-else label
+            self.codegen.set_label(&label_if_else);
+            // if-else has own state, different from if-state
+            let if_else_body_state =
+                Rc::new(RefCell::new(BlockState::new(Some(loop_body_state.clone()))));
+            // Analyse if-else body: data.else_statement
+            if let Some(else_body) = &data.else_statement {
+                self.if_condition_loop_body(else_body, &if_else_body_state)?;
+                // Codegen for jump to if-end statement -return to program flow
+                self.codegen.jump_to(&label_if_end);
+            } else if let Some(else_if_statement) = &data.else_if_statement {
+                // Analyse  else-if statement
+                self.if_loop_condition(
+                    else_if_statement,
+                    loop_body_state,
+                    label_loop_start,
+                    label_loop_end,
+                    Some(label_if_end.clone()),
+                )?;
+            }
         }
+
+        // End label for all if statement
+        self.codegen.set_label(&label_if_end);
+
+        Ok(())
     }
 
     #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
