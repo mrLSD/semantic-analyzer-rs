@@ -375,6 +375,7 @@ pub enum IfLoopBodyStatement<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum LoopBodyStatement<'a> {
     LetBinding(LetBinding<'a>),
+    Binding(Binding<'a>),
     FunctionCall(FunctionCall<'a>),
     IfLoop(IfLoopStatement<'a>),
     Loop(Vec<LoopBodyStatement<'a>>),

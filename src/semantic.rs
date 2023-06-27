@@ -20,6 +20,8 @@ use std::rc::Rc;
 const IF_BEGIN: &str = "if_begin";
 const IF_END: &str = "if_end";
 const IF_ELSE: &str = "if_else";
+const LOOP_BEGIN: &str = "loop_begin";
+const LOOP_END: &str = "loop_end";
 
 /// State result type - for single results
 pub type StateResult<T> = Result<T, error::StateErrorResult>;
@@ -498,9 +500,9 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::BodyStatement::If(if_condition) => {
                     self.if_condition(if_condition, &body_state, None)
                 }
-                ast::BodyStatement::Loop(loop_statement) => self
-                    .loop_statement(loop_statement, &body_state)
-                    .map_err(|e| vec![e]),
+                ast::BodyStatement::Loop(loop_statement) => {
+                    self.loop_statement(loop_statement, &body_state)
+                }
                 ast::BodyStatement::Expression(expression) => {
                     let expr_result = self.expression(expression, &body_state);
                     expr_result
@@ -771,9 +773,9 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::IfBodyStatement::If(if_condition) => {
                     self.if_condition(if_condition, if_body_state, None)
                 }
-                ast::IfBodyStatement::Loop(loop_statement) => self
-                    .loop_statement(loop_statement, if_body_state)
-                    .map_err(|e| vec![e]),
+                ast::IfBodyStatement::Loop(loop_statement) => {
+                    self.loop_statement(loop_statement, if_body_state)
+                }
                 ast::IfBodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, if_body_state);
                     expr_result
@@ -806,8 +808,8 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         body: &[ast::IfLoopBodyStatement<'_>],
         if_body_state: &Rc<RefCell<BlockState>>,
-        label_loop_start: LabelName,
-        label_loop_end: Option<LabelName>,
+        label_loop_start: &LabelName,
+        label_loop_end: &LabelName,
     ) -> StateResults<()> {
         let result_errors = body.iter().fold(vec![], |mut s_err, body| {
             let res = match body {
@@ -820,16 +822,16 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::IfLoopBodyStatement::FunctionCall(fn_call) => self
                     .function_call(fn_call, if_body_state)
                     .map_err(|e| vec![e]),
-                ast::IfLoopBodyStatement::IfLoop(_if_condition) => self.if_loop_condition(
+                ast::IfLoopBodyStatement::IfLoop(if_condition) => self.if_loop_condition(
                     if_condition,
                     if_body_state,
                     label_loop_start,
                     label_loop_end,
                     None,
                 ),
-                ast::IfLoopBodyStatement::Loop(loop_statement) => self
-                    .loop_statement(loop_statement, if_body_state)
-                    .map_err(|e| vec![e]),
+                ast::IfLoopBodyStatement::Loop(loop_statement) => {
+                    self.loop_statement(loop_statement, if_body_state)
+                }
                 ast::IfLoopBodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, if_body_state);
                     expr_result
@@ -1004,8 +1006,8 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &ast::IfLoopStatement<'_>,
         loop_body_state: &Rc<RefCell<BlockState>>,
-        label_loop_start: LabelName,
-        label_loop_end: LabelName,
+        label_loop_start: &LabelName,
+        label_loop_end: &LabelName,
         label_loop_if_end: Option<LabelName>,
     ) -> StateResults<()> {
         // It can't contain `else` and `if-else` on the same time
@@ -1101,7 +1103,12 @@ impl<T: Codegen<Backend = T>> State<T> {
                 Rc::new(RefCell::new(BlockState::new(Some(loop_body_state.clone()))));
             // Analyse if-else body: data.else_statement
             if let Some(else_body) = &data.else_statement {
-                self.if_condition_loop_body(else_body, &if_else_body_state)?;
+                self.if_condition_loop_body(
+                    else_body,
+                    &if_else_body_state,
+                    label_loop_start,
+                    label_loop_end,
+                )?;
                 // Codegen for jump to if-end statement -return to program flow
                 self.codegen.jump_to(&label_if_end);
             } else if let Some(else_if_statement) = &data.else_if_statement {
@@ -1122,12 +1129,79 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
-    #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
     pub const fn loop_statement(
-        &self,
-        _data: &[ast::LoopBodyStatement<'_>],
-        _body_state: &Rc<RefCell<BlockState>>,
-    ) -> StateResult<()> {
+        &mut self,
+        data: &[ast::LoopBodyStatement<'_>],
+        loop_body_state: &Rc<RefCell<BlockState>>,
+    ) -> StateResults<()> {
+        // Get labels name for loop-begin, and loop-end
+        let label_loop_begin = loop_body_state
+            .borrow_mut()
+            .get_and_set_next_label(&LOOP_BEGIN.to_string().into());
+        let label_loop_end = loop_body_state
+            .borrow_mut()
+            .get_and_set_next_label(&LOOP_BEGIN.to_string().into());
+
+        self.codegen.jump_to(&label_loop_begin);
+        self.codegen.set_label(&label_loop_begin);
+
+        let result_errors = data.iter().fold(vec![], |mut s_err, body| {
+            let res = match body {
+                ast::LoopBodyStatement::LetBinding(bind) => self
+                    .let_binding(bind, &loop_body_state)
+                    .map_err(|e| vec![e]),
+                ast::LoopBodyStatement::Binding(bind) => {
+                    self.binding(bind, &loop_body_state).map_err(|e| vec![e])
+                }
+                ast::LoopBodyStatement::FunctionCall(fn_call) => self
+                    .function_call(fn_call, &loop_body_state)
+                    .map_err(|e| vec![e]),
+                ast::LoopBodyStatement::IfLoop(if_condition) => self.if_loop_condition(
+                    if_condition,
+                    &body_state,
+                    &label_loop_begin,
+                    &label_loop_end,
+                    None,
+                ),
+                ast::LoopBodyStatement::Loop(loop_statement) => {
+                    self.loop_statement(loop_statement, &loop_body_state)
+                }
+                ast::LoopBodyStatement::Return(expression) => {
+                    let expr_result = self.expression(expression, loop_body_state);
+                    expr_result
+                        .map(|res| {
+                            // Jump to return label in codegen and set return
+                            // status to indicate function, that it's manual
+                            // return
+                            self.codegen.if_function_return(&res);
+                            if_body_state.borrow_mut().set_return();
+                        })
+                        .map_err(|e| vec![e])
+                }
+                ast::LoopBodyStatement::Break => {
+                    // Break loop and jump to the end of loop
+                    self.codegen.jump_to(&label_loop_end);
+                    Ok(())
+                }
+                ast::LoopBodyStatement::Continue => {
+                    // Skip next loop  step and jump to the start
+                    // of loop
+                    self.codegen.jump_to(&label_loop_start);
+                    Ok(())
+                }
+            };
+            // Collect errors
+            if let Err(mut err) = res {
+                s_err.append(&mut err);
+            }
+            s_err
+        });
+        if !result_errors.is_empty() {
+            return Err(result_errors);
+        }
+
+        // Loop ending
+        self.codegen.set_label(&label_loop_end);
         Ok(())
     }
 
