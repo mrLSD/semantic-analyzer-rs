@@ -507,9 +507,20 @@ impl<T: Codegen<Backend = T>> State<T> {
                     let expr_result = self.expression(expression, &body_state);
                     expr_result
                         .map(|res| {
-                            // TODO: Check is previously return was called
                             return_is_called = true;
-                            self.codegen.expression_function_return(&res);
+                            // Check is state contain flag of manual
+                            // return from other states, for example:
+                            // if-flow, loop-flow
+                            if body_state.borrow().manual_return {
+                                // First we put expression return calculation for case when
+                                // before in the state was return statement. So construct
+                                // return expression and jump to return label, set return
+                                // label and invoke after that read `return` value from all
+                                // previous returns and invoke return instruction itself.
+                                self.codegen.expression_function_return_with_label(&res);
+                            } else {
+                                self.codegen.expression_function_return(&res);
+                            }
                         })
                         .map_err(|e| vec![e])
                 }
@@ -783,7 +794,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                             // Jump to return label in codegen and set return
                             // status to indicate function, that it's manual
                             // return
-                            self.codegen.if_function_return(&res);
+                            self.codegen.jump_function_return(&res);
                             if_body_state.borrow_mut().set_return();
                         })
                         .map_err(|e| vec![e])
@@ -839,7 +850,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                             // Jump to return label in codegen and set return
                             // status to indicate function, that it's manual
                             // return
-                            self.codegen.if_function_return(&res);
+                            self.codegen.jump_function_return(&res);
                             if_body_state.borrow_mut().set_return();
                         })
                         .map_err(|e| vec![e])
@@ -1004,7 +1015,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     /// but also additional flow for: break, continue
     pub fn if_loop_condition(
         &mut self,
-        data: &ast::IfLoopStatement<'_>,
+        data: &ast::IfLoopStatement,
         loop_body_state: &Rc<RefCell<BlockState>>,
         label_loop_start: &LabelName,
         label_loop_end: &LabelName,
@@ -1129,18 +1140,25 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
-    pub const fn loop_statement(
+    pub fn loop_statement(
         &mut self,
         data: &[ast::LoopBodyStatement<'_>],
-        loop_body_state: &Rc<RefCell<BlockState>>,
+        function_body_state: &Rc<RefCell<BlockState>>,
     ) -> StateResults<()> {
+        // Create state for loop-body, from parent func state because
+        // loop-state can contain sub-state, that can be independent from parent
+        // state
+        let loop_body_state = Rc::new(RefCell::new(BlockState::new(Some(
+            function_body_state.clone(),
+        ))));
         // Get labels name for loop-begin, and loop-end
         let label_loop_begin = loop_body_state
             .borrow_mut()
             .get_and_set_next_label(&LOOP_BEGIN.to_string().into());
+
         let label_loop_end = loop_body_state
             .borrow_mut()
-            .get_and_set_next_label(&LOOP_BEGIN.to_string().into());
+            .get_and_set_next_label(&LOOP_END.to_string().into());
 
         self.codegen.jump_to(&label_loop_begin);
         self.codegen.set_label(&label_loop_begin);
@@ -1158,7 +1176,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                     .map_err(|e| vec![e]),
                 ast::LoopBodyStatement::IfLoop(if_condition) => self.if_loop_condition(
                     if_condition,
-                    &body_state,
+                    &loop_body_state,
                     &label_loop_begin,
                     &label_loop_end,
                     None,
@@ -1167,14 +1185,14 @@ impl<T: Codegen<Backend = T>> State<T> {
                     self.loop_statement(loop_statement, &loop_body_state)
                 }
                 ast::LoopBodyStatement::Return(expression) => {
-                    let expr_result = self.expression(expression, loop_body_state);
+                    let expr_result = self.expression(expression, &loop_body_state);
                     expr_result
                         .map(|res| {
                             // Jump to return label in codegen and set return
                             // status to indicate function, that it's manual
                             // return
-                            self.codegen.if_function_return(&res);
-                            if_body_state.borrow_mut().set_return();
+                            self.codegen.jump_function_return(&res);
+                            loop_body_state.borrow_mut().set_return();
                         })
                         .map_err(|e| vec![e])
                 }
@@ -1186,7 +1204,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::LoopBodyStatement::Continue => {
                     // Skip next loop  step and jump to the start
                     // of loop
-                    self.codegen.jump_to(&label_loop_start);
+                    self.codegen.jump_to(&label_loop_begin);
                     Ok(())
                 }
             };

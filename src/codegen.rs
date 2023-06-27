@@ -26,7 +26,7 @@ pub trait Codegen {
         register_number: u64,
     );
     fn expression_function_return(&self, expr_result: &ExpressionResult);
-    fn if_function_return(&self, expr_result: &ExpressionResult);
+    fn jump_function_return(&self, expr_result: &ExpressionResult);
     fn set_label(&self, label: &LabelName);
     fn expression_function_return_with_label(&self, expr_result: &ExpressionResult);
     fn condition_expression(

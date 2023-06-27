@@ -101,7 +101,7 @@ impl Codegen for Backend {
     fn expression_function_return_with_label(&self, _expr_result: &ExpressionResult) {
         todo!()
     }
-    fn if_function_return(&self, _expr_result: &ExpressionResult) {
+    fn jump_function_return(&self, _expr_result: &ExpressionResult) {
         todo!()
     }
     fn expression_function_return(&self, _expr_result: &ExpressionResult) {
