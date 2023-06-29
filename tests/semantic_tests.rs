@@ -4,7 +4,7 @@ use z_rose::ast::{
     Expression, ExpressionValue, Ident, LetBinding, PrimitiveTypes, PrimitiveValue, Type, ValueName,
 };
 use z_rose::backend::dummy::Backend;
-use z_rose::semantic::{ExpressionResult, State, ValueBlockState};
+use z_rose::semantic::{ExpressionResult, State};
 
 #[test]
 fn pure_expression_test() {
