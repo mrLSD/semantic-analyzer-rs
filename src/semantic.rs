@@ -498,7 +498,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                     .function_call(fn_call, &body_state)
                     .map_err(|e| vec![e]),
                 ast::BodyStatement::If(if_condition) => {
-                    self.if_condition(if_condition, &body_state, None)
+                    self.if_condition(if_condition, &body_state, None, None)
                 }
                 ast::BodyStatement::Loop(loop_statement) => {
                     self.loop_statement(loop_statement, &body_state)
@@ -767,14 +767,10 @@ impl<T: Codegen<Backend = T>> State<T> {
     /// - if, else, if-else
     pub fn if_condition_body(
         &mut self,
-        body: &[ast::IfBodyStatements<'_>],
+        body: &[ast::IfBodyStatement<'_>],
         if_body_state: &Rc<RefCell<BlockState>>,
     ) -> StateResults<()> {
         let result_errors = body.iter().fold(vec![], |mut s_err, body| {
-            let ast::IfBodyStatements::If(body) = body else {
-                s_err.push(error::StateErrorResult::new(error::StateErrorKind::WrongIfCondition, String::new(), 0, 0, ));
-                return s_err;
-             };
             let res = match body {
                 ast::IfBodyStatement::LetBinding(bind) => {
                     self.let_binding(bind, if_body_state).map_err(|e| vec![e])
@@ -786,7 +782,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                     .function_call(fn_call, if_body_state)
                     .map_err(|e| vec![e]),
                 ast::IfBodyStatement::If(if_condition) => {
-                    self.if_condition(if_condition, if_body_state, None)
+                    self.if_condition(if_condition, if_body_state, None, None)
                 }
                 ast::IfBodyStatement::Loop(loop_statement) => {
                     self.loop_statement(loop_statement, if_body_state)
@@ -824,8 +820,8 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         body: &[ast::IfLoopBodyStatement<'_>],
         if_body_state: &Rc<RefCell<BlockState>>,
-        _label_loop_start: &LabelName,
-        _label_loop_end: &LabelName,
+        label_loop_start: &LabelName,
+        label_loop_end: &LabelName,
     ) -> StateResults<()> {
         let result_errors = body.iter().fold(vec![], |mut s_err, body| {
             let res = match body {
@@ -838,16 +834,12 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::IfLoopBodyStatement::FunctionCall(fn_call) => self
                     .function_call(fn_call, if_body_state)
                     .map_err(|e| vec![e]),
-                ast::IfLoopBodyStatement::If(_if_condition) => {
-                    todo!();
-                    // self.if_loop_condition(
-                    //     if_condition,
-                    //     if_body_state,
-                    //     label_loop_start,
-                    //     label_loop_end,
-                    //     None,
-                    // )
-                }
+                ast::IfLoopBodyStatement::If(if_condition) => self.if_condition(
+                    if_condition,
+                    if_body_state,
+                    None,
+                    Some((label_loop_start, label_loop_end)),
+                ),
                 ast::IfLoopBodyStatement::Loop(loop_statement) => {
                     self.loop_statement(loop_statement, if_body_state)
                 }
@@ -864,10 +856,15 @@ impl<T: Codegen<Backend = T>> State<T> {
                         .map_err(|e| vec![e])
                 }
                 ast::IfLoopBodyStatement::Continue => {
-                    todo!()
+                    // Skip next loop  step and jump to the start
+                    // of loop
+                    self.codegen.jump_to(label_loop_start);
+                    Ok(())
                 }
                 ast::IfLoopBodyStatement::Break => {
-                    todo!()
+                    // Break loop and jump to the end of loop
+                    self.codegen.jump_to(label_loop_end);
+                    Ok(())
                 }
             };
             if let Err(mut err) = res {
@@ -880,6 +877,64 @@ impl<T: Codegen<Backend = T>> State<T> {
         } else {
             Err(result_errors)
         }
+    }
+
+    /// # If conditions calculations
+    /// Calculate conditions for if-condition. It can contain
+    /// simple and logic conditions.
+    pub fn if_condition_calculation(
+        &mut self,
+        condition: &ast::IfCondition<'_>,
+        if_body_state: &Rc<RefCell<BlockState>>,
+        label_if_begin: &LabelName,
+        label_if_else: &LabelName,
+        label_if_end: &LabelName,
+        is_else: bool,
+    ) -> StateResults<()> {
+        // Analyse if-conditions
+        match condition {
+            // if condition represented just as expression
+            ast::IfCondition::Single(expr) => {
+                // Calculate expression for single if-condition expression
+                let expr_result = self
+                    .expression(expr, if_body_state)
+                    .map_err(|err| vec![err])?;
+                // Codegen for if-condition from expression and if-body start
+                if is_else {
+                    self.codegen.if_condition_expression(
+                        &expr_result,
+                        label_if_begin,
+                        label_if_else,
+                    );
+                } else {
+                    self.codegen.if_condition_expression(
+                        &expr_result,
+                        label_if_begin,
+                        label_if_end,
+                    );
+                }
+            }
+            // If condition contains logic condition expression
+            ast::IfCondition::Logic(expr_logic) => {
+                // Analyse if-condition logic
+                self.condition_expression(expr_logic, if_body_state)?;
+                // Codegen for if-condition-logic with if-body start
+                if is_else {
+                    self.codegen.if_condition_logic(
+                        label_if_begin,
+                        label_if_else,
+                        if_body_state.borrow().last_register_number,
+                    );
+                } else {
+                    self.codegen.if_condition_logic(
+                        label_if_begin,
+                        label_if_end,
+                        if_body_state.borrow().last_register_number,
+                    );
+                }
+            }
+        }
+        Ok(())
     }
 
     /// # If-condition
@@ -902,7 +957,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         data: &ast::IfStatement<'_>,
         function_body_state: &Rc<RefCell<BlockState>>,
         label_end: Option<LabelName>,
-        //label_loop: Option<(&LabelName, &LabelName)>,
+        label_loop: Option<(&LabelName, &LabelName)>,
     ) -> StateResults<()> {
         // It can't contain `else` and `if-else` on the same time
         if data.else_if_statement.is_some() && data.else_if_statement.is_some() {
@@ -939,65 +994,35 @@ impl<T: Codegen<Backend = T>> State<T> {
         let is_else = data.else_if_statement.is_some() || data.else_if_statement.is_some();
 
         // Analyse if-conditions
-        match &data.condition {
-            // if condition represented just as expression
-            ast::IfCondition::Single(expr) => {
-                // Calculate expression for single if-condition expression
-                let expr_result = self
-                    .expression(expr, &if_body_state)
-                    .map_err(|err| vec![err])?;
-                // Codegen for if-condition from expression and if-body start
-                if is_else {
-                    self.codegen.if_condition_expression(
-                        &expr_result,
-                        &label_if_begin,
-                        &label_if_else,
-                    );
-                } else {
-                    self.codegen.if_condition_expression(
-                        &expr_result,
-                        &label_if_begin,
-                        &label_if_end,
-                    );
-                }
-            }
-            // If condition contains logic condition expression
-            ast::IfCondition::Logic(expr_logic) => {
-                // Analyse if-condition logic
-                self.condition_expression(expr_logic, &if_body_state)?;
-                // Codegen for if-condition-logic with if-body start
-                if is_else {
-                    self.codegen.if_condition_logic(
-                        &label_if_begin,
-                        &label_if_else,
-                        if_body_state.borrow().last_register_number,
-                    );
-                } else {
-                    self.codegen.if_condition_logic(
-                        &label_if_begin,
-                        &label_if_end,
-                        if_body_state.borrow().last_register_number,
-                    );
-                }
-            }
-        }
+        self.if_condition_calculation(
+            &data.condition,
+            &if_body_state,
+            &label_if_begin,
+            &label_if_else,
+            &label_if_end,
+            is_else,
+        )?;
 
         //== If condition main body
         // Set if-begin label
         self.codegen.set_label(&label_if_begin);
-        // Analyze if-statement body
-        /*
-        if let Some((label_loop_start, label_loop_end)) = label_loop {
-            // Analyze if-loop-statement body
-            // self.if_condition_loop_body(
-            //     &data.body,
-            //     &if_body_state,
-            //     label_loop_start,
-            //     label_loop_end,
-            // )?;
-        } else {
-            self.if_condition_body(&data.body, &if_body_state)?;
-        }*/
+        // Analyze if-conditions body kind
+        match &data.body {
+            ast::IfBodyStatements::If(body) => {
+                // Analyze if-statement body
+                self.if_condition_body(body, &if_body_state)?;
+            }
+            ast::IfBodyStatements::Loop(body) => {
+                let (label_loop_start, label_loop_end) = label_loop.expect("label should be set");
+                // Analyze if-loop-statement body
+                self.if_condition_loop_body(
+                    body,
+                    &if_body_state,
+                    label_loop_start,
+                    label_loop_end,
+                )?;
+            }
+        }
         // Codegen for jump to if-end statement -return to program flow
         self.codegen.jump_to(&label_if_end);
 
@@ -1011,7 +1036,24 @@ impl<T: Codegen<Backend = T>> State<T> {
             ))));
             // Analyse if-else body: data.else_statement
             if let Some(else_body) = &data.else_statement {
-                self.if_condition_body(else_body, &if_else_body_state)?;
+                match else_body {
+                    ast::IfBodyStatements::If(body) => {
+                        // Analyze if-statement body
+                        self.if_condition_body(body, &if_else_body_state)?;
+                    }
+                    ast::IfBodyStatements::Loop(body) => {
+                        let (label_loop_start, label_loop_end) =
+                            label_loop.expect("label should be set");
+                        // Analyze if-loop-statement body
+                        self.if_condition_loop_body(
+                            body,
+                            &if_else_body_state,
+                            label_loop_start,
+                            label_loop_end,
+                        )?;
+                    }
+                }
+
                 // Codegen for jump to if-end statement -return to program flow
                 self.codegen.jump_to(&label_if_end);
             } else if let Some(else_if_statement) = &data.else_if_statement {
@@ -1020,6 +1062,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                     else_if_statement,
                     function_body_state,
                     Some(label_if_end.clone()),
+                    label_loop,
                 )?;
             }
         }
@@ -1030,62 +1073,12 @@ impl<T: Codegen<Backend = T>> State<T> {
         Ok(())
     }
 
-    /// # IF-loop-statement
-    /// If flow used only for loops. It's same as basic if-condition flow
-    /// but also additional flow for: break, continue
-    pub fn if_loop_condition(
-        &mut self,
-        _data: &ast::IfStatement<'_>,
-        _loop_body_state: &Rc<RefCell<BlockState>>,
-        _label_loop_start: &LabelName,
-        _label_loop_end: &LabelName,
-        _label_loop_if_end: Option<LabelName>,
-    ) -> StateResults<()> {
-        todo!()
-        /*
-        //== If condition main body for loop
-        // Set if-begin label
-        self.codegen.set_label(&label_if_begin);
-        // Analyze if-statement body
-        self.if_condition_loop_body(&data.body, &if_body_state, label_loop_start, label_loop_end)?;
-        // Codegen for jump to if-end statement -return to program flow
-        self.codegen.jump_to(&label_if_end);
-
-        // Check else statements: else, else-if
-        if is_else {
-            // Set if-else label
-            self.codegen.set_label(&label_if_else);
-            // if-else has own state, different from if-state
-            let if_else_body_state =
-                Rc::new(RefCell::new(BlockState::new(Some(loop_body_state.clone()))));
-            // Analyse if-else body: data.else_statement
-            if let Some(else_body) = &data.else_statement {
-                self.if_condition_loop_body(
-                    else_body,
-                    &if_else_body_state,
-                    label_loop_start,
-                    label_loop_end,
-                )?;
-                // Codegen for jump to if-end statement -return to program flow
-                self.codegen.jump_to(&label_if_end);
-            } else if let Some(else_if_statement) = &data.else_if_statement {
-                // Analyse  else-if statement
-                self.if_loop_condition(
-                    else_if_statement,
-                    loop_body_state,
-                    label_loop_start,
-                    label_loop_end,
-                    Some(label_if_end.clone()),
-                )?;
-            }
-        }
-
-        // End label for all if statement
-        self.codegen.set_label(&label_if_end);
-
-        Ok(())*/
-    }
-
+    /// # Loop
+    /// Loop statement contains logic:
+    /// - jump to loop
+    /// - loop body
+    /// - end of loop
+    /// - return, break, continue
     pub fn loop_statement(
         &mut self,
         data: &[ast::LoopBodyStatement<'_>],
@@ -1120,12 +1113,11 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::LoopBodyStatement::FunctionCall(fn_call) => self
                     .function_call(fn_call, &loop_body_state)
                     .map_err(|e| vec![e]),
-                ast::LoopBodyStatement::If(if_condition) => self.if_loop_condition(
+                ast::LoopBodyStatement::If(if_condition) => self.if_condition(
                     if_condition,
                     &loop_body_state,
-                    &label_loop_begin,
-                    &label_loop_end,
                     None,
+                    Some((&label_loop_begin, &label_loop_end)),
                 ),
                 ast::LoopBodyStatement::Loop(loop_statement) => {
                     self.loop_statement(loop_statement, &loop_body_state)
@@ -1306,7 +1298,6 @@ mod error {
         FunctionNotFound,
         ReturnNotFound,
         IfElseDuplicated,
-        WrongIfCondition,
     }
 
     #[derive(Debug, Clone)]

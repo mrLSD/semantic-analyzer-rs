@@ -323,24 +323,12 @@ pub enum IfCondition<'a> {
     Logic(ExpressionLogicCondition<'a>),
 }
 
-pub trait ToSelf {
-    fn to_self(&self) -> &Self;
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfStatement<'a> {
     pub condition: IfCondition<'a>,
-    pub body: Vec<IfBodyStatements<'a>>,
-    pub else_statement: Option<Vec<IfBodyStatements<'a>>>,
+    pub body: IfBodyStatements<'a>,
+    pub else_statement: Option<IfBodyStatements<'a>>,
     pub else_if_statement: Option<Box<IfStatement<'a>>>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct IfLoopStatement<'a, T: ToSelf> {
-    pub condition: IfCondition<'a>,
-    pub body: Vec<T>,
-    pub else_statement: Option<Vec<T>>,
-    pub else_if_statement: Option<Box<IfLoopStatement<'a, T>>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -378,8 +366,8 @@ pub enum IfLoopBodyStatement<'a> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum IfBodyStatements<'a> {
-    If(IfBodyStatement<'a>),
-    Loop(IfLoopBodyStatement<'a>),
+    If(Vec<IfBodyStatement<'a>>),
+    Loop(Vec<IfLoopBodyStatement<'a>>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
