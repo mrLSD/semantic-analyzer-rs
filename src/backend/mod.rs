@@ -91,7 +91,9 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 ast::PrimitiveTypes::F32 => self.context.f32_type().into(),
                 ast::PrimitiveTypes::F64 => self.context.f64_type().into(),
                 ast::PrimitiveTypes::Bool => self.context.bool_type().into(),
-                ast::PrimitiveTypes::String | ast::PrimitiveTypes::None => todo!(),
+                ast::PrimitiveTypes::String
+                | ast::PrimitiveTypes::Ptr
+                | ast::PrimitiveTypes::None => todo!(),
             },
             ast::Type::Struct(ty_struct) => {
                 let struct_types = ty_struct

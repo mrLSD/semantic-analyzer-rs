@@ -68,6 +68,7 @@ pub enum PrimitiveTypes {
     Bool,
     Char,
     String,
+    Ptr,
     None,
 }
 
@@ -87,6 +88,7 @@ impl GetName for PrimitiveTypes {
             Self::Bool => "bool".to_string(),
             Self::Char => "char".to_string(),
             Self::String => "str".to_string(),
+            Self::Ptr => "ptr".to_string(),
             Self::None => "()".to_string(),
         }
     }
@@ -207,6 +209,7 @@ pub enum PrimitiveValue {
     Bool(bool),
     String(String),
     Char(char),
+    Ptr,
     None,
 }
 
@@ -226,6 +229,7 @@ impl PrimitiveValue {
             Self::Char(_) => PrimitiveTypes::Char,
             Self::Bool(_) => PrimitiveTypes::Bool,
             Self::String(_) => PrimitiveTypes::String,
+            Self::Ptr => PrimitiveTypes::Ptr,
             Self::None => PrimitiveTypes::None,
         }
     }
