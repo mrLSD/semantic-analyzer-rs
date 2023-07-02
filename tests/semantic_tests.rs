@@ -36,6 +36,7 @@ fn pure_expression_test() {
 
     let lb = LetBinding {
         name: vn,
+        mutable: false,
         value_type: Some(Type::Primitive(PrimitiveTypes::I32)),
         value: Box::new(expr2),
     };

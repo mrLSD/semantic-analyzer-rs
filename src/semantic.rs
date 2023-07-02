@@ -133,6 +133,7 @@ pub struct Constant {
 pub struct Value {
     pub inner_name: InnerValueName,
     pub inner_type: InnerType,
+    pub mutable: bool,
     pub alloca: bool,
     pub malloc: bool,
 }
@@ -611,6 +612,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 .value_type
                 // TODO: resolve type from expression for empty case
                 .map_or(String::new().into(), |ty| ty.name().into()),
+            mutable: data.mutable,
             alloca: false,
             malloc: false,
         };
@@ -654,7 +656,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 )
             })?;
         // Check is value mutable
-        if !(value.alloca || value.malloc) {
+        if !value.mutable {
             return Err(error::StateErrorResult::new(
                 error::StateErrorKind::ValueIsNotMutable,
                 data.name(),

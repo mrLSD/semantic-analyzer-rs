@@ -271,6 +271,7 @@ pub struct Expression<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct LetBinding<'a> {
     pub name: ValueName<'a>,
+    pub mutable: bool,
     pub value_type: Option<Type<'a>>,
     pub value: Box<Expression<'a>>,
 }
