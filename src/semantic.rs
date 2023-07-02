@@ -1258,6 +1258,9 @@ impl<T: Codegen<Backend = T>> State<T> {
                 call_result
                     .map(|_| ExpressionResult::Register(body_state.borrow().last_register_number))
             }
+            ast::ExpressionValue::StructValue(_value) => {
+                todo!()
+            }
         }?;
         // It's special case for "pure" expression - without operation.
         // For that check also left side of expression shouldn't exist

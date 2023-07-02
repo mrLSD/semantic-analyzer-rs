@@ -92,6 +92,18 @@ impl GetName for PrimitiveTypes {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StructValue<'a> {
+    pub attr_name: Ident<'a>,
+    pub attr_value: ValueName<'a>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StructValues<'a> {
+    pub name: Ident<'a>,
+    pub types: Vec<StructValue<'a>>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructType<'a> {
     pub attr_name: Ident<'a>,
@@ -223,6 +235,7 @@ impl PrimitiveValue {
 pub enum ExpressionValue<'a> {
     ValueName(ValueName<'a>),
     PrimitiveValue(PrimitiveValue),
+    StructValue(StructValues<'a>),
     FunctionCall(FunctionCall<'a>),
 }
 
