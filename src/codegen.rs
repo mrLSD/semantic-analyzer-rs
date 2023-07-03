@@ -8,12 +8,12 @@ pub trait Codegen {
     fn constant(&self, const_decl: &ast::Constant<'_>);
     fn types(&self, type_decl: &ast::StructTypes<'_>);
     fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>);
-    fn let_binding(&mut self, let_decl: &Value, expr_result: &ExpressionResult);
-    fn binding(&mut self, val: &Value, expr_result: &ExpressionResult);
+    fn let_binding(&mut self, let_decl: &Value, expr_result: &ExpressionResult<'_>);
+    fn binding(&mut self, val: &Value, expr_result: &ExpressionResult<'_>);
     fn call(
         &self,
         call: &ast::FunctionCall<'_>,
-        params: Vec<ExpressionResult>,
+        params: Vec<ExpressionResult<'_>>,
         register_number: u64,
     );
     fn expression_value(&mut self, expression: &Value, register_number: u64);
@@ -21,18 +21,18 @@ pub trait Codegen {
     fn expression_operation(
         &self,
         operation: &ast::ExpressionOperations,
-        left_value: &ExpressionResult,
-        right_value: &ExpressionResult,
+        left_value: &ExpressionResult<'_>,
+        right_value: &ExpressionResult<'_>,
         register_number: u64,
     );
-    fn expression_function_return(&self, expr_result: &ExpressionResult);
-    fn jump_function_return(&self, expr_result: &ExpressionResult);
+    fn expression_function_return(&self, expr_result: &ExpressionResult<'_>);
+    fn jump_function_return(&self, expr_result: &ExpressionResult<'_>);
     fn set_label(&self, label: &LabelName);
-    fn expression_function_return_with_label(&self, expr_result: &ExpressionResult);
+    fn expression_function_return_with_label(&self, expr_result: &ExpressionResult<'_>);
     fn condition_expression(
         &mut self,
-        left_result: &ExpressionResult,
-        right_result: &ExpressionResult,
+        left_result: &ExpressionResult<'_>,
+        right_result: &ExpressionResult<'_>,
         condition: &Condition,
         register_number: u64,
     );
@@ -45,7 +45,7 @@ pub trait Codegen {
     );
     fn if_condition_expression(
         &mut self,
-        expr_result: &ExpressionResult,
+        expr_result: &ExpressionResult<'_>,
         label_if_begin: &LabelName,
         label_if_end: &LabelName,
     );

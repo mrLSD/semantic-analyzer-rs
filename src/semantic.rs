@@ -11,8 +11,9 @@
 //!
 //! Codegen is result of Semantic analyzer and contains prepared data tree
 //! of generated code for next step - compilation generated raw program code.
-use crate::ast::{self, ExpressionOperations, GetName, PrimitiveValue};
+use crate::ast::{self, GetName};
 use crate::codegen::Codegen;
+use crate::semantic::error::StateErrorResult;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -344,20 +345,32 @@ pub struct GlobalState {
 /// # State
 /// Basic entity that contains `Global State`
 /// and `Codegen` tree.
+/// - errors - State analyzing errors
 #[derive(Debug)]
 pub struct State<T: Codegen> {
     pub global: GlobalState,
     pub codegen: T,
+    pub errors: Vec<StateErrorResult>,
 }
 
-/// # Expression Result
-/// Result of expression analyze has to kind:
+/// # Expression result
+/// Contains analyzing results of expression:
+/// - expr_type - result type of expression
+/// - expr_value - result value of expression
+#[derive(Debug, Clone)]
+pub struct ExpressionResult<'a> {
+    pub expr_type: ast::Type<'a>,
+    pub expr_value: ExpressionResultValue,
+}
+
+/// # Expression Result Value
+/// Result value of expression analyze has to kind:
 /// - Primitive value
 /// - Register that contain result of expression
 ///   evaluation or call.
-#[derive(Debug)]
-pub enum ExpressionResult {
-    PrimitiveValue(PrimitiveValue),
+#[derive(Debug, Clone)]
+pub enum ExpressionResultValue {
+    PrimitiveValue(ast::PrimitiveValue),
     Register(u64),
 }
 
@@ -371,7 +384,12 @@ impl<T: Codegen<Backend = T>> State<T> {
                 constants: HashMap::new(),
             },
             codegen,
+            errors: Vec::new(),
         }
+    }
+
+    fn add_error(&mut self, err: StateErrorResult) {
+        self.errors.push(err);
     }
 
     /// Run semantic analyzer that covers all flow
@@ -696,7 +714,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             ));
         }
         // Analyse function parameters expressions and set result to array
-        let mut params: Vec<ExpressionResult> = vec![];
+        let mut params: Vec<ExpressionResult<'_>> = vec![];
         for expr in &data.parameters {
             params.push(self.expression(expr, body_state)?);
         }
@@ -1187,7 +1205,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &ast::Expression<'_>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> StateResult<ExpressionResult> {
+    ) -> ExpressionResult<'_> {
         // To analyze expression first time, we set:
         // left_value - as None
         // operation - as None
@@ -1199,14 +1217,18 @@ impl<T: Codegen<Backend = T>> State<T> {
 
     /// Expression operation semantic logic:
     /// `OP(lhs, rhs)`
+    /// Left-value contains optional Exrpression result for left side
+    /// of expression.
     pub fn expression_operation(
         &mut self,
-        left_value: Option<&ExpressionResult>,
+        left_value: Option<&ExpressionResult<'_>>,
         right_expression: &ast::Expression<'_>,
-        op: Option<&ExpressionOperations>,
+        op: Option<&ast::ExpressionOperations>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> StateResult<ExpressionResult> {
-        // Get right value from expression.
+    ) -> ExpressionResult<'_> {
+        let y = x;
+        let z = y + 1;
+        // Get right side value from expression.
         // If expression return error immediately return error
         // because next analyzer should use success result.
         let right_value = match &right_expression.expression_value {
@@ -1221,34 +1243,43 @@ impl<T: Codegen<Backend = T>> State<T> {
                     // Increase register counter before loading value
                     body_state.borrow_mut().inc_register();
                     // First check value in body state
-                    if let Some(val) = value_from_state {
+                    let ty = if let Some(val) = value_from_state {
                         // If it's value then Load it to register
                         self.codegen
                             .expression_value(&val, body_state.borrow().last_register_number);
+                        &val.inner_type
                     } else if let Some(const_val) = self.global.constants.get(&value.name().into())
                     {
                         // If value is constant load it to register
                         self.codegen
                             .expression_const(const_val, body_state.borrow().last_register_number);
-                    }
+                        &const_val.inner_type
+                    };
                     // Return result as register
-                    Ok(ExpressionResult::Register(
-                        body_state.borrow().last_register_number,
-                    ))
+                    ExpressionResult {
+                        expr_type: val_ty,
+                        expr_value: ExpressionResultValue::Register(
+                            body_state.borrow().last_register_number,
+                        ),
+                    }
                 } else {
                     // If value doesn't exist
-                    Err(error::StateErrorResult::new(
+                    self.add_error(StateErrorResult::new(
                         error::StateErrorKind::ValueNotFound,
                         value.name(),
                         0,
                         0,
-                    ))
+                    ));
+                    return;
                 }
             }
             // Check is expression primitive value
             ast::ExpressionValue::PrimitiveValue(value) => {
                 // Just return primitive value itself
-                Ok(ExpressionResult::PrimitiveValue(value.clone()))
+                ExpressionResult {
+                    expr_type: value.get_type(),
+                    expr_value: ExpressionResult::PrimitiveValue(value.clone()),
+                }
             }
             // Check is expression Function call entity
             ast::ExpressionValue::FunctionCall(fn_call) => {
@@ -1257,8 +1288,12 @@ impl<T: Codegen<Backend = T>> State<T> {
                 // And result of function always stored in register.
                 let call_result = self.function_call(fn_call, body_state);
                 // Return result as register
-                call_result
-                    .map(|_| ExpressionResult::Register(body_state.borrow().last_register_number))
+                ExpressionResult {
+                    expr_type: 1,
+                    expr_value: ExpressionResultValue::Register(
+                        body_state.borrow().last_register_number,
+                    ),
+                }
             }
             ast::ExpressionValue::StructValue(_value) => {
                 todo!()
@@ -1267,27 +1302,33 @@ impl<T: Codegen<Backend = T>> State<T> {
         // It's special case for "pure" expression - without operation.
         // For that check also left side of expression shouldn't exist
         if left_value.is_none() || op.is_none() {
-            return Ok(right_value);
+            return right_value;
+        }
+        let left_value = left_value.unwrap();
+        if left_value.expr_type != right_value.expr_type {
+            self.add_error()
         }
         // Call expression operation for: OP(left_value, right_value)
         // and return result of that call as register
         body_state.borrow_mut().inc_register();
         self.codegen.expression_operation(
             op.unwrap(),
-            left_value.unwrap(),
+            left_value,
             &right_value,
             body_state.borrow().last_register_number,
         );
-        let expression_result =
-            ExpressionResult::Register(body_state.borrow().last_register_number);
+        let expression_result = ExpressionResult {
+            expr_type: right_value.expr_type,
+            expr_value: ExpressionResultValue::Register(body_state.borrow().last_register_number),
+        };
 
-        // Check is for right value exist next operation
+        // Check is for right value contain next operation
         if let Some((operation, expr)) = &right_expression.operation {
             // Recursively call, where current Execution result set as left
             // side expression
             self.expression_operation(Some(&expression_result), expr, Some(operation), body_state)
         } else {
-            Ok(expression_result)
+            expression_result
         }
     }
 }

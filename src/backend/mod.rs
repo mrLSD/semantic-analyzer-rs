@@ -145,17 +145,17 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn let_binding(&mut self, _let_decl: &Value, _expr_result: &ExpressionResult) {
+    fn let_binding(&mut self, _let_decl: &Value, _expr_result: &ExpressionResult<'a>) {
         todo!()
     }
-    fn binding(&mut self, _val: &Value, _expr_result: &ExpressionResult) {
+    fn binding(&mut self, _val: &Value, _expr_result: &ExpressionResult<'a>) {
         todo!()
     }
 
     fn call(
         &self,
         _call: &ast::FunctionCall<'_>,
-        _params: Vec<ExpressionResult>,
+        _params: Vec<ExpressionResult<'a>>,
         _register_number: u64,
     ) {
         todo!()
@@ -172,25 +172,25 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     fn expression_operation(
         &self,
         _operation: &ast::ExpressionOperations,
-        _left_value: &ExpressionResult,
-        _right_value: &ExpressionResult,
+        _left_value: &ExpressionResult<'a>,
+        _right_value: &ExpressionResult<'a>,
         _register_number: u64,
     ) {
         todo!()
     }
 
-    fn expression_function_return(&self, _expr_result: &ExpressionResult) {
+    fn expression_function_return(&self, _expr_result: &ExpressionResult<'a>) {
         todo!()
     }
-    fn jump_function_return(&self, _expr_result: &ExpressionResult) {
+    fn jump_function_return(&self, _expr_result: &ExpressionResult<'a>) {
         todo!()
     }
-    fn expression_function_return_with_label(&self, _expr_result: &ExpressionResult) {
+    fn expression_function_return_with_label(&self, _expr_result: &ExpressionResult<'a>) {
         todo!()
     }
     fn if_condition_expression(
         &mut self,
-        _expr_result: &ExpressionResult,
+        _expr_result: &ExpressionResult<'a>,
         _label_if_begin: &LabelName,
         _label_if_end: &LabelName,
     ) {
@@ -212,8 +212,8 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     }
     fn condition_expression(
         &mut self,
-        _left_result: &ExpressionResult,
-        _right_result: &ExpressionResult,
+        _left_result: &ExpressionResult<'a>,
+        _right_result: &ExpressionResult<'a>,
         _condition: &Condition,
         _register_number: u64,
     ) {

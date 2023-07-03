@@ -214,23 +214,23 @@ pub enum PrimitiveValue {
 }
 
 impl PrimitiveValue {
-    pub const fn get_type(&self) -> PrimitiveTypes {
+    pub const fn get_type(&self) -> Type<'a> {
         match self {
-            Self::U8(_) => PrimitiveTypes::U8,
-            Self::U16(_) => PrimitiveTypes::U16,
-            Self::U32(_) => PrimitiveTypes::U32,
-            Self::U64(_) => PrimitiveTypes::U64,
-            Self::I8(_) => PrimitiveTypes::I8,
-            Self::I16(_) => PrimitiveTypes::I16,
-            Self::I32(_) => PrimitiveTypes::I32,
-            Self::I64(_) => PrimitiveTypes::I64,
-            Self::F32(_) => PrimitiveTypes::F32,
-            Self::F64(_) => PrimitiveTypes::F64,
-            Self::Char(_) => PrimitiveTypes::Char,
-            Self::Bool(_) => PrimitiveTypes::Bool,
-            Self::String(_) => PrimitiveTypes::String,
-            Self::Ptr => PrimitiveTypes::Ptr,
-            Self::None => PrimitiveTypes::None,
+            Self::U8(_) => Type::Primitive(PrimitiveTypes::U8),
+            Self::U16(_) => Type::Primitive(PrimitiveTypes::U16),
+            Self::U32(_) => Type::Primitive(PrimitiveTypes::U32),
+            Self::U64(_) => Type::Primitive(PrimitiveTypes::U64),
+            Self::I8(_) => Type::Primitive(PrimitiveTypes::I8),
+            Self::I16(_) => Type::Primitive(PrimitiveTypes::I16),
+            Self::I32(_) => Type::Primitive(PrimitiveTypes::I32),
+            Self::I64(_) => Type::Primitive(PrimitiveTypes::I64),
+            Self::F32(_) => Type::Primitive(PrimitiveTypes::F32),
+            Self::F64(_) => Type::Primitive(PrimitiveTypes::F64),
+            Self::Char(_) => Type::Primitive(PrimitiveTypes::Char),
+            Self::Bool(_) => Type::Primitive(PrimitiveTypes::Bool),
+            Self::String(_) => Type::Primitive(PrimitiveTypes::String),
+            Self::Ptr => Type::Primitive(PrimitiveTypes::Ptr),
+            Self::None => Type::Primitive(PrimitiveTypes::None),
         }
     }
 }
