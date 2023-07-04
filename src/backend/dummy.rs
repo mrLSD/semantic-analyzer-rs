@@ -1,6 +1,6 @@
 use crate::ast::{Condition, LogicCondition};
 use crate::codegen::Codegen;
-use crate::semantic::{ExpressionResult, LabelName, Value};
+use crate::semantic::{ExpressionResult, ExpressionResultValue, Function, LabelName, Value};
 use crate::{ast, semantic};
 
 pub struct Backend {
@@ -49,9 +49,9 @@ impl Codegen for Backend {
                 let_decl.inner_type.to_string()
             ),
         );
-        let val = match expr_result {
-            ExpressionResult::PrimitiveValue(v) => format!("{v:?}"),
-            ExpressionResult::Register(v) => format!("%{v:?}"),
+        let val = match expr_result.clone().expr_value {
+            ExpressionResultValue::PrimitiveValue(v) => format!("{v:?}"),
+            ExpressionResultValue::Register(v) => format!("%{v:?}"),
         };
         self.set_stack(
             "let_binding",
@@ -66,12 +66,7 @@ impl Codegen for Backend {
         todo!()
     }
 
-    fn call(
-        &self,
-        _call: &ast::FunctionCall<'_>,
-        _params: Vec<ExpressionResult>,
-        _register_number: u64,
-    ) {
+    fn call(&self, _call: &Function, _params: Vec<ExpressionResult>, _register_number: u64) {
         todo!()
     }
 

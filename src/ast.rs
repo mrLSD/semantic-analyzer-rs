@@ -214,7 +214,7 @@ pub enum PrimitiveValue {
 }
 
 impl PrimitiveValue {
-    pub const fn get_type(&self) -> Type<'a> {
+    pub const fn get_type(&self) -> Type<'_> {
         match self {
             Self::U8(_) => Type::Primitive(PrimitiveTypes::U8),
             Self::U16(_) => Type::Primitive(PrimitiveTypes::U16),

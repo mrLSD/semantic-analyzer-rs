@@ -13,7 +13,6 @@
 //! of generated code for next step - compilation generated raw program code.
 use crate::ast::{self, GetName};
 use crate::codegen::Codegen;
-use crate::semantic::error::StateErrorResult;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -25,7 +24,7 @@ const LOOP_BEGIN: &str = "loop_begin";
 const LOOP_END: &str = "loop_end";
 
 /// State result type - for single results
-pub type StateResult<T> = Result<T, error::StateErrorResult>;
+pub type StateResult<T> = Result<T, error::StateError>;
 pub type StateResults<T> = Result<T, Vec<error::StateErrorResult>>;
 
 /// Value name type
@@ -350,7 +349,7 @@ pub struct GlobalState {
 pub struct State<T: Codegen> {
     pub global: GlobalState,
     pub codegen: T,
-    pub errors: Vec<StateErrorResult>,
+    pub errors: Vec<error::StateErrorResult>,
 }
 
 /// # Expression result
@@ -358,8 +357,8 @@ pub struct State<T: Codegen> {
 /// - expr_type - result type of expression
 /// - expr_value - result value of expression
 #[derive(Debug, Clone)]
-pub struct ExpressionResult<'a> {
-    pub expr_type: ast::Type<'a>,
+pub struct ExpressionResult {
+    pub expr_type: InnerType,
     pub expr_value: ExpressionResultValue,
 }
 
@@ -388,75 +387,66 @@ impl<T: Codegen<Backend = T>> State<T> {
         }
     }
 
-    fn add_error(&mut self, err: StateErrorResult) {
+    fn add_error(&mut self, err: error::StateErrorResult) {
         self.errors.push(err);
     }
 
     /// Run semantic analyzer that covers all flow
-    pub fn run(&mut self, data: &ast::Main<'_>) -> StateResults<()> {
+    pub fn run(&mut self, data: &ast::Main<'_>) -> StateResult<()> {
         // Execute each kind of analyzing and return errors data.
         // For functions - fetch only declaration for fast-forward
         // identification for using it in functions body.
-        let result_errors = data.iter().fold(vec![], |mut s_err, main| {
-            let res = match main {
+        for main in data.iter() {
+            match main {
                 ast::MainStatement::Import(import) => self.import(import),
                 ast::MainStatement::Constant(constant) => self.constant(constant),
                 ast::MainStatement::Types(types) => self.types(types),
                 ast::MainStatement::Function(function) => self.function_declaration(function),
-            };
-            if let Err(err) = res {
-                s_err.push(err);
             }
-            s_err
-        });
+        }
         // After getting all functions declarations, fetch only functions body
-        let result_errors = data.iter().fold(result_errors, |mut s_err, main| {
-            let res = match main {
+        for main in data.iter() {
+            match main {
                 ast::MainStatement::Function(function) => self.function_body(function),
-                _ => return s_err,
-            };
-            if let Err(mut err) = res {
-                s_err.append(&mut err);
+                _ => (),
             }
-            s_err
-        });
-        if result_errors.is_empty() {
+        }
+        if self.errors.is_empty() {
             Ok(())
         } else {
-            Err(result_errors)
+            Err(error::StateError(error::StateErrorKind::Common))
         }
     }
 
     /// Import analyzer
     #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
-    pub const fn import(&self, _data: &ast::ImportPath<'_>) -> StateResult<()> {
-        Ok(())
-    }
+    pub const fn import(&self, _data: &ast::ImportPath<'_>) {}
 
     /// Types declaration analyzer. Add types to Global State.
-    pub fn types(&mut self, data: &ast::StructTypes<'_>) -> StateResult<()> {
+    pub fn types(&mut self, data: &ast::StructTypes<'_>) {
         if self.global.types.contains(&data.name().into()) {
-            return Err(error::StateErrorResult::new(
+            self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::TypeAlreadyExist,
                 data.name(),
                 0,
                 0,
             ));
+            return;
         }
         self.global.types.insert(data.name().into());
         self.codegen.types(data);
-        Ok(())
     }
 
     /// Constant analyzer. Add it got Global State
-    pub fn constant(&mut self, data: &ast::Constant<'_>) -> StateResult<()> {
+    pub fn constant(&mut self, data: &ast::Constant<'_>) {
         if self.global.constants.contains_key(&data.name().into()) {
-            return Err(error::StateErrorResult::new(
+            self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::ConstantAlreadyExist,
                 data.name(),
                 0,
                 0,
             ));
+            return;
         }
         self.global.constants.insert(
             data.name().into(),
@@ -466,18 +456,18 @@ impl<T: Codegen<Backend = T>> State<T> {
             },
         );
         self.codegen.constant(data);
-        Ok(())
     }
 
     /// Function declaration analyze. Add it to Global State/
-    pub fn function_declaration(&mut self, data: &ast::FunctionStatement<'_>) -> StateResult<()> {
+    pub fn function_declaration(&mut self, data: &ast::FunctionStatement<'_>) {
         if self.global.functions.contains_key(&data.name().into()) {
-            return Err(error::StateErrorResult::new(
+            self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::FunctionAlreadyExist,
                 data.name(),
                 0,
                 0,
             ));
+            return;
         }
         self.global.functions.insert(
             data.name().into(),
@@ -492,30 +482,25 @@ impl<T: Codegen<Backend = T>> State<T> {
             },
         );
         self.codegen.function_declaration(data);
-        Ok(())
     }
 
     /// Function body analyze.
     /// It is basic execution entity for program flow.
     /// It's operate sub analyze for function elements. It's contain
     /// Body State for current and child states.
-    pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) -> StateResults<()> {
+    pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) {
         // Init empty function body state
         let body_state = Rc::new(RefCell::new(BlockState::new(None)));
         // Flag to indicate is function return called
         let mut return_is_called = false;
         // Fetch function elements and gather errors
-        let mut result_errors = data.body.iter().fold(vec![], |mut s_err, body| {
-            let res = match body {
-                ast::BodyStatement::LetBinding(bind) => {
-                    self.let_binding(bind, &body_state).map_err(|e| vec![e])
+        for body in data.body.iter() {
+            match body {
+                ast::BodyStatement::LetBinding(bind) => self.let_binding(bind, &body_state),
+                ast::BodyStatement::Binding(bind) => self.binding(bind, &body_state),
+                ast::BodyStatement::FunctionCall(fn_call) => {
+                    self.function_call(fn_call, &body_state)
                 }
-                ast::BodyStatement::Binding(bind) => {
-                    self.binding(bind, &body_state).map_err(|e| vec![e])
-                }
-                ast::BodyStatement::FunctionCall(fn_call) => self
-                    .function_call(fn_call, &body_state)
-                    .map_err(|e| vec![e]),
                 ast::BodyStatement::If(if_condition) => {
                     self.if_condition(if_condition, &body_state, None, None)
                 }
@@ -524,66 +509,52 @@ impl<T: Codegen<Backend = T>> State<T> {
                 }
                 ast::BodyStatement::Expression(expression) => {
                     let expr_result = self.expression(expression, &body_state);
-                    expr_result
-                        .map(|res| {
-                            return_is_called = true;
-                            // Check is state contain flag of manual
-                            // return from other states, for example:
-                            // if-flow, loop-flow
-                            if body_state.borrow().manual_return {
-                                // First we put expression return calculation for case when
-                                // before in the state was return statement. So construct
-                                // return expression and jump to return label, set return
-                                // label and invoke after that read `return` value from all
-                                // previous returns and invoke return instruction itself.
-                                self.codegen.expression_function_return_with_label(&res);
-                            } else {
-                                self.codegen.expression_function_return(&res);
-                            }
-                        })
-                        .map_err(|e| vec![e])
+                    expr_result.map(|res| {
+                        return_is_called = true;
+                        // Check is state contain flag of manual
+                        // return from other states, for example:
+                        // if-flow, loop-flow
+                        if body_state.borrow().manual_return {
+                            // First we put expression return calculation for case when
+                            // before in the state was return statement. So construct
+                            // return expression and jump to return label, set return
+                            // label and invoke after that read `return` value from all
+                            // previous returns and invoke return instruction itself.
+                            self.codegen.expression_function_return_with_label(&res);
+                        } else {
+                            self.codegen.expression_function_return(&res);
+                        }
+                    })
                 }
                 ast::BodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, &body_state);
-                    expr_result
-                        .map(|res| {
-                            return_is_called = true;
-                            // Check is state contain flag of manual
-                            // return from other states, for example:
-                            // if-flow, loop-flow
-                            if body_state.borrow().manual_return {
-                                // First we put expression return calculation for case when
-                                // before in the state was return statement. So construct
-                                // return expression and jump to return label, set return
-                                // label and invoke after that read `return` value from all
-                                // previous returns and invoke return instruction itself.
-                                self.codegen.expression_function_return_with_label(&res);
-                            } else {
-                                self.codegen.expression_function_return(&res);
-                            }
-                        })
-                        .map_err(|e| vec![e])
+                    expr_result.map(|res| {
+                        return_is_called = true;
+                        // Check is state contain flag of manual
+                        // return from other states, for example:
+                        // if-flow, loop-flow
+                        if body_state.borrow().manual_return {
+                            // First we put expression return calculation for case when
+                            // before in the state was return statement. So construct
+                            // return expression and jump to return label, set return
+                            // label and invoke after that read `return` value from all
+                            // previous returns and invoke return instruction itself.
+                            self.codegen.expression_function_return_with_label(&res);
+                        } else {
+                            self.codegen.expression_function_return(&res);
+                        }
+                    })
                 }
-            };
-            // Collect errors
-            if let Err(mut err) = res {
-                s_err.append(&mut err);
             }
-            s_err
-        });
+        }
         // Check is function contain return
         if !return_is_called {
-            result_errors.push(error::StateErrorResult::new(
+            self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::ReturnNotFound,
                 String::new(),
                 0,
                 0,
             ));
-        }
-        if result_errors.is_empty() {
-            Ok(())
-        } else {
-            Err(result_errors)
         }
     }
 
@@ -599,13 +570,23 @@ impl<T: Codegen<Backend = T>> State<T> {
     /// 4. Insert value to current values state map: value `name` -> `Data`
     /// 5. Store `inner_name` in current and parent states
     /// 6. Codegen
-    pub fn let_binding(
-        &mut self,
-        data: &ast::LetBinding<'_>,
-        state: &Rc<RefCell<BlockState>>,
-    ) -> StateResult<()> {
+    pub fn let_binding(&mut self, data: &ast::LetBinding<'_>, state: &Rc<RefCell<BlockState>>) {
         // Call value analytics before putting let-value to state
         let expr_result = self.expression(&data.value, state)?;
+
+        if let Some(ty) = data.clone().value_type {
+            if expr_result.expr_type != ty {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::WrongLetType,
+                    data.name(),
+                    0,
+                    0,
+                ));
+                return;
+            }
+        } else {
+            expr_result.expr_type
+        }
 
         // Find value in current state and parent states
         let value = state.borrow().get_value_name(&data.name().into());
@@ -703,28 +684,42 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &ast::FunctionCall<'_>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> StateResult<()> {
+    ) -> Result<InnerType, ()> {
         // Check is function exists in global functions state
-        if !self.global.functions.contains_key(&data.name().into()) {
-            return Err(error::StateErrorResult::new(
+        let func_data = if let Some(func_data) = self.global.functions.get(&data.name().into()) {
+            func_data
+        } else {
+            self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::FunctionNotFound,
                 data.name(),
                 0,
                 0,
             ));
-        }
+            return Err(());
+        };
+
         // Analyse function parameters expressions and set result to array
-        let mut params: Vec<ExpressionResult<'_>> = vec![];
-        for expr in &data.parameters {
-            params.push(self.expression(expr, body_state)?);
+        let mut params: Vec<ExpressionResult> = vec![];
+        for (i, expr) in &data.parameters.iter().enumerate() {
+            let expr_result = self.expression(expr, body_state)?;
+            if expr_result.expr_type != func_data.parameters[i] {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::FunctionParameterTypeWrong,
+                    expr_type.expr_type.name(),
+                    0,
+                    0,
+                ));
+                continue;
+            }
+            params.push(expr_result);
         }
 
         // Codegen for function-call
         body_state.borrow_mut().inc_register();
         // Store always result to register even for void result
         self.codegen
-            .call(data, params, body_state.borrow().last_register_number);
-        Ok(())
+            .call(func_data, params, body_state.borrow().last_register_number);
+        Ok(func_data.inner_type)
     }
 
     /// # condition-expression
@@ -798,9 +793,9 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::IfBodyStatement::Binding(bind) => {
                     self.binding(bind, if_body_state).map_err(|e| vec![e])
                 }
-                ast::IfBodyStatement::FunctionCall(fn_call) => self
-                    .function_call(fn_call, if_body_state)
-                    .map_err(|e| vec![e]),
+                ast::IfBodyStatement::FunctionCall(fn_call) => {
+                    self.function_call(fn_call, if_body_state)
+                }
                 ast::IfBodyStatement::If(if_condition) => {
                     self.if_condition(if_condition, if_body_state, None, None)
                 }
@@ -851,9 +846,9 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::IfLoopBodyStatement::Binding(bind) => {
                     self.binding(bind, if_body_state).map_err(|e| vec![e])
                 }
-                ast::IfLoopBodyStatement::FunctionCall(fn_call) => self
-                    .function_call(fn_call, if_body_state)
-                    .map_err(|e| vec![e]),
+                ast::IfLoopBodyStatement::FunctionCall(fn_call) => {
+                    self.function_call(fn_call, if_body_state)
+                }
                 ast::IfLoopBodyStatement::If(if_condition) => self.if_condition(
                     if_condition,
                     if_body_state,
@@ -1130,9 +1125,9 @@ impl<T: Codegen<Backend = T>> State<T> {
                 ast::LoopBodyStatement::Binding(bind) => {
                     self.binding(bind, &loop_body_state).map_err(|e| vec![e])
                 }
-                ast::LoopBodyStatement::FunctionCall(fn_call) => self
-                    .function_call(fn_call, &loop_body_state)
-                    .map_err(|e| vec![e]),
+                ast::LoopBodyStatement::FunctionCall(fn_call) => {
+                    self.function_call(fn_call, &loop_body_state)
+                }
                 ast::LoopBodyStatement::If(if_condition) => self.if_condition(
                     if_condition,
                     &loop_body_state,
@@ -1205,7 +1200,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &ast::Expression<'_>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> ExpressionResult<'_> {
+    ) -> ExpressionResult {
         // To analyze expression first time, we set:
         // left_value - as None
         // operation - as None
@@ -1221,13 +1216,11 @@ impl<T: Codegen<Backend = T>> State<T> {
     /// of expression.
     pub fn expression_operation(
         &mut self,
-        left_value: Option<&ExpressionResult<'_>>,
+        left_value: Option<&ExpressionResult>,
         right_expression: &ast::Expression<'_>,
         op: Option<&ast::ExpressionOperations>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> ExpressionResult<'_> {
-        let y = x;
-        let z = y + 1;
+    ) -> StateResult<ExpressionResult> {
         // Get right side value from expression.
         // If expression return error immediately return error
         // because next analyzer should use success result.
@@ -1257,20 +1250,20 @@ impl<T: Codegen<Backend = T>> State<T> {
                     };
                     // Return result as register
                     ExpressionResult {
-                        expr_type: val_ty,
+                        expr_type: ty.clone(),
                         expr_value: ExpressionResultValue::Register(
                             body_state.borrow().last_register_number,
                         ),
                     }
                 } else {
                     // If value doesn't exist
-                    self.add_error(StateErrorResult::new(
+                    self.add_error(error::StateErrorResult::new(
                         error::StateErrorKind::ValueNotFound,
                         value.name(),
                         0,
                         0,
                     ));
-                    return;
+                    return Err(error::StateError(error::StateErrorKind::ValueNotFound));
                 }
             }
             // Check is expression primitive value
@@ -1335,13 +1328,20 @@ impl<T: Codegen<Backend = T>> State<T> {
 
 mod error {
     #[derive(Debug, Clone)]
+    pub struct StateError(pub StateErrorKind);
+
+    #[derive(Debug, Clone)]
     pub enum StateErrorKind {
+        /// Common error indicate errors in the State
+        Common,
         ConstantAlreadyExist,
+        WrongLetType,
         TypeAlreadyExist,
         FunctionAlreadyExist,
         ValueNotFound,
         ValueIsNotMutable,
         FunctionNotFound,
+        FunctionParameterTypeWrong,
         ReturnNotFound,
         IfElseDuplicated,
     }

@@ -7,7 +7,7 @@ use crate::codegen::Codegen;
 use crate::{ast, semantic};
 use inkwell::types::{ArrayType, BasicType, BasicTypeEnum, FloatType, IntType, StructType};
 // use inkwell::values::BasicValue;
-use crate::semantic::{ExpressionResult, LabelName, Value};
+use crate::semantic::{ExpressionResult, Function, LabelName, Value};
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -145,19 +145,14 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn let_binding(&mut self, _let_decl: &Value, _expr_result: &ExpressionResult<'a>) {
+    fn let_binding(&mut self, _let_decl: &Value, _expr_result: &ExpressionResult) {
         todo!()
     }
-    fn binding(&mut self, _val: &Value, _expr_result: &ExpressionResult<'a>) {
+    fn binding(&mut self, _val: &Value, _expr_result: &ExpressionResult) {
         todo!()
     }
 
-    fn call(
-        &self,
-        _call: &ast::FunctionCall<'_>,
-        _params: Vec<ExpressionResult<'a>>,
-        _register_number: u64,
-    ) {
+    fn call(&self, _call: &Function, _params: Vec<ExpressionResult>, _register_number: u64) {
         todo!()
     }
 
@@ -172,25 +167,25 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     fn expression_operation(
         &self,
         _operation: &ast::ExpressionOperations,
-        _left_value: &ExpressionResult<'a>,
-        _right_value: &ExpressionResult<'a>,
+        _left_value: &ExpressionResult,
+        _right_value: &ExpressionResult,
         _register_number: u64,
     ) {
         todo!()
     }
 
-    fn expression_function_return(&self, _expr_result: &ExpressionResult<'a>) {
+    fn expression_function_return(&self, _expr_result: &ExpressionResult) {
         todo!()
     }
-    fn jump_function_return(&self, _expr_result: &ExpressionResult<'a>) {
+    fn jump_function_return(&self, _expr_result: &ExpressionResult) {
         todo!()
     }
-    fn expression_function_return_with_label(&self, _expr_result: &ExpressionResult<'a>) {
+    fn expression_function_return_with_label(&self, _expr_result: &ExpressionResult) {
         todo!()
     }
     fn if_condition_expression(
         &mut self,
-        _expr_result: &ExpressionResult<'a>,
+        _expr_result: &ExpressionResult,
         _label_if_begin: &LabelName,
         _label_if_end: &LabelName,
     ) {
@@ -212,8 +207,8 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     }
     fn condition_expression(
         &mut self,
-        _left_result: &ExpressionResult<'a>,
-        _right_result: &ExpressionResult<'a>,
+        _left_result: &ExpressionResult,
+        _right_result: &ExpressionResult,
         _condition: &Condition,
         _register_number: u64,
     ) {
