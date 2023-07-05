@@ -705,7 +705,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             if expr_result.expr_type != func_data.parameters[i] {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::FunctionParameterTypeWrong,
-                    expr_type.expr_type.name(),
+                    expr_result.expr_type.name(),
                     0,
                     0,
                 ));
@@ -728,18 +728,18 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &ast::ExpressionLogicCondition<'_>,
         function_body_state: &Rc<RefCell<BlockState>>,
-    ) -> StateResults<()> {
+    ) -> Result<(), ()> {
         // Analyse left expression of left condition
         let left_expr = &data.left.left;
-        let left_res = self
-            .expression(left_expr, function_body_state)
-            .map_err(|err| vec![err])?;
+        let left_res = self.expression(left_expr, function_body_state);
 
         // Analyse right expression of left condition
         let right_expr = &data.left.right;
-        let right_res = self
-            .expression(right_expr, function_body_state)
-            .map_err(|err| vec![err])?;
+        let right_res = self.expression(right_expr, function_body_state);
+
+        // Unwrap result only after analysing
+        let left_res = left_res?;
+        let right_res = right_res?;
 
         // Increase register counter before generate condition
         function_body_state.borrow_mut().inc_register();
@@ -1200,7 +1200,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &ast::Expression<'_>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> ExpressionResult {
+    ) -> Result<ExpressionResult, ()> {
         // To analyze expression first time, we set:
         // left_value - as None
         // operation - as None
@@ -1220,7 +1220,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         right_expression: &ast::Expression<'_>,
         op: Option<&ast::ExpressionOperations>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> StateResult<ExpressionResult> {
+    ) -> Result<ExpressionResult, ()> {
         // Get right side value from expression.
         // If expression return error immediately return error
         // because next analyzer should use success result.
@@ -1247,6 +1247,8 @@ impl<T: Codegen<Backend = T>> State<T> {
                         self.codegen
                             .expression_const(const_val, body_state.borrow().last_register_number);
                         &const_val.inner_type
+                    } else {
+                        return Err(());
                     };
                     // Return result as register
                     ExpressionResult {
@@ -1263,15 +1265,15 @@ impl<T: Codegen<Backend = T>> State<T> {
                         0,
                         0,
                     ));
-                    return Err(error::StateError(error::StateErrorKind::ValueNotFound));
+                    return Err(());
                 }
             }
             // Check is expression primitive value
             ast::ExpressionValue::PrimitiveValue(value) => {
                 // Just return primitive value itself
                 ExpressionResult {
-                    expr_type: value.get_type(),
-                    expr_value: ExpressionResult::PrimitiveValue(value.clone()),
+                    expr_type: value.get_type().name().into(),
+                    expr_value: ExpressionResultValue::PrimitiveValue(value.clone()),
                 }
             }
             // Check is expression Function call entity
@@ -1279,10 +1281,10 @@ impl<T: Codegen<Backend = T>> State<T> {
                 // We shouldn't increment register, because it's
                 // inside `self.function_call`.
                 // And result of function always stored in register.
-                let call_result = self.function_call(fn_call, body_state);
+                let func_call_ty = self.function_call(fn_call, body_state)?;
                 // Return result as register
                 ExpressionResult {
-                    expr_type: 1,
+                    expr_type: func_call_ty,
                     expr_value: ExpressionResultValue::Register(
                         body_state.borrow().last_register_number,
                     ),
@@ -1291,15 +1293,20 @@ impl<T: Codegen<Backend = T>> State<T> {
             ast::ExpressionValue::StructValue(_value) => {
                 todo!()
             }
-        }?;
+        };
         // It's special case for "pure" expression - without operation.
         // For that check also left side of expression shouldn't exist
         if left_value.is_none() || op.is_none() {
-            return right_value;
+            return Ok(right_value);
         }
         let left_value = left_value.unwrap();
         if left_value.expr_type != right_value.expr_type {
-            self.add_error()
+            self.add_error(error::StateErrorResult::new(
+                error::StateErrorKind::WrongExpressionType,
+                left_value.expr_type.to_string(),
+                0,
+                0,
+            ));
         }
         // Call expression operation for: OP(left_value, right_value)
         // and return result of that call as register
@@ -1321,7 +1328,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             // side expression
             self.expression_operation(Some(&expression_result), expr, Some(operation), body_state)
         } else {
-            expression_result
+            Ok(expression_result)
         }
     }
 }
@@ -1336,6 +1343,7 @@ mod error {
         Common,
         ConstantAlreadyExist,
         WrongLetType,
+        WrongExpressionType,
         TypeAlreadyExist,
         FunctionAlreadyExist,
         ValueNotFound,
