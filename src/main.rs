@@ -9,11 +9,11 @@ mod semantic;
 
 fn main() {
     let source: ast::Main = vec![];
-    let res = State::new(Backend::new()).run(&source);
+    let _res = State::new(Backend::new()).run(&source);
     println!("#> ...");
-    if let Err(err) = res {
-        for trace in &err {
-            println!("{}", trace.trace_state());
-        }
-    }
+    // if let Err(err) = res {
+    //     for trace in &err {
+    //         println!("{}", trace.trace_state());
+    //     }
+    // }
 }

@@ -13,6 +13,7 @@
 //! of generated code for next step - compilation generated raw program code.
 use crate::ast::{self, GetName};
 use crate::codegen::Codegen;
+use crate::semantic::error::EmptyError;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -25,7 +26,6 @@ const LOOP_END: &str = "loop_end";
 
 /// State result type - for single results
 pub type StateResult<T> = Result<T, error::StateError>;
-pub type StateResults<T> = Result<T, Vec<error::StateErrorResult>>;
 
 /// Value name type
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -354,8 +354,8 @@ pub struct State<T: Codegen> {
 
 /// # Expression result
 /// Contains analyzing results of expression:
-/// - expr_type - result type of expression
-/// - expr_value - result value of expression
+/// - `expr_type` - result type of expression
+/// - `expr_value` - result value of expression
 #[derive(Debug, Clone)]
 pub struct ExpressionResult {
     pub expr_type: InnerType,
@@ -406,9 +406,8 @@ impl<T: Codegen<Backend = T>> State<T> {
         }
         // After getting all functions declarations, fetch only functions body
         for main in data.iter() {
-            match main {
-                ast::MainStatement::Function(function) => self.function_body(function),
-                _ => (),
+            if let ast::MainStatement::Function(function) = main {
+                self.function_body(function);
             }
         }
         if self.errors.is_empty() {
@@ -494,22 +493,26 @@ impl<T: Codegen<Backend = T>> State<T> {
         // Flag to indicate is function return called
         let mut return_is_called = false;
         // Fetch function elements and gather errors
-        for body in data.body.iter() {
+        for body in &data.body {
             match body {
-                ast::BodyStatement::LetBinding(bind) => self.let_binding(bind, &body_state),
-                ast::BodyStatement::Binding(bind) => self.binding(bind, &body_state),
+                ast::BodyStatement::LetBinding(bind) => {
+                    let _ = self.let_binding(bind, &body_state);
+                }
+                ast::BodyStatement::Binding(bind) => {
+                    let _ = self.binding(bind, &body_state);
+                }
                 ast::BodyStatement::FunctionCall(fn_call) => {
-                    self.function_call(fn_call, &body_state)
+                    let _ = self.function_call(fn_call, &body_state);
                 }
                 ast::BodyStatement::If(if_condition) => {
-                    self.if_condition(if_condition, &body_state, None, None)
+                    self.if_condition(if_condition, &body_state, None, None);
                 }
                 ast::BodyStatement::Loop(loop_statement) => {
-                    self.loop_statement(loop_statement, &body_state)
+                    self.loop_statement(loop_statement, &body_state);
                 }
                 ast::BodyStatement::Expression(expression) => {
                     let expr_result = self.expression(expression, &body_state);
-                    expr_result.map(|res| {
+                    let _ = expr_result.map(|res| {
                         return_is_called = true;
                         // Check is state contain flag of manual
                         // return from other states, for example:
@@ -524,11 +527,11 @@ impl<T: Codegen<Backend = T>> State<T> {
                         } else {
                             self.codegen.expression_function_return(&res);
                         }
-                    })
+                    });
                 }
                 ast::BodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, &body_state);
-                    expr_result.map(|res| {
+                    let _ = expr_result.map(|res| {
                         return_is_called = true;
                         // Check is state contain flag of manual
                         // return from other states, for example:
@@ -543,7 +546,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                         } else {
                             self.codegen.expression_function_return(&res);
                         }
-                    })
+                    });
                 }
             }
         }
@@ -570,23 +573,26 @@ impl<T: Codegen<Backend = T>> State<T> {
     /// 4. Insert value to current values state map: value `name` -> `Data`
     /// 5. Store `inner_name` in current and parent states
     /// 6. Codegen
-    pub fn let_binding(&mut self, data: &ast::LetBinding<'_>, state: &Rc<RefCell<BlockState>>) {
+    pub fn let_binding(
+        &mut self,
+        data: &ast::LetBinding<'_>,
+        state: &Rc<RefCell<BlockState>>,
+    ) -> Result<(), EmptyError> {
         // Call value analytics before putting let-value to state
         let expr_result = self.expression(&data.value, state)?;
 
         if let Some(ty) = data.clone().value_type {
-            if expr_result.expr_type != ty {
+            if expr_result.expr_type != ty.name().into() {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::WrongLetType,
                     data.name(),
                     0,
                     0,
                 ));
-                return;
+                return Err(EmptyError);
             }
-        } else {
-            expr_result.expr_type
         }
+        let let_ty = expr_result.clone().expr_type;
 
         // Find value in current state and parent states
         let value = state.borrow().get_value_name(&data.name().into());
@@ -606,11 +612,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         // Set value parameters
         let value = Value {
             inner_name: inner_name.clone(),
-            inner_type: data
-                .clone()
-                .value_type
-                // TODO: resolve type from expression for empty case
-                .map_or(String::new().into(), |ty| ty.name().into()),
+            inner_type: let_ty,
             mutable: data.mutable,
             alloca: false,
             malloc: false,
@@ -638,7 +640,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &ast::Binding<'_>,
         state: &Rc<RefCell<BlockState>>,
-    ) -> StateResult<()> {
+    ) -> Result<(), EmptyError> {
         // Call value analytics before putting let-value to state
         let expr_result = self.expression(&data.value, state)?;
 
@@ -647,21 +649,23 @@ impl<T: Codegen<Backend = T>> State<T> {
             .borrow()
             .get_value_name(&data.name().into())
             .ok_or_else(|| {
-                error::StateErrorResult::new(
+                self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::ValueNotFound,
                     data.name(),
                     0,
                     0,
-                )
+                ));
+                EmptyError
             })?;
         // Check is value mutable
         if !value.mutable {
-            return Err(error::StateErrorResult::new(
+            self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::ValueIsNotMutable,
                 data.name(),
                 0,
                 0,
             ));
+            return Err(EmptyError);
         }
 
         self.codegen.binding(&value, &expr_result);
@@ -684,34 +688,34 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &ast::FunctionCall<'_>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> Result<InnerType, ()> {
-        // Check is function exists in global functions state
-        let func_data = if let Some(func_data) = self.global.functions.get(&data.name().into()) {
-            func_data
-        } else {
+    ) -> Result<InnerType, EmptyError> {
+        // Check is function exists in global functions stat
+        let Some(func_data) = self.global.functions.get(&data.name().into()) else {
             self.add_error(error::StateErrorResult::new(
-                error::StateErrorKind::FunctionNotFound,
-                data.name(),
-                0,
-                0,
-            ));
-            return Err(());
+                 error::StateErrorKind::FunctionNotFound,
+                 data.name(),
+                 0,
+                 0,
+             ));
+            return Err(EmptyError);
         };
+        let fn_type = func_data.inner_type.clone();
+        let _fn_parameters = func_data.parameters.clone();
 
         // Analyse function parameters expressions and set result to array
-        let mut params: Vec<ExpressionResult> = vec![];
-        for (i, expr) in &data.parameters.iter().enumerate() {
-            let expr_result = self.expression(expr, body_state)?;
-            if expr_result.expr_type != func_data.parameters[i] {
-                self.add_error(error::StateErrorResult::new(
-                    error::StateErrorKind::FunctionParameterTypeWrong,
-                    expr_result.expr_type.name(),
-                    0,
-                    0,
-                ));
-                continue;
-            }
-            params.push(expr_result);
+        let params: Vec<ExpressionResult> = vec![];
+        for (_i, _expr) in data.parameters.iter().enumerate() {
+            // let expr_result = self.expression(expr, body_state)?;
+            // if expr_result.expr_type != fn_parameters[i] {
+            //     self.add_error(error::StateErrorResult::new(
+            //         error::StateErrorKind::FunctionParameterTypeWrong,
+            //         expr_result.expr_type.to_string(),
+            //         0,
+            //         0,
+            //     ));
+            //     continue;
+            // }
+            // params.push(expr_result);
         }
 
         // Codegen for function-call
@@ -719,7 +723,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         // Store always result to register even for void result
         self.codegen
             .call(func_data, params, body_state.borrow().last_register_number);
-        Ok(func_data.inner_type)
+        Ok(fn_type)
     }
 
     /// # condition-expression
@@ -728,7 +732,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &ast::ExpressionLogicCondition<'_>,
         function_body_state: &Rc<RefCell<BlockState>>,
-    ) -> Result<(), ()> {
+    ) -> Result<(), EmptyError> {
         // Analyse left expression of left condition
         let left_expr = &data.left.left;
         let left_res = self.expression(left_expr, function_body_state);
@@ -784,46 +788,35 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         body: &[ast::IfBodyStatement<'_>],
         if_body_state: &Rc<RefCell<BlockState>>,
-    ) -> StateResults<()> {
-        let result_errors = body.iter().fold(vec![], |mut s_err, body| {
-            let res = match body {
+    ) {
+        for body in body.iter() {
+            match body {
                 ast::IfBodyStatement::LetBinding(bind) => {
-                    self.let_binding(bind, if_body_state).map_err(|e| vec![e])
+                    let _ = self.let_binding(bind, if_body_state);
                 }
                 ast::IfBodyStatement::Binding(bind) => {
-                    self.binding(bind, if_body_state).map_err(|e| vec![e])
+                    let _ = self.binding(bind, if_body_state);
                 }
                 ast::IfBodyStatement::FunctionCall(fn_call) => {
-                    self.function_call(fn_call, if_body_state)
+                    let _ = self.function_call(fn_call, if_body_state);
                 }
                 ast::IfBodyStatement::If(if_condition) => {
-                    self.if_condition(if_condition, if_body_state, None, None)
+                    self.if_condition(if_condition, if_body_state, None, None);
                 }
                 ast::IfBodyStatement::Loop(loop_statement) => {
-                    self.loop_statement(loop_statement, if_body_state)
+                    self.loop_statement(loop_statement, if_body_state);
                 }
                 ast::IfBodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, if_body_state);
-                    expr_result
-                        .map(|res| {
-                            // Jump to return label in codegen and set return
-                            // status to indicate function, that it's manual
-                            // return
-                            self.codegen.jump_function_return(&res);
-                            if_body_state.borrow_mut().set_return();
-                        })
-                        .map_err(|e| vec![e])
+                    let _ = expr_result.map(|res| {
+                        // Jump to return label in codegen and set return
+                        // status to indicate function, that it's manual
+                        // return
+                        self.codegen.jump_function_return(&res);
+                        if_body_state.borrow_mut().set_return();
+                    });
                 }
-            };
-            if let Err(mut err) = res {
-                s_err.append(&mut err);
             }
-            s_err
-        });
-        if result_errors.is_empty() {
-            Ok(())
-        } else {
-            Err(result_errors)
         }
     }
 
@@ -837,60 +830,49 @@ impl<T: Codegen<Backend = T>> State<T> {
         if_body_state: &Rc<RefCell<BlockState>>,
         label_loop_start: &LabelName,
         label_loop_end: &LabelName,
-    ) -> StateResults<()> {
-        let result_errors = body.iter().fold(vec![], |mut s_err, body| {
-            let res = match body {
+    ) {
+        for body in body.iter() {
+            match body {
                 ast::IfLoopBodyStatement::LetBinding(bind) => {
-                    self.let_binding(bind, if_body_state).map_err(|e| vec![e])
+                    let _ = self.let_binding(bind, if_body_state);
                 }
                 ast::IfLoopBodyStatement::Binding(bind) => {
-                    self.binding(bind, if_body_state).map_err(|e| vec![e])
+                    let _ = self.binding(bind, if_body_state);
                 }
                 ast::IfLoopBodyStatement::FunctionCall(fn_call) => {
-                    self.function_call(fn_call, if_body_state)
+                    let _ = self.function_call(fn_call, if_body_state);
                 }
-                ast::IfLoopBodyStatement::If(if_condition) => self.if_condition(
-                    if_condition,
-                    if_body_state,
-                    None,
-                    Some((label_loop_start, label_loop_end)),
-                ),
+                ast::IfLoopBodyStatement::If(if_condition) => {
+                    self.if_condition(
+                        if_condition,
+                        if_body_state,
+                        None,
+                        Some((label_loop_start, label_loop_end)),
+                    );
+                }
                 ast::IfLoopBodyStatement::Loop(loop_statement) => {
-                    self.loop_statement(loop_statement, if_body_state)
+                    self.loop_statement(loop_statement, if_body_state);
                 }
                 ast::IfLoopBodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, if_body_state);
-                    expr_result
-                        .map(|res| {
-                            // Jump to return label in codegen and set return
-                            // status to indicate function, that it's manual
-                            // return
-                            self.codegen.jump_function_return(&res);
-                            if_body_state.borrow_mut().set_return();
-                        })
-                        .map_err(|e| vec![e])
+                    let _ = expr_result.map(|res| {
+                        // Jump to return label in codegen and set return
+                        // status to indicate function, that it's manual
+                        // return
+                        self.codegen.jump_function_return(&res);
+                        if_body_state.borrow_mut().set_return();
+                    });
                 }
                 ast::IfLoopBodyStatement::Continue => {
                     // Skip next loop  step and jump to the start
                     // of loop
                     self.codegen.jump_to(label_loop_start);
-                    Ok(())
                 }
                 ast::IfLoopBodyStatement::Break => {
                     // Break loop and jump to the end of loop
                     self.codegen.jump_to(label_loop_end);
-                    Ok(())
                 }
-            };
-            if let Err(mut err) = res {
-                s_err.append(&mut err);
             }
-            s_err
-        });
-        if result_errors.is_empty() {
-            Ok(())
-        } else {
-            Err(result_errors)
         }
     }
 
@@ -905,15 +887,13 @@ impl<T: Codegen<Backend = T>> State<T> {
         label_if_else: &LabelName,
         label_if_end: &LabelName,
         is_else: bool,
-    ) -> StateResults<()> {
+    ) -> Result<(), EmptyError> {
         // Analyse if-conditions
         match condition {
             // if condition represented just as expression
             ast::IfCondition::Single(expr) => {
                 // Calculate expression for single if-condition expression
-                let expr_result = self
-                    .expression(expr, if_body_state)
-                    .map_err(|err| vec![err])?;
+                let expr_result = self.expression(expr, if_body_state)?;
                 // Codegen for if-condition from expression and if-body start
                 if is_else {
                     self.codegen.if_condition_expression(
@@ -932,7 +912,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             // If condition contains logic condition expression
             ast::IfCondition::Logic(expr_logic) => {
                 // Analyse if-condition logic
-                self.condition_expression(expr_logic, if_body_state)?;
+                let _ = self.condition_expression(expr_logic, if_body_state);
                 // Codegen for if-condition-logic with if-body start
                 if is_else {
                     self.codegen.if_condition_logic(
@@ -973,15 +953,15 @@ impl<T: Codegen<Backend = T>> State<T> {
         function_body_state: &Rc<RefCell<BlockState>>,
         label_end: Option<LabelName>,
         label_loop: Option<(&LabelName, &LabelName)>,
-    ) -> StateResults<()> {
+    ) {
         // It can't contain `else` and `if-else` on the same time
         if data.else_if_statement.is_some() && data.else_if_statement.is_some() {
-            return Err(vec![error::StateErrorResult::new(
+            self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::IfElseDuplicated,
                 String::from("if-condition"),
                 0,
                 0,
-            )]);
+            ));
         }
         // Create state for if-body, from parent function state because
         // if-state can contain sub-state, that can be independent from parent
@@ -1009,14 +989,14 @@ impl<T: Codegen<Backend = T>> State<T> {
         let is_else = data.else_if_statement.is_some() || data.else_if_statement.is_some();
 
         // Analyse if-conditions
-        self.if_condition_calculation(
+        let _ = self.if_condition_calculation(
             &data.condition,
             &if_body_state,
             &label_if_begin,
             &label_if_else,
             &label_if_end,
             is_else,
-        )?;
+        );
 
         //== If condition main body
         // Set if-begin label
@@ -1025,17 +1005,12 @@ impl<T: Codegen<Backend = T>> State<T> {
         match &data.body {
             ast::IfBodyStatements::If(body) => {
                 // Analyze if-statement body
-                self.if_condition_body(body, &if_body_state)?;
+                self.if_condition_body(body, &if_body_state);
             }
             ast::IfBodyStatements::Loop(body) => {
                 let (label_loop_start, label_loop_end) = label_loop.expect("label should be set");
                 // Analyze if-loop-statement body
-                self.if_condition_loop_body(
-                    body,
-                    &if_body_state,
-                    label_loop_start,
-                    label_loop_end,
-                )?;
+                self.if_condition_loop_body(body, &if_body_state, label_loop_start, label_loop_end);
             }
         }
         // Codegen for jump to if-end statement -return to program flow
@@ -1054,7 +1029,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                 match else_body {
                     ast::IfBodyStatements::If(body) => {
                         // Analyze if-statement body
-                        self.if_condition_body(body, &if_else_body_state)?;
+                        self.if_condition_body(body, &if_else_body_state);
                     }
                     ast::IfBodyStatements::Loop(body) => {
                         let (label_loop_start, label_loop_end) =
@@ -1065,7 +1040,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                             &if_else_body_state,
                             label_loop_start,
                             label_loop_end,
-                        )?;
+                        );
                     }
                 }
 
@@ -1078,14 +1053,12 @@ impl<T: Codegen<Backend = T>> State<T> {
                     function_body_state,
                     Some(label_if_end.clone()),
                     label_loop,
-                )?;
+                );
             }
         }
 
         // End label for all if statement
         self.codegen.set_label(&label_if_end);
-
-        Ok(())
     }
 
     /// # Loop
@@ -1098,7 +1071,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &[ast::LoopBodyStatement<'_>],
         function_body_state: &Rc<RefCell<BlockState>>,
-    ) -> StateResults<()> {
+    ) {
         // Create state for loop-body, from parent func state because
         // loop-state can contain sub-state, that can be independent from parent
         // state
@@ -1117,16 +1090,16 @@ impl<T: Codegen<Backend = T>> State<T> {
         self.codegen.jump_to(&label_loop_begin);
         self.codegen.set_label(&label_loop_begin);
 
-        let result_errors = data.iter().fold(vec![], |mut s_err, body| {
-            let res = match body {
-                ast::LoopBodyStatement::LetBinding(bind) => self
-                    .let_binding(bind, &loop_body_state)
-                    .map_err(|e| vec![e]),
+        for body in data.iter() {
+            match body {
+                ast::LoopBodyStatement::LetBinding(bind) => {
+                    let _ = self.let_binding(bind, &loop_body_state);
+                }
                 ast::LoopBodyStatement::Binding(bind) => {
-                    self.binding(bind, &loop_body_state).map_err(|e| vec![e])
+                    let _ = self.binding(bind, &loop_body_state).map_err(|e| vec![e]);
                 }
                 ast::LoopBodyStatement::FunctionCall(fn_call) => {
-                    self.function_call(fn_call, &loop_body_state)
+                    let _ = self.function_call(fn_call, &loop_body_state);
                 }
                 ast::LoopBodyStatement::If(if_condition) => self.if_condition(
                     if_condition,
@@ -1135,45 +1108,32 @@ impl<T: Codegen<Backend = T>> State<T> {
                     Some((&label_loop_begin, &label_loop_end)),
                 ),
                 ast::LoopBodyStatement::Loop(loop_statement) => {
-                    self.loop_statement(loop_statement, &loop_body_state)
+                    self.loop_statement(loop_statement, &loop_body_state);
                 }
                 ast::LoopBodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, &loop_body_state);
-                    expr_result
-                        .map(|res| {
-                            // Jump to return label in codegen and set return
-                            // status to indicate function, that it's manual
-                            // return
-                            self.codegen.jump_function_return(&res);
-                            loop_body_state.borrow_mut().set_return();
-                        })
-                        .map_err(|e| vec![e])
+                    let _ = expr_result.map(|res| {
+                        // Jump to return label in codegen and set return
+                        // status to indicate function, that it's manual
+                        // return
+                        self.codegen.jump_function_return(&res);
+                        loop_body_state.borrow_mut().set_return();
+                    });
                 }
                 ast::LoopBodyStatement::Break => {
                     // Break loop and jump to the end of loop
                     self.codegen.jump_to(&label_loop_end);
-                    Ok(())
                 }
                 ast::LoopBodyStatement::Continue => {
                     // Skip next loop  step and jump to the start
                     // of loop
                     self.codegen.jump_to(&label_loop_begin);
-                    Ok(())
                 }
-            };
-            // Collect errors
-            if let Err(mut err) = res {
-                s_err.append(&mut err);
             }
-            s_err
-        });
-        if !result_errors.is_empty() {
-            return Err(result_errors);
         }
 
         // Loop ending
         self.codegen.set_label(&label_loop_end);
-        Ok(())
     }
 
     #[allow(clippy::doc_markdown)]
@@ -1200,7 +1160,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         &mut self,
         data: &ast::Expression<'_>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> Result<ExpressionResult, ()> {
+    ) -> Result<ExpressionResult, EmptyError> {
         // To analyze expression first time, we set:
         // left_value - as None
         // operation - as None
@@ -1220,7 +1180,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         right_expression: &ast::Expression<'_>,
         op: Option<&ast::ExpressionOperations>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> Result<ExpressionResult, ()> {
+    ) -> Result<ExpressionResult, EmptyError> {
         // Get right side value from expression.
         // If expression return error immediately return error
         // because next analyzer should use success result.
@@ -1240,19 +1200,19 @@ impl<T: Codegen<Backend = T>> State<T> {
                         // If it's value then Load it to register
                         self.codegen
                             .expression_value(&val, body_state.borrow().last_register_number);
-                        &val.inner_type
+                        val.inner_type
                     } else if let Some(const_val) = self.global.constants.get(&value.name().into())
                     {
                         // If value is constant load it to register
                         self.codegen
                             .expression_const(const_val, body_state.borrow().last_register_number);
-                        &const_val.inner_type
+                        const_val.inner_type.clone()
                     } else {
-                        return Err(());
+                        return Err(EmptyError);
                     };
                     // Return result as register
                     ExpressionResult {
-                        expr_type: ty.clone(),
+                        expr_type: ty,
                         expr_value: ExpressionResultValue::Register(
                             body_state.borrow().last_register_number,
                         ),
@@ -1265,7 +1225,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                         0,
                         0,
                     ));
-                    return Err(());
+                    return Err(EmptyError);
                 }
             }
             // Check is expression primitive value
@@ -1333,7 +1293,11 @@ impl<T: Codegen<Backend = T>> State<T> {
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 mod error {
+    #[derive(Debug, Clone)]
+    pub struct EmptyError;
+
     #[derive(Debug, Clone)]
     pub struct StateError(pub StateErrorKind);
 
@@ -1349,22 +1313,22 @@ mod error {
         ValueNotFound,
         ValueIsNotMutable,
         FunctionNotFound,
-        FunctionParameterTypeWrong,
+        // FunctionParameterTypeWrong,
         ReturnNotFound,
         IfElseDuplicated,
     }
 
     #[derive(Debug, Clone)]
     pub struct StateErrorLocation {
-        line: u64,
-        column: u64,
+        pub line: u64,
+        pub column: u64,
     }
 
     #[derive(Debug, Clone)]
     pub struct StateErrorResult {
-        kind: StateErrorKind,
-        value: String,
-        location: StateErrorLocation,
+        pub kind: StateErrorKind,
+        pub value: String,
+        pub location: StateErrorLocation,
     }
 
     impl StateErrorResult {
@@ -1378,6 +1342,7 @@ mod error {
     }
 
     impl StateErrorResult {
+        #[allow(dead_code)]
         pub fn trace_state(&self) -> String {
             format!(
                 "[{:?}] for value {:?} at: {:?}:{:?}",
