@@ -320,7 +320,7 @@ impl BlockState {
 /// It used to detect functions in state and
 /// their parameters to use in normal execution
 /// flog.
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Function {
     pub inner_name: FunctionName,
     pub inner_type: InnerType,
@@ -690,7 +690,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         body_state: &Rc<RefCell<BlockState>>,
     ) -> Result<InnerType, EmptyError> {
         // Check is function exists in global functions stat
-        let Some(func_data) = self.global.functions.get(&data.name().into()) else {
+        let Some(func_data) = self.global.functions.get(&data.name().into()).cloned() else {
             self.add_error(error::StateErrorResult::new(
                  error::StateErrorKind::FunctionNotFound,
                  data.name(),
@@ -700,29 +700,29 @@ impl<T: Codegen<Backend = T>> State<T> {
             return Err(EmptyError);
         };
         let fn_type = func_data.inner_type.clone();
-        let _fn_parameters = func_data.parameters.clone();
 
-        // Analyse function parameters expressions and set result to array
-        let params: Vec<ExpressionResult> = vec![];
-        for (_i, _expr) in data.parameters.iter().enumerate() {
-            // let expr_result = self.expression(expr, body_state)?;
-            // if expr_result.expr_type != fn_parameters[i] {
-            //     self.add_error(error::StateErrorResult::new(
-            //         error::StateErrorKind::FunctionParameterTypeWrong,
-            //         expr_result.expr_type.to_string(),
-            //         0,
-            //         0,
-            //     ));
-            //     continue;
-            // }
-            // params.push(expr_result);
+        // Analyse function parameters expressions, check their types
+        // and set result to array
+        let mut params: Vec<ExpressionResult> = vec![];
+        for (i, expr) in data.parameters.iter().enumerate() {
+            let expr_result = self.expression(expr, body_state)?;
+            if expr_result.expr_type != func_data.parameters[i] {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::FunctionParameterTypeWrong,
+                    expr_result.expr_type.to_string(),
+                    0,
+                    0,
+                ));
+                continue;
+            }
+            params.push(expr_result);
         }
 
         // Codegen for function-call
         body_state.borrow_mut().inc_register();
         // Store always result to register even for void result
         self.codegen
-            .call(func_data, params, body_state.borrow().last_register_number);
+            .call(&func_data, params, body_state.borrow().last_register_number);
         Ok(fn_type)
     }
 
@@ -1313,7 +1313,7 @@ mod error {
         ValueNotFound,
         ValueIsNotMutable,
         FunctionNotFound,
-        // FunctionParameterTypeWrong,
+        FunctionParameterTypeWrong,
         ReturnNotFound,
         IfElseDuplicated,
     }
