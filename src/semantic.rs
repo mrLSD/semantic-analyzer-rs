@@ -119,7 +119,7 @@ impl ToString for ConstantName {
 
 /// # Constant
 /// Can contain: name, type
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Constant {
     pub name: ConstantName,
     pub inner_type: InnerType,
@@ -129,7 +129,7 @@ pub struct Constant {
 /// Can contain inner data: name, type, memory allocation status:
 /// - alloca - stack allocation
 /// - malloc - malloc allocation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Value {
     pub inner_name: InnerValueName,
     pub inner_type: InnerType,
@@ -356,7 +356,7 @@ pub struct State<T: Codegen> {
 /// Contains analyzing results of expression:
 /// - `expr_type` - result type of expression
 /// - `expr_value` - result value of expression
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ExpressionResult {
     pub expr_type: InnerType,
     pub expr_value: ExpressionResultValue,
@@ -367,7 +367,7 @@ pub struct ExpressionResult {
 /// - Primitive value
 /// - Register that contain result of expression
 ///   evaluation or call.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionResultValue {
     PrimitiveValue(ast::PrimitiveValue),
     Register(u64),
