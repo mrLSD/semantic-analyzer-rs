@@ -2,12 +2,11 @@
 
 pub mod dummy;
 
-use crate::ast::{Condition, Constant, LogicCondition, StructTypes};
+use crate::ast;
 use crate::codegen::Codegen;
-use crate::{ast, semantic};
 use inkwell::types::{ArrayType, BasicType, BasicTypeEnum, FloatType, IntType, StructType};
 // use inkwell::values::BasicValue;
-use crate::semantic::{ExpressionResult, Function, LabelName, Value};
+use crate::types::{Constant, ExpressionResult, Function, LabelName, Value};
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -129,15 +128,15 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
 impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     type Backend = FunctionValue<'ctx>;
-    fn function_declaration(&self, _fn_decl: &ast::FunctionStatement<'_>) {
+    fn function_declaration(&mut self, _fn_decl: &ast::FunctionStatement<'_>) {
         todo!()
     }
 
-    fn constant(&self, _const_decl: &Constant<'_>) {
+    fn constant(&self, _const_decl: &ast::Constant<'_>) {
         todo!()
     }
 
-    fn types(&self, _type_decl: &StructTypes<'_>) {
+    fn types(&self, _type_decl: &ast::StructTypes<'_>) {
         todo!()
     }
 
@@ -160,7 +159,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn expression_const(&self, _expression: &semantic::Constant, _register_number: u64) {
+    fn expression_const(&self, _expression: &Constant, _register_number: u64) {
         todo!()
     }
 
@@ -209,7 +208,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         &mut self,
         _left_result: &ExpressionResult,
         _right_result: &ExpressionResult,
-        _condition: &Condition,
+        _condition: &ast::Condition,
         _register_number: u64,
     ) {
         todo!();
@@ -219,7 +218,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         &mut self,
         _left_condition_register: u64,
         _right_condition_register: u64,
-        _logic_condition: &LogicCondition,
+        _logic_condition: &ast::LogicCondition,
         _register_number: u64,
     ) {
         todo!()

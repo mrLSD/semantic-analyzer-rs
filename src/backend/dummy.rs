@@ -1,7 +1,7 @@
+use crate::ast;
 use crate::ast::{Condition, LogicCondition};
 use crate::codegen::Codegen;
-use crate::semantic::{ExpressionResult, ExpressionResultValue, Function, LabelName, Value};
-use crate::{ast, semantic};
+use crate::types::{Constant, ExpressionResult, ExpressionResultValue, Function, LabelName, Value};
 
 pub struct Backend {
     stack: Vec<(String, String)>,
@@ -24,7 +24,7 @@ impl Backend {
 impl Codegen for Backend {
     type Backend = Self;
 
-    fn function_declaration(&self, _fn_decl: &ast::FunctionStatement<'_>) {
+    fn function_declaration(&mut self, _fn_decl: &ast::FunctionStatement<'_>) {
         todo!()
     }
 
@@ -81,7 +81,7 @@ impl Codegen for Backend {
         );
     }
 
-    fn expression_const(&self, _expression: &semantic::Constant, _register_number: u64) {
+    fn expression_const(&self, _expression: &Constant, _register_number: u64) {
         todo!()
     }
     fn expression_operation(

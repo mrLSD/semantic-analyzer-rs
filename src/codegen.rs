@@ -1,16 +1,133 @@
-use crate::semantic::{ExpressionResult, Function, LabelName, Value};
-use crate::{ast, semantic};
+use crate::ast;
+use crate::types::{Constant, ExpressionResult, Function, FunctionStatement, LabelName, Value};
 
 #[allow(dead_code, clippy::module_name_repetitions)]
 #[derive(Debug, Clone, PartialEq)]
-pub struct CodegenStack<'a>(Vec<StackKind<'a>>);
+pub struct CodegenStack(Vec<StackKind>);
+
+impl<'a> CodegenStack {
+    pub fn push(&mut self, value: StackKind) {
+        self.0.push(value);
+    }
+}
+
+/*
+impl<'a> Codegen<'a> for CodegenStack<'a> {
+    type Backend = ();
+
+    fn function_declaration(&mut self, fn_decl: &ast::FunctionStatement<'a>) {
+        self.push(StackKind::FunctionDeclaration {
+            fn_decl: fn_decl.clone(),
+        });
+    }
+
+    fn constant(&self, _const_decl: &ast::Constant<'_>) {
+        todo!()
+    }
+
+    fn types(&self, _type_decl: &ast::StructTypes<'_>) {
+        todo!()
+    }
+
+    fn function_statement(&mut self, _fn_decl: &ast::FunctionStatement<'_>) {
+        todo!()
+    }
+
+    fn let_binding(&mut self, _let_decl: &Value, _expr_result: &ExpressionResult) {
+        todo!()
+    }
+
+    fn binding(&mut self, _val: &Value, _expr_result: &ExpressionResult) {
+        todo!()
+    }
+
+    fn call(&self, _call: &Function, _params: Vec<ExpressionResult>, _register_number: u64) {
+        todo!()
+    }
+
+    fn expression_value(&mut self, _expression: &Value, _register_number: u64) {
+        todo!()
+    }
+
+    fn expression_const(&self, _expression: &Constant, _register_number: u64) {
+        todo!()
+    }
+
+    fn expression_operation(
+        &self,
+        _operation: &ast::ExpressionOperations,
+        _left_value: &ExpressionResult,
+        _right_value: &ExpressionResult,
+        _register_number: u64,
+    ) {
+        todo!()
+    }
+
+    fn expression_function_return(&self, _expr_result: &ExpressionResult) {
+        todo!()
+    }
+
+    fn jump_function_return(&self, _expr_result: &ExpressionResult) {
+        todo!()
+    }
+
+    fn set_label(&self, _label: &LabelName) {
+        todo!()
+    }
+
+    fn expression_function_return_with_label(&self, _expr_result: &ExpressionResult) {
+        todo!()
+    }
+
+    fn condition_expression(
+        &mut self,
+        _left_result: &ExpressionResult,
+        _right_result: &ExpressionResult,
+        _condition: &ast::Condition,
+        _register_number: u64,
+    ) {
+        todo!()
+    }
+
+    fn logic_condition(
+        &mut self,
+        _left_condition_register: u64,
+        _right_condition_register: u64,
+        _logic_condition: &ast::LogicCondition,
+        _register_number: u64,
+    ) {
+        todo!()
+    }
+
+    fn if_condition_expression(
+        &mut self,
+        _expr_result: &ExpressionResult,
+        _label_if_begin: &LabelName,
+        _label_if_end: &LabelName,
+    ) {
+        todo!()
+    }
+
+    fn if_condition_logic(
+        &mut self,
+        _label_if_begin: &LabelName,
+        _label_if_end: &LabelName,
+        _register_number: u64,
+    ) {
+        todo!()
+    }
+
+    fn jump_to(&mut self, _label: &LabelName) {
+        todo!()
+    }
+}
+*/
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
-pub enum StackKind<'a> {
-    FunctionDeclaration {
-        fn_decl: ast::FunctionStatement<'a>,
-    },
+pub enum StackKind {
+    FunctionDeclaration { fn_decl: FunctionStatement },
+    /*
     Constant {
         const_decl: ast::Constant<'a>,
     },
@@ -38,7 +155,7 @@ pub enum StackKind<'a> {
         register_number: u64,
     },
     ExpressionConst {
-        expression: semantic::Constant,
+        expression: Constant,
         register_number: u64,
     },
     ExpressionOperation {
@@ -84,11 +201,12 @@ pub enum StackKind<'a> {
     JumpTo {
         label: LabelName,
     },
+    */
 }
 
 pub trait Codegen {
     type Backend;
-    fn function_declaration(&self, _fn_decl: &ast::FunctionStatement<'_>);
+    fn function_declaration(&mut self, _fn_decl: &ast::FunctionStatement<'_>);
     fn constant(&self, const_decl: &ast::Constant<'_>);
     fn types(&self, type_decl: &ast::StructTypes<'_>);
     fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>);
@@ -96,7 +214,7 @@ pub trait Codegen {
     fn binding(&mut self, val: &Value, expr_result: &ExpressionResult);
     fn call(&self, call: &Function, params: Vec<ExpressionResult>, register_number: u64);
     fn expression_value(&mut self, expression: &Value, register_number: u64);
-    fn expression_const(&self, expression: &semantic::Constant, register_number: u64);
+    fn expression_const(&self, expression: &Constant, register_number: u64);
     fn expression_operation(
         &self,
         operation: &ast::ExpressionOperations,
