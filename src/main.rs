@@ -6,6 +6,7 @@ mod ast;
 mod backend;
 mod codegen;
 mod semantic;
+mod types;
 
 fn main() {
     let source: ast::Main = vec![];

@@ -1,3 +1,4 @@
+#![allow(dead_code, clippy::module_name_repetitions)]
 use crate::ast;
 
 /// State result type - for single results
@@ -150,8 +151,238 @@ pub enum ExpressionResultValue {
     Register(u64),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct FunctionStatement;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParameterName(String);
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FunctionParameter {
+    pub name: ParameterName,
+    pub parameter_type: Type,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct FunctionStatement {
+    pub name: FunctionName,
+    pub parameters: Vec<FunctionParameter>,
+    pub result_type: Type,
+    pub body: Vec<BodyStatement>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Type {
+    Primitive(PrimitiveTypes),
+    Struct(StructTypes),
+    Array(Box<Self>, u32),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PrimitiveTypes {
+    U8,
+    U16,
+    U32,
+    U64,
+    I8,
+    I16,
+    I32,
+    I64,
+    F32,
+    F64,
+    Bool,
+    Char,
+    String,
+    Ptr,
+    None,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct StructTypes {
+    pub name: String,
+    pub types: Vec<StructType>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct StructType {
+    pub attr_name: String,
+    pub attr_type: Type,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum BodyStatement {
+    LetBinding(LetBinding),
+    Binding(Binding),
+    FunctionCall(FunctionCall),
+    If(IfStatement),
+    Loop(Vec<LoopBodyStatement>),
+    Expression(Expression),
+    Return(Expression),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExpressionValue {
+    ValueName(ValueName),
+    PrimitiveValue(PrimitiveValue),
+    StructValue(StructValues),
+    FunctionCall(FunctionCall),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExpressionOperations {
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    ShiftLeft,
+    ShiftRight,
+    And,
+    Or,
+    Xor,
+    Eq,
+    NotEq,
+    Great,
+    Less,
+    GreatEq,
+    LessEq,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Expression {
+    pub expression_value: ExpressionValue,
+    pub operation: Option<(ExpressionOperations, Box<Expression>)>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LetBinding {
+    pub name: ValueName,
+    pub mutable: bool,
+    pub value_type: Option<Type>,
+    pub value: Box<Expression>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PrimitiveValue {
+    U8(u8),
+    U16(u16),
+    U32(u32),
+    U64(u64),
+    I8(i8),
+    I16(i16),
+    I32(i32),
+    I64(i64),
+    F32(f32),
+    F64(f64),
+    Bool(bool),
+    String(String),
+    Char(char),
+    Ptr,
+    None,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StructValues {
+    pub name: String,
+    pub types: Vec<StructValue>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StructValue {
+    pub attr_name: String,
+    pub attr_value: ValueName,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionCall {
+    pub name: FunctionName,
+    pub parameters: Vec<Expression>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Condition {
+    Great,
+    Less,
+    Eq,
+    GreatEq,
+    LessEq,
+    NotEq,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LogicCondition {
+    And,
+    Or,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExpressionCondition {
+    pub left: Expression,
+    pub condition: Condition,
+    pub right: Expression,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Binding {
+    pub name: ValueName,
+    pub value: Box<Expression>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExpressionLogicCondition {
+    pub left: ExpressionCondition,
+    pub right: Option<(LogicCondition, Box<ExpressionLogicCondition>)>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum IfCondition {
+    Single(Expression),
+    Logic(ExpressionLogicCondition),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct IfStatement {
+    pub condition: IfCondition,
+    pub body: IfBodyStatements,
+    pub else_statement: Option<IfBodyStatements>,
+    pub else_if_statement: Option<Box<IfStatement>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum IfBodyStatements {
+    If(Vec<IfBodyStatement>),
+    Loop(Vec<IfLoopBodyStatement>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LoopBodyStatement {
+    LetBinding(LetBinding),
+    Binding(Binding),
+    FunctionCall(FunctionCall),
+    If(IfStatement),
+    Loop(Vec<LoopBodyStatement>),
+    Return(Expression),
+    Break,
+    Continue,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum IfBodyStatement {
+    LetBinding(LetBinding),
+    Binding(Binding),
+    FunctionCall(FunctionCall),
+    If(IfStatement),
+    Loop(Vec<LoopBodyStatement>),
+    Return(Expression),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum IfLoopBodyStatement {
+    LetBinding(LetBinding),
+    Binding(Binding),
+    FunctionCall(FunctionCall),
+    If(IfStatement),
+    Loop(Vec<LoopBodyStatement>),
+    Return(Expression),
+    Break,
+    Continue,
+}
 
 #[allow(clippy::module_name_repetitions)]
 pub mod error {

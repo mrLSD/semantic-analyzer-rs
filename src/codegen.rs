@@ -5,20 +5,20 @@ use crate::types::{Constant, ExpressionResult, Function, FunctionStatement, Labe
 #[derive(Debug, Clone, PartialEq)]
 pub struct CodegenStack(Vec<StackKind>);
 
-impl<'a> CodegenStack {
+impl CodegenStack {
+    #[allow(dead_code)]
     pub fn push(&mut self, value: StackKind) {
         self.0.push(value);
     }
 }
 
-/*
-impl<'a> Codegen<'a> for CodegenStack<'a> {
+impl Codegen for CodegenStack {
     type Backend = ();
 
-    fn function_declaration(&mut self, fn_decl: &ast::FunctionStatement<'a>) {
-        self.push(StackKind::FunctionDeclaration {
-            fn_decl: fn_decl.clone(),
-        });
+    fn function_declaration(&mut self, _fn_decl: &ast::FunctionStatement<'_>) {
+        // self.push(StackKind::FunctionDeclaration {
+        //     fn_decl: fn_decl.clone(),
+        // });
     }
 
     fn constant(&self, _const_decl: &ast::Constant<'_>) {
@@ -121,7 +121,6 @@ impl<'a> Codegen<'a> for CodegenStack<'a> {
         todo!()
     }
 }
-*/
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
