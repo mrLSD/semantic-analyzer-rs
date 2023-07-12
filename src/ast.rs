@@ -233,8 +233,9 @@ impl PrimitiveValue {
 pub enum ExpressionValue<'a> {
     ValueName(ValueName<'a>),
     PrimitiveValue(PrimitiveValue),
-    StructValue(StructValues<'a>),
     FunctionCall(FunctionCall<'a>),
+    StructValue(StructValues<'a>),
+    Expression(Box<Expression<'a>>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -1106,30 +1106,30 @@ impl<T: Codegen<Backend = T>> State<T> {
             ast::ExpressionValue::StructValue(_value) => {
                 todo!()
             }
+            ast::ExpressionValue::Expression(_expr) => {
+                todo!()
+            }
         };
-        // It's special case for "pure" expression - without operation.
-        // For that check also left side of expression shouldn't exist
-        if left_value.is_none() || op.is_none() {
-            return Ok(right_value);
+        // Check left expression side and generate code
+        if let (Some(left_value), Some(op)) = (left_value, op) {
+            if left_value.expr_type != right_value.expr_type {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::WrongExpressionType,
+                    left_value.expr_type.to_string(),
+                    0,
+                    0,
+                ));
+            }
+            // Call expression operation for: OP(left_value, right_value)
+            // and return result of that call as register
+            body_state.borrow_mut().inc_register();
+            self.codegen.expression_operation(
+                op,
+                left_value,
+                &right_value,
+                body_state.borrow().last_register_number,
+            );
         }
-        let left_value = left_value.unwrap();
-        if left_value.expr_type != right_value.expr_type {
-            self.add_error(error::StateErrorResult::new(
-                error::StateErrorKind::WrongExpressionType,
-                left_value.expr_type.to_string(),
-                0,
-                0,
-            ));
-        }
-        // Call expression operation for: OP(left_value, right_value)
-        // and return result of that call as register
-        body_state.borrow_mut().inc_register();
-        self.codegen.expression_operation(
-            op.unwrap(),
-            left_value,
-            &right_value,
-            body_state.borrow().last_register_number,
-        );
         let expression_result = ExpressionResult {
             expr_type: right_value.expr_type,
             expr_value: ExpressionResultValue::Register(body_state.borrow().last_register_number),
