@@ -49,6 +49,10 @@ impl Codegen for CodegenStack {
         todo!()
     }
 
+    fn expression_struct_value(&mut self, _expression: &Value, _index: u64, _register_number: u64) {
+        todo!()
+    }
+
     fn expression_const(&self, _expression: &Constant, _register_number: u64) {
         todo!()
     }
@@ -213,6 +217,7 @@ pub trait Codegen {
     fn binding(&mut self, val: &Value, expr_result: &ExpressionResult);
     fn call(&self, call: &Function, params: Vec<ExpressionResult>, register_number: u64);
     fn expression_value(&mut self, expression: &Value, register_number: u64);
+    fn expression_struct_value(&mut self, expression: &Value, index: u64, register_number: u64);
     fn expression_const(&self, expression: &Constant, register_number: u64);
     fn expression_operation(
         &self,

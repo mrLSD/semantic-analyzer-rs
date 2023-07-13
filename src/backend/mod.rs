@@ -159,6 +159,10 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
+    fn expression_struct_value(&mut self, _expression: &Value, _index: u64, _register_number: u64) {
+        todo!()
+    }
+
     fn expression_const(&self, _expression: &Constant, _register_number: u64) {
         todo!()
     }

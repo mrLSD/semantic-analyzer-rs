@@ -1027,6 +1027,7 @@ impl<T: Codegen<Backend = T>> State<T> {
     /// `OP(lhs, rhs)`
     /// Left-value contains optional Exrpression result for left side
     /// of expression.
+    #[allow(clippy::too_many_lines)]
     pub fn expression_operation(
         &mut self,
         left_value: Option<&ExpressionResult>,
@@ -1103,11 +1104,48 @@ impl<T: Codegen<Backend = T>> State<T> {
                     ),
                 }
             }
-            ast::ExpressionValue::StructValue(_value) => {
-                todo!()
+            ast::ExpressionValue::StructValue(value) => {
+                // Can be only Value form state, not constant
+                // Get value from block state
+                let value_from_state = body_state
+                    .borrow_mut()
+                    .get_value_name(&value.name.name().into());
+                if let Some(val) = value_from_state {
+                    // TODO: For type system we should get index of struct
+                    // attribute for `value.attribute` (now set default)
+                    let attr_index = 0;
+                    // TODO: For type system get attribute type of struct
+                    // field for `value.attribute` (now dummy)
+                    let field_ty = val.inner_type.clone();
+
+                    // Increase register counter before loading value
+                    body_state.borrow_mut().inc_register();
+                    self.codegen.expression_struct_value(
+                        &val,
+                        attr_index,
+                        body_state.borrow().last_register_number,
+                    );
+
+                    ExpressionResult {
+                        expr_type: field_ty,
+                        expr_value: ExpressionResultValue::Register(
+                            body_state.borrow().last_register_number,
+                        ),
+                    }
+                } else {
+                    // If value doesn't exist
+                    self.add_error(error::StateErrorResult::new(
+                        error::StateErrorKind::ValueNotFound,
+                        value.name.name(),
+                        0,
+                        0,
+                    ));
+                    return Err(EmptyError);
+                }
             }
-            ast::ExpressionValue::Expression(_expr) => {
-                todo!()
+            ast::ExpressionValue::Expression(expr) => {
+                // Subexpression should be analyzed independently
+                self.expression(expr, body_state)?
             }
         };
         // Check left expression side and generate code
