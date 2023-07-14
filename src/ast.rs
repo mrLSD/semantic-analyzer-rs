@@ -35,8 +35,20 @@ pub struct ConstantName<'a>(Ident<'a>);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionName<'a>(Ident<'a>);
 
+impl<'a> ToString for FunctionName<'a> {
+    fn to_string(&self) -> String {
+        (*self.0.fragment()).to_string()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParameterName<'a>(Ident<'a>);
+
+impl ToString for ParameterName<'_> {
+    fn to_string(&self) -> String {
+        (*self.0.fragment()).to_string()
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValueName<'a>(Ident<'a>);
@@ -49,7 +61,7 @@ impl<'a> ValueName<'a> {
 
 impl GetName for ValueName<'_> {
     fn name(&self) -> String {
-        self.0.to_string()
+        (*self.0.fragment()).to_string()
     }
 }
 
@@ -106,6 +118,12 @@ pub struct StructType<'a> {
     pub attr_type: Type<'a>,
 }
 
+impl GetName for StructType<'_> {
+    fn name(&self) -> String {
+        (*self.attr_name.fragment()).to_string()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructTypes<'a> {
     pub name: Ident<'a>,
@@ -114,7 +132,7 @@ pub struct StructTypes<'a> {
 
 impl<'a> GetName for StructTypes<'a> {
     fn name(&self) -> String {
-        self.name.to_string()
+        (*self.name.fragment()).to_string()
     }
 }
 
