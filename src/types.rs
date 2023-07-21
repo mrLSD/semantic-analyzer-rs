@@ -246,21 +246,21 @@ pub enum PrimitiveTypes {
 impl From<ast::PrimitiveTypes> for PrimitiveTypes {
     fn from(value: ast::PrimitiveTypes) -> Self {
         match value {
-            ast::PrimitiveTypes::U8 => PrimitiveTypes::U8,
-            ast::PrimitiveTypes::U16 => PrimitiveTypes::U16,
-            ast::PrimitiveTypes::U32 => PrimitiveTypes::U32,
-            ast::PrimitiveTypes::U64 => PrimitiveTypes::U64,
-            ast::PrimitiveTypes::I8 => PrimitiveTypes::I8,
-            ast::PrimitiveTypes::I16 => PrimitiveTypes::I16,
-            ast::PrimitiveTypes::I32 => PrimitiveTypes::I32,
-            ast::PrimitiveTypes::I64 => PrimitiveTypes::I64,
-            ast::PrimitiveTypes::F32 => PrimitiveTypes::F32,
-            ast::PrimitiveTypes::F64 => PrimitiveTypes::F64,
-            ast::PrimitiveTypes::Bool => PrimitiveTypes::Bool,
-            ast::PrimitiveTypes::Char => PrimitiveTypes::Char,
-            ast::PrimitiveTypes::String => PrimitiveTypes::String,
-            ast::PrimitiveTypes::Ptr => PrimitiveTypes::Ptr,
-            ast::PrimitiveTypes::None => PrimitiveTypes::None,
+            ast::PrimitiveTypes::U8 => Self::U8,
+            ast::PrimitiveTypes::U16 => Self::U16,
+            ast::PrimitiveTypes::U32 => Self::U32,
+            ast::PrimitiveTypes::U64 => Self::U64,
+            ast::PrimitiveTypes::I8 => Self::I8,
+            ast::PrimitiveTypes::I16 => Self::I16,
+            ast::PrimitiveTypes::I32 => Self::I32,
+            ast::PrimitiveTypes::I64 => Self::I64,
+            ast::PrimitiveTypes::F32 => Self::F32,
+            ast::PrimitiveTypes::F64 => Self::F64,
+            ast::PrimitiveTypes::Bool => Self::Bool,
+            ast::PrimitiveTypes::Char => Self::Char,
+            ast::PrimitiveTypes::String => Self::String,
+            ast::PrimitiveTypes::Ptr => Self::Ptr,
+            ast::PrimitiveTypes::None => Self::None,
         }
     }
 }
@@ -309,15 +309,13 @@ pub enum BodyStatement {
 impl From<ast::BodyStatement<'_>> for BodyStatement {
     fn from(value: ast::BodyStatement<'_>) -> Self {
         match value {
-            ast::BodyStatement::LetBinding(v) => BodyStatement::LetBinding(v.into()),
-            ast::BodyStatement::Binding(v) => BodyStatement::Binding(v.into()),
-            ast::BodyStatement::FunctionCall(v) => BodyStatement::FunctionCall(v.into()),
-            ast::BodyStatement::If(v) => BodyStatement::If(v.into()),
-            ast::BodyStatement::Loop(v) => {
-                BodyStatement::Loop(v.iter().map(|v| v.clone().into()).collect())
-            }
-            ast::BodyStatement::Expression(v) => BodyStatement::Expression(v.into()),
-            ast::BodyStatement::Return(v) => BodyStatement::Return(v.into()),
+            ast::BodyStatement::LetBinding(v) => Self::LetBinding(v.into()),
+            ast::BodyStatement::Binding(v) => Self::Binding(v.into()),
+            ast::BodyStatement::FunctionCall(v) => Self::FunctionCall(v.into()),
+            ast::BodyStatement::If(v) => Self::If(v.into()),
+            ast::BodyStatement::Loop(v) => Self::Loop(v.iter().map(|v| v.clone().into()).collect()),
+            ast::BodyStatement::Expression(v) => Self::Expression(v.into()),
+            ast::BodyStatement::Return(v) => Self::Return(v.into()),
         }
     }
 }
@@ -326,17 +324,21 @@ impl From<ast::BodyStatement<'_>> for BodyStatement {
 pub enum ExpressionValue {
     ValueName(ValueName),
     PrimitiveValue(PrimitiveValue),
-    StructValue(StructValues),
+    StructValue(StructValue),
     FunctionCall(FunctionCall),
+    Expression(Box<Expression>),
 }
 
 impl From<ast::ExpressionValue<'_>> for ExpressionValue {
     fn from(value: ast::ExpressionValue<'_>) -> Self {
         match value {
-            ast::ExpressionValue::ValueName(v) => ExpressionValue::ValueName(v.into()),
-            ast::ExpressionValue::PrimitiveValue(v) => ExpressionValue::PrimitiveValue(v.into()),
-            ast::ExpressionValue::StructValue(v) => ExpressionValue::StructValue(v.into()),
-            ast::ExpressionValue::FunctionCall(v) => ExpressionValue::FunctionCall(v.into()),
+            ast::ExpressionValue::ValueName(v) => Self::ValueName(v.into()),
+            ast::ExpressionValue::PrimitiveValue(v) => Self::PrimitiveValue(v.into()),
+            ast::ExpressionValue::StructValue(v) => Self::StructValue(v.into()),
+            ast::ExpressionValue::FunctionCall(v) => Self::FunctionCall(v.into()),
+            ast::ExpressionValue::Expression(v) => {
+                Self::Expression(Box::new(v.as_ref().clone().into()))
+            }
         }
     }
 }
@@ -358,6 +360,28 @@ pub enum ExpressionOperations {
     Less,
     GreatEq,
     LessEq,
+}
+
+impl From<ast::ExpressionOperations> for ExpressionOperations {
+    fn from(value: ast::ExpressionOperations) -> Self {
+        match value {
+            ast::ExpressionOperations::Plus => Self::Plus,
+            ast::ExpressionOperations::Minus => Self::Minus,
+            ast::ExpressionOperations::Multiply => Self::Multiply,
+            ast::ExpressionOperations::Divide => Self::Divide,
+            ast::ExpressionOperations::ShiftLeft => Self::ShiftLeft,
+            ast::ExpressionOperations::ShiftRight => Self::ShiftRight,
+            ast::ExpressionOperations::And => Self::And,
+            ast::ExpressionOperations::Or => Self::Or,
+            ast::ExpressionOperations::Xor => Self::Xor,
+            ast::ExpressionOperations::Eq => Self::Eq,
+            ast::ExpressionOperations::NotEq => Self::NotEq,
+            ast::ExpressionOperations::Great => Self::Great,
+            ast::ExpressionOperations::Less => Self::Less,
+            ast::ExpressionOperations::GreatEq => Self::GreatEq,
+            ast::ExpressionOperations::LessEq => Self::LessEq,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -390,8 +414,8 @@ impl From<ast::LetBinding<'_>> for LetBinding {
         Self {
             name: value.name.into(),
             mutable: value.mutable,
-            value_type: value.value_type.map(|v| v.into()),
-            value: Box::new(value.value_type.as_ref().clone().into()),
+            value_type: value.value_type.map(Into::into),
+            value: Box::new(value.value.as_ref().clone().into()),
         }
     }
 }
@@ -418,21 +442,21 @@ pub enum PrimitiveValue {
 impl From<ast::PrimitiveValue> for PrimitiveValue {
     fn from(value: ast::PrimitiveValue) -> Self {
         match value {
-            ast::PrimitiveValue::U8(v) => PrimitiveValue::U8(v),
-            ast::PrimitiveValue::U16(v) => PrimitiveValue::U16(v),
-            ast::PrimitiveValue::U32(v) => PrimitiveValue::U32(v),
-            ast::PrimitiveValue::U64(v) => PrimitiveValue::U64(v),
-            ast::PrimitiveValue::I8(v) => PrimitiveValue::I8(v),
-            ast::PrimitiveValue::I16(v) => PrimitiveValue::I16(v),
-            ast::PrimitiveValue::I32(v) => PrimitiveValue::I32(v),
-            ast::PrimitiveValue::I64(v) => PrimitiveValue::I64(v),
-            ast::PrimitiveValue::F32(v) => PrimitiveValue::F32(v),
-            ast::PrimitiveValue::F64(v) => PrimitiveValue::F64(v),
-            ast::PrimitiveValue::Bool(v) => PrimitiveValue::Bool(v),
-            ast::PrimitiveValue::String(v) => PrimitiveValue::String(v),
-            ast::PrimitiveValue::Char(v) => PrimitiveValue::Char(v),
-            ast::PrimitiveValue::Ptr => PrimitiveValue::Ptr,
-            ast::PrimitiveValue::None => PrimitiveValue::None,
+            ast::PrimitiveValue::U8(v) => Self::U8(v),
+            ast::PrimitiveValue::U16(v) => Self::U16(v),
+            ast::PrimitiveValue::U32(v) => Self::U32(v),
+            ast::PrimitiveValue::U64(v) => Self::U64(v),
+            ast::PrimitiveValue::I8(v) => Self::I8(v),
+            ast::PrimitiveValue::I16(v) => Self::I16(v),
+            ast::PrimitiveValue::I32(v) => Self::I32(v),
+            ast::PrimitiveValue::I64(v) => Self::I64(v),
+            ast::PrimitiveValue::F32(v) => Self::F32(v),
+            ast::PrimitiveValue::F64(v) => Self::F64(v),
+            ast::PrimitiveValue::Bool(v) => Self::Bool(v),
+            ast::PrimitiveValue::String(v) => Self::String(v),
+            ast::PrimitiveValue::Char(v) => Self::Char(v),
+            ast::PrimitiveValue::Ptr => Self::Ptr,
+            ast::PrimitiveValue::None => Self::None,
         }
     }
 }
@@ -468,7 +492,7 @@ impl From<ast::FunctionCall<'_>> for FunctionCall {
     fn from(value: ast::FunctionCall<'_>) -> Self {
         Self {
             name: value.name.into(),
-            parameters: value.iter().map(|v| v.into()).collect(),
+            parameters: value.parameters.iter().map(|v| v.clone().into()).collect(),
         }
     }
 }
@@ -483,10 +507,32 @@ pub enum Condition {
     NotEq,
 }
 
+impl From<ast::Condition> for Condition {
+    fn from(value: ast::Condition) -> Self {
+        match value {
+            ast::Condition::Great => Self::Great,
+            ast::Condition::Less => Self::Less,
+            ast::Condition::Eq => Self::Eq,
+            ast::Condition::GreatEq => Self::GreatEq,
+            ast::Condition::LessEq => Self::LessEq,
+            ast::Condition::NotEq => Self::NotEq,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LogicCondition {
     And,
     Or,
+}
+
+impl From<ast::LogicCondition> for LogicCondition {
+    fn from(value: ast::LogicCondition) -> Self {
+        match value {
+            ast::LogicCondition::And => Self::And,
+            ast::LogicCondition::Or => Self::Or,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -494,6 +540,16 @@ pub struct ExpressionCondition {
     pub left: Expression,
     pub condition: Condition,
     pub right: Expression,
+}
+
+impl From<ast::ExpressionCondition<'_>> for ExpressionCondition {
+    fn from(value: ast::ExpressionCondition<'_>) -> Self {
+        Self {
+            left: value.left.into(),
+            condition: value.condition.into(),
+            right: value.right.into(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -517,10 +573,30 @@ pub struct ExpressionLogicCondition {
     pub right: Option<(LogicCondition, Box<ExpressionLogicCondition>)>,
 }
 
+impl From<ast::ExpressionLogicCondition<'_>> for ExpressionLogicCondition {
+    fn from(value: ast::ExpressionLogicCondition<'_>) -> Self {
+        Self {
+            left: value.left.into(),
+            right: value
+                .right
+                .map(|(v, expr)| (v.into(), Box::new(expr.as_ref().clone().into()))),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum IfCondition {
     Single(Expression),
     Logic(ExpressionLogicCondition),
+}
+
+impl From<ast::IfCondition<'_>> for IfCondition {
+    fn from(value: ast::IfCondition<'_>) -> Self {
+        match value {
+            ast::IfCondition::Single(v) => Self::Single(v.into()),
+            ast::IfCondition::Logic(v) => Self::Logic(v.into()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -536,7 +612,7 @@ impl From<ast::IfStatement<'_>> for IfStatement {
         Self {
             condition: value.condition.into(),
             body: value.body.into(),
-            else_statement: value.else_statement.map(|v| v.into()),
+            else_statement: value.else_statement.map(Into::into),
             else_if_statement: value
                 .else_if_statement
                 .map(|v| Box::new(v.as_ref().clone().into())),
@@ -548,6 +624,17 @@ impl From<ast::IfStatement<'_>> for IfStatement {
 pub enum IfBodyStatements {
     If(Vec<IfBodyStatement>),
     Loop(Vec<IfLoopBodyStatement>),
+}
+
+impl From<ast::IfBodyStatements<'_>> for IfBodyStatements {
+    fn from(value: ast::IfBodyStatements<'_>) -> Self {
+        match value {
+            ast::IfBodyStatements::If(v) => Self::If(v.iter().map(|v| v.clone().into()).collect()),
+            ast::IfBodyStatements::Loop(v) => {
+                Self::Loop(v.iter().map(|v| v.clone().into()).collect())
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -565,16 +652,16 @@ pub enum LoopBodyStatement {
 impl From<ast::LoopBodyStatement<'_>> for LoopBodyStatement {
     fn from(value: ast::LoopBodyStatement<'_>) -> Self {
         match value {
-            ast::LoopBodyStatement::LetBinding(v) => LoopBodyStatement::LetBinding(v.into()),
-            ast::LoopBodyStatement::Binding(v) => LoopBodyStatement::Binding(v.into()),
-            ast::LoopBodyStatement::FunctionCall(v) => LoopBodyStatement::FunctionCall(v.into()),
-            ast::LoopBodyStatement::If(v) => LoopBodyStatement::If(v.into()),
+            ast::LoopBodyStatement::LetBinding(v) => Self::LetBinding(v.into()),
+            ast::LoopBodyStatement::Binding(v) => Self::Binding(v.into()),
+            ast::LoopBodyStatement::FunctionCall(v) => Self::FunctionCall(v.into()),
+            ast::LoopBodyStatement::If(v) => Self::If(v.into()),
             ast::LoopBodyStatement::Loop(v) => {
-                LoopBodyStatement::Loop(v.iter().map(|v| v.clone().into()).collect())
+                Self::Loop(v.iter().map(|v| v.clone().into()).collect())
             }
-            ast::LoopBodyStatement::Return(v) => LoopBodyStatement::Return(v.into()),
-            ast::LoopBodyStatement::Break => LoopBodyStatement::Break,
-            ast::LoopBodyStatement::Continue => LoopBodyStatement::Continue,
+            ast::LoopBodyStatement::Return(v) => Self::Return(v.into()),
+            ast::LoopBodyStatement::Break => Self::Break,
+            ast::LoopBodyStatement::Continue => Self::Continue,
         }
     }
 }
@@ -589,6 +676,21 @@ pub enum IfBodyStatement {
     Return(Expression),
 }
 
+impl From<ast::IfBodyStatement<'_>> for IfBodyStatement {
+    fn from(value: ast::IfBodyStatement<'_>) -> Self {
+        match value {
+            ast::IfBodyStatement::LetBinding(v) => Self::LetBinding(v.into()),
+            ast::IfBodyStatement::Binding(v) => Self::Binding(v.into()),
+            ast::IfBodyStatement::FunctionCall(v) => Self::FunctionCall(v.into()),
+            ast::IfBodyStatement::If(v) => Self::If(v.into()),
+            ast::IfBodyStatement::Loop(v) => {
+                Self::Loop(v.iter().map(|v| v.clone().into()).collect())
+            }
+            ast::IfBodyStatement::Return(v) => Self::Return(v.into()),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum IfLoopBodyStatement {
     LetBinding(LetBinding),
@@ -599,6 +701,23 @@ pub enum IfLoopBodyStatement {
     Return(Expression),
     Break,
     Continue,
+}
+
+impl From<ast::IfLoopBodyStatement<'_>> for IfLoopBodyStatement {
+    fn from(value: ast::IfLoopBodyStatement<'_>) -> Self {
+        match value {
+            ast::IfLoopBodyStatement::LetBinding(v) => Self::LetBinding(v.into()),
+            ast::IfLoopBodyStatement::Binding(v) => Self::Binding(v.into()),
+            ast::IfLoopBodyStatement::FunctionCall(v) => Self::FunctionCall(v.into()),
+            ast::IfLoopBodyStatement::If(v) => Self::If(v.into()),
+            ast::IfLoopBodyStatement::Loop(v) => {
+                Self::Loop(v.iter().map(|v| v.clone().into()).collect())
+            }
+            ast::IfLoopBodyStatement::Return(v) => Self::Return(v.into()),
+            ast::IfLoopBodyStatement::Break => Self::Break,
+            ast::IfLoopBodyStatement::Continue => Self::Continue,
+        }
+    }
 }
 
 #[allow(clippy::module_name_repetitions)]
