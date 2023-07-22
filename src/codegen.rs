@@ -15,10 +15,10 @@ impl CodegenStack {
 impl Codegen for CodegenStack {
     type Backend = ();
 
-    fn function_declaration(&mut self, _fn_decl: &ast::FunctionStatement<'_>) {
-        // self.push(StackKind::FunctionDeclaration {
-        //     fn_decl: fn_decl.clone(),
-        // });
+    fn function_declaration(&mut self, fn_decl: &FunctionStatement) {
+        self.push(StackKind::FunctionDeclaration {
+            fn_decl: fn_decl.clone(),
+        });
     }
 
     fn constant(&self, _const_decl: &ast::Constant<'_>) {
@@ -209,7 +209,7 @@ pub enum StackKind {
 
 pub trait Codegen {
     type Backend;
-    fn function_declaration(&mut self, _fn_decl: &ast::FunctionStatement<'_>);
+    fn function_declaration(&mut self, fn_decl: &FunctionStatement);
     fn constant(&self, const_decl: &ast::Constant<'_>);
     fn types(&self, type_decl: &ast::StructTypes<'_>);
     fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>);

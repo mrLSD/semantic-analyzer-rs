@@ -1,7 +1,10 @@
 use crate::ast;
 use crate::ast::{Condition, LogicCondition};
 use crate::codegen::Codegen;
-use crate::types::{Constant, ExpressionResult, ExpressionResultValue, Function, LabelName, Value};
+use crate::types::{
+    Constant, ExpressionResult, ExpressionResultValue, Function, FunctionStatement, LabelName,
+    Value,
+};
 
 pub struct Backend {
     stack: Vec<(String, String)>,
@@ -24,7 +27,7 @@ impl Backend {
 impl Codegen for Backend {
     type Backend = Self;
 
-    fn function_declaration(&mut self, _fn_decl: &ast::FunctionStatement<'_>) {
+    fn function_declaration(&mut self, _fn_decl: &FunctionStatement) {
         todo!()
     }
 

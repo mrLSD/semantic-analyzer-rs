@@ -333,7 +333,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                     .collect(),
             },
         );
-        self.codegen.function_declaration(data);
+        self.codegen.function_declaration(&data.clone().into());
     }
 
     /// Function body analyze.

@@ -6,7 +6,7 @@ use crate::ast;
 use crate::codegen::Codegen;
 use inkwell::types::{ArrayType, BasicType, BasicTypeEnum, FloatType, IntType, StructType};
 // use inkwell::values::BasicValue;
-use crate::types::{Constant, ExpressionResult, Function, LabelName, Value};
+use crate::types::{Constant, ExpressionResult, Function, FunctionStatement, LabelName, Value};
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -128,7 +128,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 
 impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     type Backend = FunctionValue<'ctx>;
-    fn function_declaration(&mut self, _fn_decl: &ast::FunctionStatement<'_>) {
+    fn function_declaration(&mut self, _fn_decl: &FunctionStatement) {
         todo!()
     }
 
