@@ -6,7 +6,9 @@ use crate::ast;
 use crate::codegen::Codegen;
 use inkwell::types::{ArrayType, BasicType, BasicTypeEnum, FloatType, IntType, StructType};
 // use inkwell::values::BasicValue;
-use crate::types::{Constant, ExpressionResult, Function, FunctionStatement, LabelName, Value};
+use crate::types::{
+    Constant, ExpressionResult, Function, FunctionStatement, LabelName, StructTypes, Value,
+};
 use inkwell::{
     builder::Builder,
     context::Context,
@@ -132,11 +134,11 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn constant(&self, _const_decl: &ast::Constant<'_>) {
+    fn constant(&mut self, _const_decl: &Constant) {
         todo!()
     }
 
-    fn types(&self, _type_decl: &ast::StructTypes<'_>) {
+    fn types(&mut self, _type_decl: &StructTypes) {
         todo!()
     }
 
@@ -151,7 +153,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn call(&self, _call: &Function, _params: Vec<ExpressionResult>, _register_number: u64) {
+    fn call(&mut self, _call: &Function, _params: Vec<ExpressionResult>, _register_number: u64) {
         todo!()
     }
 
@@ -163,12 +165,12 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn expression_const(&self, _expression: &Constant, _register_number: u64) {
+    fn expression_const(&mut self, _expression: &Constant, _register_number: u64) {
         todo!()
     }
 
     fn expression_operation(
-        &self,
+        &mut self,
         _operation: &ast::ExpressionOperations,
         _left_value: &ExpressionResult,
         _right_value: &ExpressionResult,
@@ -177,13 +179,13 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn expression_function_return(&self, _expr_result: &ExpressionResult) {
+    fn expression_function_return(&mut self, _expr_result: &ExpressionResult) {
         todo!()
     }
-    fn jump_function_return(&self, _expr_result: &ExpressionResult) {
+    fn jump_function_return(&mut self, _expr_result: &ExpressionResult) {
         todo!()
     }
-    fn expression_function_return_with_label(&self, _expr_result: &ExpressionResult) {
+    fn expression_function_return_with_label(&mut self, _expr_result: &ExpressionResult) {
         todo!()
     }
     fn if_condition_expression(
@@ -205,7 +207,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
     fn jump_to(&mut self, _label: &LabelName) {
         todo!();
     }
-    fn set_label(&self, _label: &LabelName) {
+    fn set_label(&mut self, _label: &LabelName) {
         todo!()
     }
     fn condition_expression(

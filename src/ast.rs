@@ -32,6 +32,12 @@ pub type ImportPath<'a> = Vec<ImportName<'a>>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConstantName<'a>(Ident<'a>);
 
+impl GetName for ConstantName<'_> {
+    fn name(&self) -> String {
+        (*self.0.fragment()).to_string()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionName<'a>(Ident<'a>);
 

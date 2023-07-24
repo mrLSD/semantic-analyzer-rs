@@ -286,7 +286,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             return;
         }
         self.global.types.insert(data.name().into());
-        self.codegen.types(data);
+        self.codegen.types(&data.clone().into());
     }
 
     /// Constant analyzer. Add it got Global State
@@ -304,10 +304,11 @@ impl<T: Codegen<Backend = T>> State<T> {
             data.name().into(),
             Constant {
                 name: data.name().into(),
-                inner_type: data.constant_type.name().into(),
+                constant_type: data.constant_type.name().into(),
+                constant_value: data.constant_value.clone().into(),
             },
         );
-        self.codegen.constant(data);
+        self.codegen.constant(&data.clone().into());
     }
 
     /// Function declaration analyze. Add it to Global State/
@@ -1060,7 +1061,7 @@ impl<T: Codegen<Backend = T>> State<T> {
                         // If value is constant load it to register
                         self.codegen
                             .expression_const(const_val, body_state.borrow().last_register_number);
-                        const_val.inner_type.clone()
+                        const_val.constant_type.clone()
                     } else {
                         return Err(EmptyError);
                     };

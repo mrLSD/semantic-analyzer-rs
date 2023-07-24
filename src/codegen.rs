@@ -1,5 +1,7 @@
 use crate::ast;
-use crate::types::{Constant, ExpressionResult, Function, FunctionStatement, LabelName, Value};
+use crate::types::{
+    Constant, ExpressionResult, Function, FunctionStatement, LabelName, StructTypes, Value,
+};
 
 #[allow(dead_code, clippy::module_name_repetitions)]
 #[derive(Debug, Clone, PartialEq)]
@@ -21,12 +23,16 @@ impl Codegen for CodegenStack {
         });
     }
 
-    fn constant(&self, _const_decl: &ast::Constant<'_>) {
-        todo!()
+    fn constant(&mut self, const_decl: &Constant) {
+        self.push(StackKind::Constant {
+            const_decl: const_decl.clone(),
+        });
     }
 
-    fn types(&self, _type_decl: &ast::StructTypes<'_>) {
-        todo!()
+    fn types(&mut self, type_decl: &StructTypes) {
+        self.push(StackKind::Types {
+            type_decl: type_decl.clone(),
+        });
     }
 
     fn function_statement(&mut self, _fn_decl: &ast::FunctionStatement<'_>) {
@@ -41,7 +47,7 @@ impl Codegen for CodegenStack {
         todo!()
     }
 
-    fn call(&self, _call: &Function, _params: Vec<ExpressionResult>, _register_number: u64) {
+    fn call(&mut self, _call: &Function, _params: Vec<ExpressionResult>, _register_number: u64) {
         todo!()
     }
 
@@ -53,12 +59,12 @@ impl Codegen for CodegenStack {
         todo!()
     }
 
-    fn expression_const(&self, _expression: &Constant, _register_number: u64) {
+    fn expression_const(&mut self, _expression: &Constant, _register_number: u64) {
         todo!()
     }
 
     fn expression_operation(
-        &self,
+        &mut self,
         _operation: &ast::ExpressionOperations,
         _left_value: &ExpressionResult,
         _right_value: &ExpressionResult,
@@ -67,19 +73,19 @@ impl Codegen for CodegenStack {
         todo!()
     }
 
-    fn expression_function_return(&self, _expr_result: &ExpressionResult) {
+    fn expression_function_return(&mut self, _expr_result: &ExpressionResult) {
         todo!()
     }
 
-    fn jump_function_return(&self, _expr_result: &ExpressionResult) {
+    fn jump_function_return(&mut self, _expr_result: &ExpressionResult) {
         todo!()
     }
 
-    fn set_label(&self, _label: &LabelName) {
+    fn set_label(&mut self, _label: &LabelName) {
         todo!()
     }
 
-    fn expression_function_return_with_label(&self, _expr_result: &ExpressionResult) {
+    fn expression_function_return_with_label(&mut self, _expr_result: &ExpressionResult) {
         todo!()
     }
 
@@ -130,13 +136,9 @@ impl Codegen for CodegenStack {
 #[derive(Debug, Clone, PartialEq)]
 pub enum StackKind {
     FunctionDeclaration { fn_decl: FunctionStatement },
+    Constant { const_decl: Constant },
+    Types { type_decl: StructTypes },
     /*
-    Constant {
-        const_decl: ast::Constant<'a>,
-    },
-    Types {
-        type_decl: ast::StructTypes<'a>,
-    },
     FunctionStatement {
         fn_decl: ast::FunctionStatement<'a>,
     },
@@ -210,26 +212,26 @@ pub enum StackKind {
 pub trait Codegen {
     type Backend;
     fn function_declaration(&mut self, fn_decl: &FunctionStatement);
-    fn constant(&self, const_decl: &ast::Constant<'_>);
-    fn types(&self, type_decl: &ast::StructTypes<'_>);
+    fn constant(&mut self, const_decl: &Constant);
+    fn types(&mut self, type_decl: &StructTypes);
     fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>);
     fn let_binding(&mut self, let_decl: &Value, expr_result: &ExpressionResult);
     fn binding(&mut self, val: &Value, expr_result: &ExpressionResult);
-    fn call(&self, call: &Function, params: Vec<ExpressionResult>, register_number: u64);
+    fn call(&mut self, call: &Function, params: Vec<ExpressionResult>, register_number: u64);
     fn expression_value(&mut self, expression: &Value, register_number: u64);
     fn expression_struct_value(&mut self, expression: &Value, index: u64, register_number: u64);
-    fn expression_const(&self, expression: &Constant, register_number: u64);
+    fn expression_const(&mut self, expression: &Constant, register_number: u64);
     fn expression_operation(
-        &self,
+        &mut self,
         operation: &ast::ExpressionOperations,
         left_value: &ExpressionResult,
         right_value: &ExpressionResult,
         register_number: u64,
     );
-    fn expression_function_return(&self, expr_result: &ExpressionResult);
-    fn jump_function_return(&self, expr_result: &ExpressionResult);
-    fn set_label(&self, label: &LabelName);
-    fn expression_function_return_with_label(&self, expr_result: &ExpressionResult);
+    fn expression_function_return(&mut self, expr_result: &ExpressionResult);
+    fn jump_function_return(&mut self, expr_result: &ExpressionResult);
+    fn set_label(&mut self, label: &LabelName);
+    fn expression_function_return_with_label(&mut self, expr_result: &ExpressionResult);
     fn condition_expression(
         &mut self,
         left_result: &ExpressionResult,

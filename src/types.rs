@@ -94,6 +94,12 @@ impl ToString for FunctionName {
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct ConstantName(String);
 
+impl From<ast::ConstantName<'_>> for ConstantName {
+    fn from(value: ast::ConstantName<'_>) -> Self {
+        Self(value.name())
+    }
+}
+
 impl From<String> for ConstantName {
     fn from(value: String) -> Self {
         Self(value)
@@ -106,12 +112,55 @@ impl ToString for ConstantName {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConstantValue {
+    Constant(ConstantName),
+    Value(PrimitiveValue),
+}
+
+impl From<ast::ConstantValue<'_>> for ConstantValue {
+    fn from(value: ast::ConstantValue<'_>) -> Self {
+        match value {
+            ast::ConstantValue::Constant(v) => Self::Constant(v.into()),
+            ast::ConstantValue::Value(v) => Self::Value(v.into()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConstantExpression {
+    pub value: ConstantValue,
+    pub operation: Option<(ExpressionOperations, Box<ConstantExpression>)>,
+}
+
+impl From<ast::ConstantExpression<'_>> for ConstantExpression {
+    fn from(value: ast::ConstantExpression<'_>) -> Self {
+        Self {
+            value: value.value.into(),
+            operation: value
+                .operation
+                .map(|(op, expr)| (op.into(), Box::new(expr.as_ref().clone().into()))),
+        }
+    }
+}
+
 /// # Constant
 /// Can contain: name, type
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Constant {
     pub name: ConstantName,
-    pub inner_type: InnerType,
+    pub constant_type: InnerType,
+    pub constant_value: ConstantExpression,
+}
+
+impl From<ast::Constant<'_>> for Constant {
+    fn from(value: ast::Constant<'_>) -> Self {
+        Self {
+            name: value.name.into(),
+            constant_type: value.constant_type.name().into(),
+            constant_value: value.constant_value.into(),
+        }
+    }
 }
 
 /// # Values

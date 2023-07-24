@@ -3,7 +3,7 @@ use crate::ast::{Condition, LogicCondition};
 use crate::codegen::Codegen;
 use crate::types::{
     Constant, ExpressionResult, ExpressionResultValue, Function, FunctionStatement, LabelName,
-    Value,
+    StructTypes, Value,
 };
 
 pub struct Backend {
@@ -31,11 +31,11 @@ impl Codegen for Backend {
         todo!()
     }
 
-    fn constant(&self, _const_decl: &ast::Constant<'_>) {
+    fn constant(&mut self, _const_decl: &Constant) {
         todo!()
     }
 
-    fn types(&self, _type_decl: &ast::StructTypes<'_>) {
+    fn types(&mut self, _type_decl: &StructTypes) {
         todo!()
     }
 
@@ -69,7 +69,7 @@ impl Codegen for Backend {
         todo!()
     }
 
-    fn call(&self, _call: &Function, _params: Vec<ExpressionResult>, _register_number: u64) {
+    fn call(&mut self, _call: &Function, _params: Vec<ExpressionResult>, _register_number: u64) {
         todo!()
     }
 
@@ -86,11 +86,11 @@ impl Codegen for Backend {
     fn expression_struct_value(&mut self, _expression: &Value, _index: u64, _register_number: u64) {
         todo!()
     }
-    fn expression_const(&self, _expression: &Constant, _register_number: u64) {
+    fn expression_const(&mut self, _expression: &Constant, _register_number: u64) {
         todo!()
     }
     fn expression_operation(
-        &self,
+        &mut self,
         _operation: &ast::ExpressionOperations,
         _left_value: &ExpressionResult,
         _right_value: &ExpressionResult,
@@ -98,13 +98,13 @@ impl Codegen for Backend {
     ) {
         todo!()
     }
-    fn expression_function_return_with_label(&self, _expr_result: &ExpressionResult) {
+    fn expression_function_return_with_label(&mut self, _expr_result: &ExpressionResult) {
         todo!()
     }
-    fn jump_function_return(&self, _expr_result: &ExpressionResult) {
+    fn jump_function_return(&mut self, _expr_result: &ExpressionResult) {
         todo!()
     }
-    fn expression_function_return(&self, _expr_result: &ExpressionResult) {
+    fn expression_function_return(&mut self, _expr_result: &ExpressionResult) {
         todo!()
     }
     fn condition_expression(
@@ -146,7 +146,7 @@ impl Codegen for Backend {
     fn jump_to(&mut self, _label: &LabelName) {
         todo!();
     }
-    fn set_label(&self, _label: &LabelName) {
+    fn set_label(&mut self, _label: &LabelName) {
         todo!()
     }
 }
