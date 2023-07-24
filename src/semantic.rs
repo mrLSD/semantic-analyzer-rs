@@ -605,7 +605,7 @@ impl<T: Codegen<Backend = T>> State<T> {
         self.codegen.condition_expression(
             &left_res,
             &right_res,
-            &data.left.condition,
+            &data.left.condition.clone().into(),
             function_body_state.borrow().last_register_number,
         );
 
@@ -627,7 +627,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             self.codegen.logic_condition(
                 left_register_number,
                 right_register_number,
-                &right.0,
+                &right.0.clone().into(),
                 function_body_state.borrow().last_register_number,
             );
         }
@@ -1163,7 +1163,7 @@ impl<T: Codegen<Backend = T>> State<T> {
             // and return result of that call as register
             body_state.borrow_mut().inc_register();
             self.codegen.expression_operation(
-                op,
+                &op.clone().into(),
                 left_value,
                 &right_value,
                 body_state.borrow().last_register_number,

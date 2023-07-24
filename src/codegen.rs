@@ -1,6 +1,6 @@
-use crate::ast;
 use crate::types::{
-    Constant, ExpressionResult, Function, FunctionStatement, LabelName, StructTypes, Value,
+    Condition, Constant, ExpressionOperations, ExpressionResult, Function, FunctionStatement,
+    LabelName, LogicCondition, StructTypes, Value,
 };
 
 #[allow(dead_code, clippy::module_name_repetitions)]
@@ -35,7 +35,7 @@ impl Codegen for CodegenStack {
         });
     }
 
-    fn function_statement(&mut self, _fn_decl: &ast::FunctionStatement<'_>) {
+    fn function_statement(&mut self, _fn_decl: &FunctionStatement) {
         todo!()
     }
 
@@ -65,7 +65,7 @@ impl Codegen for CodegenStack {
 
     fn expression_operation(
         &mut self,
-        _operation: &ast::ExpressionOperations,
+        _operation: &ExpressionOperations,
         _left_value: &ExpressionResult,
         _right_value: &ExpressionResult,
         _register_number: u64,
@@ -93,7 +93,7 @@ impl Codegen for CodegenStack {
         &mut self,
         _left_result: &ExpressionResult,
         _right_result: &ExpressionResult,
-        _condition: &ast::Condition,
+        _condition: &Condition,
         _register_number: u64,
     ) {
         todo!()
@@ -103,7 +103,7 @@ impl Codegen for CodegenStack {
         &mut self,
         _left_condition_register: u64,
         _right_condition_register: u64,
-        _logic_condition: &ast::LogicCondition,
+        _logic_condition: &LogicCondition,
         _register_number: u64,
     ) {
         todo!()
@@ -140,7 +140,7 @@ pub enum StackKind {
     Types { type_decl: StructTypes },
     /*
     FunctionStatement {
-        fn_decl: ast::FunctionStatement<'a>,
+        fn_decl: FunctionStatement,
     },
     LetBinding {
         let_decl: Value,
@@ -164,7 +164,7 @@ pub enum StackKind {
         register_number: u64,
     },
     ExpressionOperation {
-        operation: ast::ExpressionOperations,
+        operation: ExpressionOperations,
         left_value: ExpressionResult,
         right_value: ExpressionResult,
         register_number: u64,
@@ -184,13 +184,13 @@ pub enum StackKind {
     ConditionExpression {
         left_result: ExpressionResult,
         right_result: ExpressionResult,
-        condition: ast::Condition,
+        condition: Condition,
         register_number: u64,
     },
     LogicCondition {
         left_condition_register: u64,
         right_condition_register: u64,
-        logic_condition: ast::LogicCondition,
+        logic_condition: LogicCondition,
         register_number: u64,
     },
     IfConditionExpression {
@@ -214,7 +214,7 @@ pub trait Codegen {
     fn function_declaration(&mut self, fn_decl: &FunctionStatement);
     fn constant(&mut self, const_decl: &Constant);
     fn types(&mut self, type_decl: &StructTypes);
-    fn function_statement(&mut self, fn_decl: &ast::FunctionStatement<'_>);
+    fn function_statement(&mut self, fn_decl: &FunctionStatement);
     fn let_binding(&mut self, let_decl: &Value, expr_result: &ExpressionResult);
     fn binding(&mut self, val: &Value, expr_result: &ExpressionResult);
     fn call(&mut self, call: &Function, params: Vec<ExpressionResult>, register_number: u64);
@@ -223,7 +223,7 @@ pub trait Codegen {
     fn expression_const(&mut self, expression: &Constant, register_number: u64);
     fn expression_operation(
         &mut self,
-        operation: &ast::ExpressionOperations,
+        operation: &ExpressionOperations,
         left_value: &ExpressionResult,
         right_value: &ExpressionResult,
         register_number: u64,
@@ -236,14 +236,14 @@ pub trait Codegen {
         &mut self,
         left_result: &ExpressionResult,
         right_result: &ExpressionResult,
-        condition: &ast::Condition,
+        condition: &Condition,
         register_number: u64,
     );
     fn logic_condition(
         &mut self,
         left_condition_register: u64,
         right_condition_register: u64,
-        logic_condition: &ast::LogicCondition,
+        logic_condition: &LogicCondition,
         register_number: u64,
     );
     fn if_condition_expression(

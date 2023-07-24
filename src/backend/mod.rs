@@ -1,13 +1,11 @@
 #![allow(dead_code)]
 
-pub mod dummy;
-
-use crate::ast;
 use crate::codegen::Codegen;
 use inkwell::types::{ArrayType, BasicType, BasicTypeEnum, FloatType, IntType, StructType};
 // use inkwell::values::BasicValue;
 use crate::types::{
-    Constant, ExpressionResult, Function, FunctionStatement, LabelName, StructTypes, Value,
+    Condition, Constant, ExpressionOperations, ExpressionResult, Function, FunctionStatement,
+    LabelName, LogicCondition, PrimitiveTypes, StructTypes, Type, Value,
 };
 use inkwell::{
     builder::Builder,
@@ -18,6 +16,7 @@ use inkwell::{
 };
 use std::collections::HashMap;
 
+pub mod dummy;
 //mod ink;
 
 pub struct Compiler<'a, 'ctx> {
@@ -68,7 +67,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         let _compiler = Compiler::new(&context, &module, &builder, &fpm);
     }
 
-    pub fn get_type<T>(&self, ty: &ast::Type) -> T
+    pub fn get_type<T>(&self, ty: &Type) -> T
     where
         T: From<IntType<'ctx>>
             + From<FloatType<'ctx>>
@@ -76,27 +75,19 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
             + From<StructType<'ctx>>,
     {
         match ty {
-            ast::Type::Primitive(ty) => match ty {
-                ast::PrimitiveTypes::I8 | ast::PrimitiveTypes::U8 | ast::PrimitiveTypes::Char => {
+            Type::Primitive(ty) => match ty {
+                PrimitiveTypes::I8 | PrimitiveTypes::U8 | PrimitiveTypes::Char => {
                     self.context.i8_type().into()
                 }
-                ast::PrimitiveTypes::I16 | ast::PrimitiveTypes::U16 => {
-                    self.context.i16_type().into()
-                }
-                ast::PrimitiveTypes::I32 | ast::PrimitiveTypes::U32 => {
-                    self.context.i32_type().into()
-                }
-                ast::PrimitiveTypes::I64 | ast::PrimitiveTypes::U64 => {
-                    self.context.i64_type().into()
-                }
-                ast::PrimitiveTypes::F32 => self.context.f32_type().into(),
-                ast::PrimitiveTypes::F64 => self.context.f64_type().into(),
-                ast::PrimitiveTypes::Bool => self.context.bool_type().into(),
-                ast::PrimitiveTypes::String
-                | ast::PrimitiveTypes::Ptr
-                | ast::PrimitiveTypes::None => todo!(),
+                PrimitiveTypes::I16 | PrimitiveTypes::U16 => self.context.i16_type().into(),
+                PrimitiveTypes::I32 | PrimitiveTypes::U32 => self.context.i32_type().into(),
+                PrimitiveTypes::I64 | PrimitiveTypes::U64 => self.context.i64_type().into(),
+                PrimitiveTypes::F32 => self.context.f32_type().into(),
+                PrimitiveTypes::F64 => self.context.f64_type().into(),
+                PrimitiveTypes::Bool => self.context.bool_type().into(),
+                PrimitiveTypes::String | PrimitiveTypes::Ptr | PrimitiveTypes::None => todo!(),
             },
-            ast::Type::Struct(ty_struct) => {
+            Type::Struct(ty_struct) => {
                 let struct_types = ty_struct
                     .types
                     .iter()
@@ -104,7 +95,7 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                     .collect::<Vec<BasicTypeEnum>>();
                 self.context.struct_type(&struct_types[..], false).into()
             }
-            ast::Type::Array(ty, capacity) => {
+            Type::Array(ty, capacity) => {
                 let ty_array: BasicTypeEnum = self.get_type(ty);
                 ty_array.array_type(*capacity).into()
             }
@@ -142,7 +133,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         todo!()
     }
 
-    fn function_statement(&mut self, _fn_decl: &ast::FunctionStatement<'_>) {
+    fn function_statement(&mut self, _fn_decl: &FunctionStatement) {
         todo!()
     }
 
@@ -171,7 +162,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
 
     fn expression_operation(
         &mut self,
-        _operation: &ast::ExpressionOperations,
+        _operation: &ExpressionOperations,
         _left_value: &ExpressionResult,
         _right_value: &ExpressionResult,
         _register_number: u64,
@@ -214,7 +205,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         &mut self,
         _left_result: &ExpressionResult,
         _right_result: &ExpressionResult,
-        _condition: &ast::Condition,
+        _condition: &Condition,
         _register_number: u64,
     ) {
         todo!();
@@ -224,7 +215,7 @@ impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
         &mut self,
         _left_condition_register: u64,
         _right_condition_register: u64,
-        _logic_condition: &ast::LogicCondition,
+        _logic_condition: &LogicCondition,
         _register_number: u64,
     ) {
         todo!()

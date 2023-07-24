@@ -1,9 +1,7 @@
-use crate::ast;
-use crate::ast::{Condition, LogicCondition};
 use crate::codegen::Codegen;
 use crate::types::{
-    Constant, ExpressionResult, ExpressionResultValue, Function, FunctionStatement, LabelName,
-    StructTypes, Value,
+    Condition, Constant, ExpressionOperations, ExpressionResult, ExpressionResultValue, Function,
+    FunctionStatement, LabelName, LogicCondition, StructTypes, Value,
 };
 
 pub struct Backend {
@@ -39,7 +37,7 @@ impl Codegen for Backend {
         todo!()
     }
 
-    fn function_statement(&mut self, _fn_decl: &ast::FunctionStatement<'_>) {
+    fn function_statement(&mut self, _fn_decl: &FunctionStatement) {
         todo!()
     }
 
@@ -91,7 +89,7 @@ impl Codegen for Backend {
     }
     fn expression_operation(
         &mut self,
-        _operation: &ast::ExpressionOperations,
+        _operation: &ExpressionOperations,
         _left_value: &ExpressionResult,
         _right_value: &ExpressionResult,
         _register_number: u64,
