@@ -15,8 +15,8 @@ use crate::ast::{self, GetName};
 use crate::codegen::Codegen;
 use crate::types::error::{self, EmptyError};
 use crate::types::{
-    Constant, ConstantName, ExpressionResult, ExpressionResultValue, Function, FunctionName,
-    InnerType, InnerValueName, LabelName, StateResult, Value, ValueName,
+    Constant, ConstantName, Expression, ExpressionResult, ExpressionResultValue, ExpressionValue,
+    Function, FunctionName, InnerType, InnerValueName, LabelName, StateResult, Value, ValueName,
 };
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -1181,6 +1181,43 @@ impl<T: Codegen> State<T> {
             self.expression_operation(Some(&expression_result), expr, Some(operation), body_state)
         } else {
             Ok(expression_result)
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn expression_operations_priority(data: &ast::Expression<'_>) {
+        for priority in (0..10).rev() {
+            let _ = Self::fetch_op_priority(&data.clone().into(), priority);
+        }
+    }
+
+    pub fn fetch_op_priority(data: &Expression, priority: u8) -> Expression {
+        if let Some((op, expr)) = data.clone().operation {
+            if expr.operation.clone().is_some() {
+                if op.priority() == priority {
+                    let expression_value = ExpressionValue::Expression(Box::new(Expression {
+                        expression_value: data.clone().expression_value,
+                        operation: Some((
+                            op,
+                            Box::from(Expression {
+                                expression_value: expr.expression_value,
+                                operation: None,
+                            }),
+                        )),
+                    }));
+                    let new_expr = Expression {
+                        expression_value,
+                        operation: expr.operation,
+                    };
+                    Self::fetch_op_priority(&new_expr, priority)
+                } else {
+                    todo!()
+                }
+            } else {
+                todo!()
+            }
+        } else {
+            data.clone()
         }
     }
 }
