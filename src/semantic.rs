@@ -1193,28 +1193,33 @@ impl<T: Codegen> State<T> {
 
     pub fn fetch_op_priority(data: &Expression, priority: u8) -> Expression {
         if let Some((op, expr)) = data.clone().operation {
-            if expr.operation.clone().is_some() {
+            if let Some((next_op, next_expr)) = expr.operation.clone() {
                 if op.priority() == priority {
                     let expression_value = ExpressionValue::Expression(Box::new(Expression {
                         expression_value: data.clone().expression_value,
                         operation: Some((
                             op,
-                            Box::from(Expression {
+                            Box::new(Expression {
                                 expression_value: expr.expression_value,
                                 operation: None,
                             }),
                         )),
                     }));
-                    let new_expr = Expression {
+
+                    let new_expr = Self::fetch_op_priority(&next_expr, priority);
+                    Expression {
                         expression_value,
-                        operation: expr.operation,
-                    };
-                    Self::fetch_op_priority(&new_expr, priority)
+                        operation: Some((next_op, Box::new(new_expr))),
+                    }
                 } else {
-                    todo!()
+                    let new_expr = Self::fetch_op_priority(&expr, priority);
+                    Expression {
+                        expression_value: data.expression_value.clone(),
+                        operation: Some((op, Box::new(new_expr))),
+                    }
                 }
             } else {
-                todo!()
+                data.clone()
             }
         } else {
             data.clone()
