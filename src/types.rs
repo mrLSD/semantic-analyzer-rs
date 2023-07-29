@@ -411,25 +411,6 @@ pub enum ExpressionOperations {
     LessEq,
 }
 
-impl ExpressionOperations {
-    pub const fn priority(&self) -> u8 {
-        match self {
-            Self::Plus => 5,
-            Self::Minus => 4,
-            Self::Divide => 8,
-            Self::Multiply | Self::ShiftLeft | Self::ShiftRight => 9,
-            Self::Or | Self::Xor => 6,
-            Self::And
-            | Self::Eq
-            | Self::NotEq
-            | Self::Great
-            | Self::Less
-            | Self::GreatEq
-            | Self::LessEq => 7,
-        }
-    }
-}
-
 impl From<ast::ExpressionOperations> for ExpressionOperations {
     fn from(value: ast::ExpressionOperations) -> Self {
         match value {

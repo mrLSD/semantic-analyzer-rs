@@ -5,6 +5,9 @@
 #![allow(dead_code)]
 use nom_locate::LocatedSpan;
 
+/// Max priority level fpr expressions operations
+pub const MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS: u8 = 9;
+
 /// Basic `Ident` entity
 pub type Ident<'a> = LocatedSpan<&'a str>;
 
@@ -330,6 +333,27 @@ pub enum ExpressionOperations {
     Less,
     GreatEq,
     LessEq,
+}
+
+impl ExpressionOperations {
+    pub const fn priority(&self) -> u8 {
+        match self {
+            Self::Plus => 5,
+            Self::Minus => 4,
+            Self::Divide => 8,
+            Self::Multiply | Self::ShiftLeft | Self::ShiftRight => {
+                MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS
+            }
+            Self::Or | Self::Xor => 6,
+            Self::And
+            | Self::Eq
+            | Self::NotEq
+            | Self::Great
+            | Self::Less
+            | Self::GreatEq
+            | Self::LessEq => 7,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

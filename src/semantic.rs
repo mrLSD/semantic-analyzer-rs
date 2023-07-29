@@ -11,12 +11,12 @@
 //!
 //! Codegen is result of Semantic analyzer and contains prepared data tree
 //! of generated code for next step - compilation generated raw program code.
-use crate::ast::{self, GetLocation, GetName};
+use crate::ast::{self, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
 use crate::codegen::Codegen;
 use crate::types::error::{self, EmptyError};
 use crate::types::{
-    Constant, ConstantName, Expression, ExpressionResult, ExpressionResultValue, ExpressionValue,
-    Function, FunctionName, InnerType, InnerValueName, LabelName, StateResult, Value, ValueName,
+    Constant, ConstantName, ExpressionResult, ExpressionResultValue, Function, FunctionName,
+    InnerType, InnerValueName, LabelName, StateResult, Value, ValueName,
 };
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -985,7 +985,13 @@ impl<T: Codegen> State<T> {
     /// ## Expression
     /// Is basic entity for state operation and state usage.
     /// State correctness verified by expressions call.
-    /// Return: `PrimitiveValue` | `TmpRegister`
+    /// Expressions folded by operations priority. For that
+    /// expressions tree folded each leaf of tree by priority operation
+    /// level. The most striking image is bracketing an expression with
+    /// a higher priority, and build tree based on that.
+    ///
+    /// ## Return
+    /// `PrimitiveValue` | `TmpRegister`
     ///
     ///  Possible algorithm conditions:
     ///     1. PrimitiveValue -> PrimitiveValue
@@ -1006,13 +1012,15 @@ impl<T: Codegen> State<T> {
         data: &ast::Expression<'_>,
         body_state: &Rc<RefCell<BlockState>>,
     ) -> Result<ExpressionResult, EmptyError> {
+        // Fold expression operations priority
+        let expr = Self::expression_operations_priority(data.clone());
         // To analyze expression first time, we set:
         // left_value - as None
         // operation - as None
         // And basic expression value is `right_value`, because
         // it can contain sub-operations (`left_value` don't contain
         // and contain Expression result)
-        self.expression_operation(None, data, None, body_state)
+        self.expression_operation(None, &expr, None, body_state)
     }
 
     /// Expression operation semantic logic:
@@ -1172,45 +1180,77 @@ impl<T: Codegen> State<T> {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn expression_operations_priority(data: &ast::Expression<'_>) {
-        for priority in (0..10).rev() {
-            let _ = Self::fetch_op_priority(&data.clone().into(), priority);
+    /// # Expression operation priority
+    /// Fold expression priority.
+    /// Pass expressions tree from max priority level to minimum
+    /// priority level. If expression priority for concrete branch
+    /// founded, it's folded to leaf (same as bracketing).
+    ///
+    /// ## Return
+    /// New folded expressions tree.
+    fn expression_operations_priority(data: ast::Expression<'_>) -> ast::Expression<'_> {
+        let mut data = data;
+        for priority in (0..=MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS).rev() {
+            data = Self::fetch_op_priority(data, priority);
         }
+        data
     }
 
-    pub fn fetch_op_priority(data: &Expression, priority: u8) -> Expression {
+    /// Fetch expression operation priories and fold it.
+    /// Expressions folded by operations priority. For that expressions
+    /// tree folded each branch of tree to leaf by priority operation
+    /// level. The most striking image is bracketing an expression with
+    /// a higher priority, and build tree based on that.
+    ///
+    /// For example: expr = expr1 OP1 expr2 - it has 2 branches
+    /// if expr2 contain subbranch (for example: `expr2 OP2 expr3`) we trying
+    /// to find priority level for current pass. And if `priority_level == OP1`
+    /// - fold it to leaf.
+    /// NOTICE: expr1 can't contain subbranches by design. So we pass
+    /// expression tree from left to right.
+    /// If priority level not equal, we just return income expression, or
+    /// if it has subbranch - launch fetching subbranch
+    fn fetch_op_priority(data: ast::Expression<'_>, priority_level: u8) -> ast::Expression<'_> {
+        // Check is expression contains right side with operation
         if let Some((op, expr)) = data.clone().operation {
+            // Check is right expression contain subbranch (sub operation)
             if let Some((next_op, next_expr)) = expr.operation.clone() {
-                if op.priority() == priority {
-                    let expression_value = ExpressionValue::Expression(Box::new(Expression {
-                        expression_value: data.clone().expression_value,
-                        operation: Some((
-                            op,
-                            Box::new(Expression {
-                                expression_value: expr.expression_value,
-                                operation: None,
-                            }),
-                        )),
-                    }));
-
-                    let new_expr = Self::fetch_op_priority(&next_expr, priority);
-                    Expression {
+                // Check incoming expression operation priority level
+                if op.priority() == priority_level {
+                    // Fold expression to leaf - creating new expression as value
+                    let expression_value =
+                        ast::ExpressionValue::Expression(Box::new(ast::Expression {
+                            expression_value: data.expression_value,
+                            operation: Some((
+                                op,
+                                Box::new(ast::Expression {
+                                    expression_value: expr.expression_value,
+                                    operation: None,
+                                }),
+                            )),
+                        }));
+                    // Fetch next expression branch
+                    let new_expr = Self::fetch_op_priority(*next_expr, priority_level);
+                    // Create new expression with folded `expression_value`
+                    ast::Expression {
                         expression_value,
                         operation: Some((next_op, Box::new(new_expr))),
                     }
                 } else {
-                    let new_expr = Self::fetch_op_priority(&expr, priority);
-                    Expression {
-                        expression_value: data.expression_value.clone(),
+                    // If priority not equal for current level just
+                    // fetch right side of expression for next branches
+                    let new_expr = Self::fetch_op_priority(*expr, priority_level);
+                    // Rebuild expression tree
+                    ast::Expression {
+                        expression_value: data.expression_value,
                         operation: Some((op, Box::new(new_expr))),
                     }
                 }
             } else {
-                data.clone()
+                data
             }
         } else {
-            data.clone()
+            data
         }
     }
 }
