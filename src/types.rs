@@ -790,6 +790,8 @@ impl From<ast::IfLoopBodyStatement<'_>> for IfLoopBodyStatement {
 
 #[allow(clippy::module_name_repetitions)]
 pub mod error {
+    use crate::ast::CodeLocation;
+
     #[derive(Debug, Clone)]
     pub struct EmptyError;
 
@@ -814,10 +816,7 @@ pub mod error {
     }
 
     #[derive(Debug, Clone)]
-    pub struct StateErrorLocation {
-        pub line: u64,
-        pub column: u64,
-    }
+    pub struct StateErrorLocation(pub CodeLocation);
 
     #[derive(Debug, Clone)]
     pub struct StateErrorResult {
@@ -827,11 +826,11 @@ pub mod error {
     }
 
     impl StateErrorResult {
-        pub const fn new(kind: StateErrorKind, value: String, line: u64, column: u64) -> Self {
+        pub const fn new(kind: StateErrorKind, value: String, location: CodeLocation) -> Self {
             Self {
                 kind,
                 value,
-                location: StateErrorLocation { line, column },
+                location: StateErrorLocation(location),
             }
         }
     }
@@ -841,7 +840,10 @@ pub mod error {
         pub fn trace_state(&self) -> String {
             format!(
                 "[{:?}] for value {:?} at: {:?}:{:?}",
-                self.kind, self.value, self.location.line, self.location.column
+                self.kind,
+                self.value,
+                self.location.0.line(),
+                self.location.0.offset()
             )
         }
     }

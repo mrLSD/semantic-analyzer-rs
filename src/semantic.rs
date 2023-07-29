@@ -11,7 +11,7 @@
 //!
 //! Codegen is result of Semantic analyzer and contains prepared data tree
 //! of generated code for next step - compilation generated raw program code.
-use crate::ast::{self, GetName};
+use crate::ast::{self, GetLocation, GetName};
 use crate::codegen::Codegen;
 use crate::types::error::{self, EmptyError};
 use crate::types::{
@@ -280,8 +280,7 @@ impl<T: Codegen> State<T> {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::TypeAlreadyExist,
                 data.name(),
-                0,
-                0,
+                data.location(),
             ));
             return;
         }
@@ -295,8 +294,7 @@ impl<T: Codegen> State<T> {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::ConstantAlreadyExist,
                 data.name(),
-                0,
-                0,
+                data.location(),
             ));
             return;
         }
@@ -317,8 +315,7 @@ impl<T: Codegen> State<T> {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::FunctionAlreadyExist,
                 data.name(),
-                0,
-                0,
+                data.location(),
             ));
             return;
         }
@@ -409,8 +406,7 @@ impl<T: Codegen> State<T> {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::ReturnNotFound,
                 String::new(),
-                0,
-                0,
+                data.location(),
             ));
         }
     }
@@ -440,8 +436,7 @@ impl<T: Codegen> State<T> {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::WrongLetType,
                     data.name(),
-                    0,
-                    0,
+                    data.location(),
                 ));
                 return Err(EmptyError);
             }
@@ -506,8 +501,7 @@ impl<T: Codegen> State<T> {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::ValueNotFound,
                     data.name(),
-                    0,
-                    0,
+                    data.location(),
                 ));
                 EmptyError
             })?;
@@ -516,8 +510,7 @@ impl<T: Codegen> State<T> {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::ValueIsNotMutable,
                 data.name(),
-                0,
-                0,
+                data.location(),
             ));
             return Err(EmptyError);
         }
@@ -548,8 +541,7 @@ impl<T: Codegen> State<T> {
             self.add_error(error::StateErrorResult::new(
                  error::StateErrorKind::FunctionNotFound,
                  data.name(),
-                 0,
-                 0,
+                 data.location()
              ));
             return Err(EmptyError);
         };
@@ -564,8 +556,7 @@ impl<T: Codegen> State<T> {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::FunctionParameterTypeWrong,
                     expr_result.expr_type.to_string(),
-                    0,
-                    0,
+                    data.location(),
                 ));
                 continue;
             }
@@ -810,11 +801,11 @@ impl<T: Codegen> State<T> {
     ) {
         // It can't contain `else` and `if-else` on the same time
         if data.else_if_statement.is_some() && data.else_if_statement.is_some() {
+            let stm = data.else_if_statement.clone().unwrap();
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::IfElseDuplicated,
                 String::from("if-condition"),
-                0,
-                0,
+                stm.location(),
             ));
         }
         // Create state for if-body, from parent function state because
@@ -1077,8 +1068,7 @@ impl<T: Codegen> State<T> {
                     self.add_error(error::StateErrorResult::new(
                         error::StateErrorKind::ValueNotFound,
                         value.name(),
-                        0,
-                        0,
+                        value.location(),
                     ));
                     return Err(EmptyError);
                 }
@@ -1138,8 +1128,7 @@ impl<T: Codegen> State<T> {
                     self.add_error(error::StateErrorResult::new(
                         error::StateErrorKind::ValueNotFound,
                         value.name.name(),
-                        0,
-                        0,
+                        value.name.location(),
                     ));
                     return Err(EmptyError);
                 }
@@ -1155,8 +1144,7 @@ impl<T: Codegen> State<T> {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::WrongExpressionType,
                     left_value.expr_type.to_string(),
-                    0,
-                    0,
+                    right_expression.location(),
                 ));
             }
             // Call expression operation for: OP(left_value, right_value)

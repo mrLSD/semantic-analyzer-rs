@@ -16,6 +16,10 @@ pub trait GetType {
     fn inner_type(&self) -> String;
 }
 
+pub trait GetLocation {
+    fn location(&self) -> CodeLocation;
+}
+
 /// Specific import name
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImportName<'a>(Ident<'a>);
@@ -32,6 +36,12 @@ pub type ImportPath<'a> = Vec<ImportName<'a>>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConstantName<'a>(Ident<'a>);
 
+impl GetLocation for ConstantName<'_> {
+    fn location(&self) -> CodeLocation {
+        CodeLocation::new(self.0.location_line(), self.0.location_offset())
+    }
+}
+
 impl GetName for ConstantName<'_> {
     fn name(&self) -> String {
         (*self.0.fragment()).to_string()
@@ -40,6 +50,12 @@ impl GetName for ConstantName<'_> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionName<'a>(Ident<'a>);
+
+impl GetLocation for FunctionName<'_> {
+    fn location(&self) -> CodeLocation {
+        CodeLocation::new(self.0.location_line(), self.0.location_offset())
+    }
+}
 
 impl<'a> ToString for FunctionName<'a> {
     fn to_string(&self) -> String {
@@ -59,9 +75,32 @@ impl ToString for ParameterName<'_> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValueName<'a>(Ident<'a>);
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CodeLocation(u32, usize);
+
+impl CodeLocation {
+    pub const fn new(location: u32, offset: usize) -> Self {
+        Self(location, offset)
+    }
+
+    pub const fn line(&self) -> u32 {
+        self.0
+    }
+
+    pub const fn offset(&self) -> usize {
+        self.1
+    }
+}
+
 impl<'a> ValueName<'a> {
     pub const fn new(name: Ident<'a>) -> Self {
         Self(name)
+    }
+}
+
+impl GetLocation for ValueName<'_> {
+    fn location(&self) -> CodeLocation {
+        CodeLocation::new(self.0.location_line(), self.0.location_offset())
     }
 }
 
@@ -136,6 +175,12 @@ pub struct StructTypes<'a> {
     pub types: Vec<StructType<'a>>,
 }
 
+impl GetLocation for StructTypes<'_> {
+    fn location(&self) -> CodeLocation {
+        CodeLocation::new(self.name.location_line(), self.name.location_offset())
+    }
+}
+
 impl<'a> GetName for StructTypes<'a> {
     fn name(&self) -> String {
         (*self.name.fragment()).to_string()
@@ -180,6 +225,12 @@ pub struct Constant<'a> {
     pub constant_value: ConstantExpression<'a>,
 }
 
+impl GetLocation for Constant<'_> {
+    fn location(&self) -> CodeLocation {
+        self.name.location()
+    }
+}
+
 impl GetName for Constant<'_> {
     fn name(&self) -> String {
         (*self.name.0.fragment()).to_string()
@@ -198,6 +249,12 @@ pub struct FunctionStatement<'a> {
     pub parameters: Vec<FunctionParameter<'a>>,
     pub result_type: Type<'a>,
     pub body: Vec<BodyStatement<'a>>,
+}
+
+impl GetLocation for FunctionStatement<'_> {
+    fn location(&self) -> CodeLocation {
+        self.name.location()
+    }
 }
 
 impl GetName for FunctionStatement<'_> {
@@ -281,12 +338,24 @@ pub struct Expression<'a> {
     pub operation: Option<(ExpressionOperations, Box<Expression<'a>>)>,
 }
 
+impl GetLocation for Expression<'_> {
+    fn location(&self) -> CodeLocation {
+        todo!()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct LetBinding<'a> {
     pub name: ValueName<'a>,
     pub mutable: bool,
     pub value_type: Option<Type<'a>>,
     pub value: Box<Expression<'a>>,
+}
+
+impl GetLocation for LetBinding<'_> {
+    fn location(&self) -> CodeLocation {
+        self.name.location()
+    }
 }
 
 impl GetName for LetBinding<'_> {
@@ -301,6 +370,12 @@ pub struct Binding<'a> {
     pub value: Box<Expression<'a>>,
 }
 
+impl GetLocation for Binding<'_> {
+    fn location(&self) -> CodeLocation {
+        self.name.location()
+    }
+}
+
 impl GetName for Binding<'_> {
     fn name(&self) -> String {
         self.name.0.to_string()
@@ -311,6 +386,12 @@ impl GetName for Binding<'_> {
 pub struct FunctionCall<'a> {
     pub name: FunctionName<'a>,
     pub parameters: Vec<Expression<'a>>,
+}
+
+impl GetLocation for FunctionCall<'_> {
+    fn location(&self) -> CodeLocation {
+        self.name.location()
+    }
 }
 
 impl GetName for FunctionCall<'_> {
@@ -360,6 +441,12 @@ pub struct IfStatement<'a> {
     pub body: IfBodyStatements<'a>,
     pub else_statement: Option<IfBodyStatements<'a>>,
     pub else_if_statement: Option<Box<IfStatement<'a>>>,
+}
+
+impl GetLocation for IfStatement<'_> {
+    fn location(&self) -> CodeLocation {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
