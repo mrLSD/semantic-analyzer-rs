@@ -226,7 +226,7 @@ pub struct State<T: Codegen> {
     pub errors: Vec<error::StateErrorResult>,
 }
 
-impl<T: Codegen<Backend = T>> State<T> {
+impl<T: Codegen> State<T> {
     /// Init new `State`
     pub fn new(codegen: T) -> Self {
         Self {

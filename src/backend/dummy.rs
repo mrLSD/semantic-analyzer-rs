@@ -23,8 +23,6 @@ impl Backend {
 }
 
 impl Codegen for Backend {
-    type Backend = Self;
-
     fn function_declaration(&mut self, _fn_decl: &FunctionStatement) {
         todo!()
     }

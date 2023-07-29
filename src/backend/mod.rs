@@ -120,7 +120,6 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
 }
 
 impl<'a, 'ctx> Codegen for Compiler<'a, 'ctx> {
-    type Backend = FunctionValue<'ctx>;
     fn function_declaration(&mut self, _fn_decl: &FunctionStatement) {
         todo!()
     }

@@ -15,8 +15,6 @@ impl CodegenStack {
 }
 
 impl Codegen for CodegenStack {
-    type Backend = ();
-
     fn function_declaration(&mut self, fn_decl: &FunctionStatement) {
         self.push(StackKind::FunctionDeclaration {
             fn_decl: fn_decl.clone(),
@@ -35,110 +33,171 @@ impl Codegen for CodegenStack {
         });
     }
 
-    fn function_statement(&mut self, _fn_decl: &FunctionStatement) {
-        todo!()
+    fn function_statement(&mut self, fn_decl: &FunctionStatement) {
+        self.push(StackKind::FunctionStatement {
+            fn_decl: fn_decl.clone(),
+        });
     }
 
-    fn let_binding(&mut self, _let_decl: &Value, _expr_result: &ExpressionResult) {
-        todo!()
+    fn let_binding(&mut self, let_decl: &Value, expr_result: &ExpressionResult) {
+        self.push(StackKind::LetBinding {
+            let_decl: let_decl.clone(),
+            expr_result: expr_result.clone(),
+        });
     }
 
-    fn binding(&mut self, _val: &Value, _expr_result: &ExpressionResult) {
-        todo!()
+    fn binding(&mut self, val: &Value, expr_result: &ExpressionResult) {
+        self.push(StackKind::Binding {
+            val: val.clone(),
+            expr_result: expr_result.clone(),
+        });
     }
 
-    fn call(&mut self, _call: &Function, _params: Vec<ExpressionResult>, _register_number: u64) {
-        todo!()
+    fn call(&mut self, call: &Function, params: Vec<ExpressionResult>, register_number: u64) {
+        self.push(StackKind::Call {
+            call: call.clone(),
+            params,
+            register_number,
+        });
     }
 
-    fn expression_value(&mut self, _expression: &Value, _register_number: u64) {
-        todo!()
+    fn expression_value(&mut self, expression: &Value, register_number: u64) {
+        self.push(StackKind::ExpressionValue {
+            expression: expression.clone(),
+            register_number,
+        });
     }
 
-    fn expression_struct_value(&mut self, _expression: &Value, _index: u64, _register_number: u64) {
-        todo!()
+    fn expression_struct_value(&mut self, expression: &Value, index: u64, register_number: u64) {
+        self.push(StackKind::ExpressionStructValue {
+            expression: expression.clone(),
+            index,
+            register_number,
+        });
     }
 
-    fn expression_const(&mut self, _expression: &Constant, _register_number: u64) {
-        todo!()
+    fn expression_const(&mut self, expression: &Constant, register_number: u64) {
+        self.push(StackKind::ExpressionConst {
+            expression: expression.clone(),
+            register_number,
+        });
     }
 
     fn expression_operation(
         &mut self,
-        _operation: &ExpressionOperations,
-        _left_value: &ExpressionResult,
-        _right_value: &ExpressionResult,
-        _register_number: u64,
+        operation: &ExpressionOperations,
+        left_value: &ExpressionResult,
+        right_value: &ExpressionResult,
+        register_number: u64,
     ) {
-        todo!()
+        self.push(StackKind::ExpressionOperation {
+            operation: operation.clone(),
+            left_value: left_value.clone(),
+            right_value: right_value.clone(),
+            register_number,
+        });
     }
 
-    fn expression_function_return(&mut self, _expr_result: &ExpressionResult) {
-        todo!()
+    fn expression_function_return(&mut self, expr_result: &ExpressionResult) {
+        self.push(StackKind::ExpressionFunctionReturnWithLabel {
+            expr_result: expr_result.clone(),
+        });
     }
 
-    fn jump_function_return(&mut self, _expr_result: &ExpressionResult) {
-        todo!()
+    fn jump_function_return(&mut self, expr_result: &ExpressionResult) {
+        self.push(StackKind::JumpFunctionReturn {
+            expr_result: expr_result.clone(),
+        });
     }
 
-    fn set_label(&mut self, _label: &LabelName) {
-        todo!()
+    fn set_label(&mut self, label: &LabelName) {
+        self.push(StackKind::SetLabel {
+            label: label.clone(),
+        });
     }
 
-    fn expression_function_return_with_label(&mut self, _expr_result: &ExpressionResult) {
-        todo!()
+    fn expression_function_return_with_label(&mut self, expr_result: &ExpressionResult) {
+        self.push(StackKind::ExpressionFunctionReturnWithLabel {
+            expr_result: expr_result.clone(),
+        });
     }
 
     fn condition_expression(
         &mut self,
-        _left_result: &ExpressionResult,
-        _right_result: &ExpressionResult,
-        _condition: &Condition,
-        _register_number: u64,
+        left_result: &ExpressionResult,
+        right_result: &ExpressionResult,
+        condition: &Condition,
+        register_number: u64,
     ) {
-        todo!()
+        self.push(StackKind::ConditionExpression {
+            left_result: left_result.clone(),
+            right_result: right_result.clone(),
+            condition: condition.clone(),
+            register_number,
+        });
     }
 
     fn logic_condition(
         &mut self,
-        _left_condition_register: u64,
-        _right_condition_register: u64,
-        _logic_condition: &LogicCondition,
-        _register_number: u64,
+        left_condition_register: u64,
+        right_condition_register: u64,
+        logic_condition: &LogicCondition,
+        register_number: u64,
     ) {
-        todo!()
+        self.push(StackKind::LogicCondition {
+            left_condition_register,
+            right_condition_register,
+            logic_condition: logic_condition.clone(),
+            register_number,
+        });
     }
 
     fn if_condition_expression(
         &mut self,
-        _expr_result: &ExpressionResult,
-        _label_if_begin: &LabelName,
-        _label_if_end: &LabelName,
+        expr_result: &ExpressionResult,
+        label_if_begin: &LabelName,
+        label_if_end: &LabelName,
     ) {
-        todo!()
+        self.push(StackKind::IfConditionExpression {
+            expr_result: expr_result.clone(),
+            label_if_begin: label_if_begin.clone(),
+            label_if_end: label_if_end.clone(),
+        });
     }
 
     fn if_condition_logic(
         &mut self,
-        _label_if_begin: &LabelName,
-        _label_if_end: &LabelName,
-        _register_number: u64,
+        label_if_begin: &LabelName,
+        label_if_end: &LabelName,
+        register_number: u64,
     ) {
-        todo!()
+        self.push(StackKind::IfConditionLogic {
+            label_if_begin: label_if_begin.clone(),
+            label_if_end: label_if_end.clone(),
+            register_number,
+        });
     }
 
-    fn jump_to(&mut self, _label: &LabelName) {
-        todo!()
+    fn jump_to(&mut self, label: &LabelName) {
+        self.push(StackKind::JumpTo {
+            label: label.clone(),
+        });
     }
 }
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum StackKind {
-    FunctionDeclaration { fn_decl: FunctionStatement },
-    Constant { const_decl: Constant },
-    Types { type_decl: StructTypes },
-    /*
+    FunctionDeclaration {
+        fn_decl: FunctionStatement,
+    },
+    Constant {
+        const_decl: Constant,
+    },
+    Types {
+        type_decl: StructTypes,
+    },
+
     FunctionStatement {
         fn_decl: FunctionStatement,
     },
@@ -157,6 +216,11 @@ pub enum StackKind {
     },
     ExpressionValue {
         expression: Value,
+        register_number: u64,
+    },
+    ExpressionStructValue {
+        expression: Value,
+        index: u64,
         register_number: u64,
     },
     ExpressionConst {
@@ -206,11 +270,9 @@ pub enum StackKind {
     JumpTo {
         label: LabelName,
     },
-    */
 }
 
 pub trait Codegen {
-    type Backend;
     fn function_declaration(&mut self, fn_decl: &FunctionStatement);
     fn constant(&mut self, const_decl: &Constant);
     fn types(&mut self, type_decl: &StructTypes);
