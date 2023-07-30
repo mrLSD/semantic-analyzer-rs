@@ -87,13 +87,8 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
                 PrimitiveTypes::Bool => self.context.bool_type().into(),
                 PrimitiveTypes::String | PrimitiveTypes::Ptr | PrimitiveTypes::None => todo!(),
             },
-            Type::Struct(ty_struct) => {
-                let struct_types = ty_struct
-                    .types
-                    .iter()
-                    .map(|ty| self.get_type(&ty.attr_type))
-                    .collect::<Vec<BasicTypeEnum>>();
-                self.context.struct_type(&struct_types[..], false).into()
+            Type::Struct(_ty_struct) => {
+                todo!()
             }
             Type::Array(ty, capacity) => {
                 let ty_array: BasicTypeEnum = self.get_type(ty);

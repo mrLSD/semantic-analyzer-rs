@@ -14,4 +14,4 @@ fmt:
 	@cargo fmt
 
 test:
-	@cargo test -- --nocapture
+	@cargo test --features=llvm15  -- --nocapture

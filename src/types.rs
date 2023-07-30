@@ -2,6 +2,25 @@
 
 use crate::ast;
 use crate::ast::GetName;
+use std::collections::HashMap;
+
+trait TypeAttributes {
+    fn get_attribute_index(&self, _attr_name: String) -> Option<u32> {
+        None
+    }
+    fn get_attribute_type(&self, _attr_name: String) -> Option<Type> {
+        None
+    }
+    fn get_method(&self, _method_name: String) -> Option<FunctionName> {
+        None
+    }
+    fn is_attribute(&self, _name: String) -> bool {
+        false
+    }
+    fn is_method(&self, _name: String) -> bool {
+        false
+    }
+}
 
 /// State result type - for single results
 pub type StateResult<T> = Result<T, error::StateError>;
@@ -262,6 +281,32 @@ pub enum Type {
     Struct(StructTypes),
     Array(Box<Self>, u32),
 }
+impl GetName for Type {
+    fn name(&self) -> String {
+        todo!()
+    }
+}
+
+impl TypeAttributes for Type {
+    fn get_attribute_index(&self, attr_name: String) -> Option<u32> {
+        match self {
+            Self::Struct(st) => st.get_attribute_index(attr_name),
+            Self::Primitive(_) | Self::Array(_, _) => None,
+        }
+    }
+    fn get_attribute_type(&self, _attr_name: String) -> Option<Type> {
+        None
+    }
+    fn get_method(&self, _method_name: String) -> Option<FunctionName> {
+        None
+    }
+    fn is_attribute(&self, _name: String) -> bool {
+        false
+    }
+    fn is_method(&self, _name: String) -> bool {
+        false
+    }
+}
 
 impl From<ast::Type<'_>> for Type {
     fn from(value: ast::Type<'_>) -> Self {
@@ -317,14 +362,41 @@ impl From<ast::PrimitiveTypes> for PrimitiveTypes {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct StructTypes {
     pub name: String,
-    pub types: Vec<StructType>,
+    pub attributes: HashMap<String, StructType>,
+}
+
+impl TypeAttributes for StructTypes {
+    fn get_attribute_index(&self, attr_name: String) -> Option<u32> {
+        self.attributes.get(&attr_name).map(|attr| attr.attr_index)
+    }
+    fn get_attribute_type(&self, _attr_name: String) -> Option<Type> {
+        None
+    }
+    fn get_method(&self, _method_name: String) -> Option<FunctionName> {
+        None
+    }
+    fn is_attribute(&self, _name: String) -> bool {
+        false
+    }
+    fn is_method(&self, _name: String) -> bool {
+        false
+    }
 }
 
 impl From<ast::StructTypes<'_>> for StructTypes {
     fn from(value: ast::StructTypes<'_>) -> Self {
         Self {
             name: value.name(),
-            types: value.types.iter().map(|v| v.clone().into()).collect(),
+            attributes: {
+                let mut res = HashMap::new();
+
+                for val in value.attributes {
+                    let name = (*val.attr_name.fragment()).to_string();
+                    let v = val.clone().into();
+                    res.insert(name, v);
+                }
+                res
+            },
         }
     }
 }
@@ -332,6 +404,7 @@ impl From<ast::StructTypes<'_>> for StructTypes {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct StructType {
     pub attr_name: String,
+    pub attr_index: u32,
     pub attr_type: Type,
 }
 
@@ -340,6 +413,7 @@ impl From<ast::StructType<'_>> for StructType {
         Self {
             attr_name: value.name(),
             attr_type: value.attr_type.into(),
+            attr_index: 0,
         }
     }
 }

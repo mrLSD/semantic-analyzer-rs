@@ -3,6 +3,7 @@
 //! represent full cycle of the program, and represent
 //! `turing-complete` state machine.
 #![allow(dead_code)]
+
 use nom_locate::LocatedSpan;
 
 /// Max priority level fpr expressions operations
@@ -175,7 +176,7 @@ impl GetName for StructType<'_> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructTypes<'a> {
     pub name: Ident<'a>,
-    pub types: Vec<StructType<'a>>,
+    pub attributes: Vec<StructType<'a>>,
 }
 
 impl GetLocation for StructTypes<'_> {
@@ -201,7 +202,7 @@ impl<'a> GetName for Type<'a> {
     fn name(&self) -> String {
         match self {
             Self::Primitive(primitive) => primitive.name(),
-            Self::Struct(struct_type) => struct_type.name.to_string(),
+            Self::Struct(struct_type) => (*struct_type.name.fragment()).to_string(),
             Self::Array(array_type, size) => {
                 format!("[{:?};{:?}]", array_type.name(), size)
             }
