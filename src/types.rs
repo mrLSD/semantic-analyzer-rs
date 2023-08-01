@@ -283,7 +283,13 @@ pub enum Type {
 }
 impl GetName for Type {
     fn name(&self) -> String {
-        todo!()
+        match self {
+            Self::Primitive(primitive) => primitive.name(),
+            Self::Struct(struct_type) => struct_type.name.clone(),
+            Self::Array(array_type, size) => {
+                format!("[{:?};{:?}]", array_type.name(), size)
+            }
+        }
     }
 }
 
@@ -291,20 +297,32 @@ impl TypeAttributes for Type {
     fn get_attribute_index(&self, attr_name: String) -> Option<u32> {
         match self {
             Self::Struct(st) => st.get_attribute_index(attr_name),
-            Self::Primitive(_) | Self::Array(_, _) => None,
+            _ => None,
         }
     }
-    fn get_attribute_type(&self, _attr_name: String) -> Option<Type> {
-        None
+    fn get_attribute_type(&self, attr_name: String) -> Option<Type> {
+        match self {
+            Self::Struct(st) => st.get_attribute_type(attr_name),
+            _ => None,
+        }
     }
-    fn get_method(&self, _method_name: String) -> Option<FunctionName> {
-        None
+    fn get_method(&self, method_name: String) -> Option<FunctionName> {
+        match self {
+            Self::Struct(st) => st.get_method(method_name),
+            _ => None,
+        }
     }
-    fn is_attribute(&self, _name: String) -> bool {
-        false
+    fn is_attribute(&self, attr_name: String) -> bool {
+        match self {
+            Self::Struct(st) => st.is_attribute(attr_name),
+            _ => false,
+        }
     }
-    fn is_method(&self, _name: String) -> bool {
-        false
+    fn is_method(&self, method_name: String) -> bool {
+        match self {
+            Self::Struct(st) => st.is_method(method_name),
+            _ => false,
+        }
     }
 }
 
@@ -337,6 +355,28 @@ pub enum PrimitiveTypes {
     None,
 }
 
+impl GetName for PrimitiveTypes {
+    fn name(&self) -> String {
+        match self {
+            Self::U8 => "u8".to_string(),
+            Self::U16 => "u16".to_string(),
+            Self::U32 => "u32".to_string(),
+            Self::U64 => "u64".to_string(),
+            Self::I8 => "i8".to_string(),
+            Self::I16 => "i16".to_string(),
+            Self::I32 => "i32".to_string(),
+            Self::I64 => "i64".to_string(),
+            Self::F32 => "f32".to_string(),
+            Self::F64 => "f64".to_string(),
+            Self::Bool => "bool".to_string(),
+            Self::Char => "char".to_string(),
+            Self::String => "str".to_string(),
+            Self::Ptr => "ptr".to_string(),
+            Self::None => "()".to_string(),
+        }
+    }
+}
+
 impl From<ast::PrimitiveTypes> for PrimitiveTypes {
     fn from(value: ast::PrimitiveTypes) -> Self {
         match value {
@@ -363,23 +403,26 @@ impl From<ast::PrimitiveTypes> for PrimitiveTypes {
 pub struct StructTypes {
     pub name: String,
     pub attributes: HashMap<String, StructType>,
+    pub methods: HashMap<String, FunctionName>,
 }
 
 impl TypeAttributes for StructTypes {
     fn get_attribute_index(&self, attr_name: String) -> Option<u32> {
         self.attributes.get(&attr_name).map(|attr| attr.attr_index)
     }
-    fn get_attribute_type(&self, _attr_name: String) -> Option<Type> {
-        None
+    fn get_attribute_type(&self, attr_name: String) -> Option<Type> {
+        self.attributes
+            .get(&attr_name)
+            .map(|attr| attr.attr_type.clone())
     }
-    fn get_method(&self, _method_name: String) -> Option<FunctionName> {
-        None
+    fn get_method(&self, method_name: String) -> Option<FunctionName> {
+        self.methods.get(&method_name).cloned()
     }
-    fn is_attribute(&self, _name: String) -> bool {
-        false
+    fn is_attribute(&self, attr_name: String) -> bool {
+        self.attributes.contains_key(&attr_name)
     }
-    fn is_method(&self, _name: String) -> bool {
-        false
+    fn is_method(&self, method_name: String) -> bool {
+        self.attributes.contains_key(&method_name)
     }
 }
 
@@ -397,6 +440,7 @@ impl From<ast::StructTypes<'_>> for StructTypes {
                 }
                 res
             },
+            methods: HashMap::new(),
         }
     }
 }

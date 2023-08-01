@@ -16,7 +16,7 @@ use crate::codegen::Codegen;
 use crate::types::error::{self, EmptyError};
 use crate::types::{
     Constant, ConstantName, ExpressionResult, ExpressionResultValue, Function, FunctionName,
-    InnerType, InnerValueName, LabelName, StateResult, Value, ValueName,
+    InnerType, InnerValueName, LabelName, StateResult, Type, Value, ValueName,
 };
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -276,6 +276,8 @@ impl<T: Codegen> State<T> {
 
     /// Types declaration analyzer. Add types to Global State.
     pub fn types(&mut self, data: &ast::StructTypes<'_>) {
+        let _inner_type: Type = ast::Type::Struct(data.clone()).into();
+        //inner_type.name()
         if self.global.types.contains(&data.name().into()) {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::TypeAlreadyExist,
