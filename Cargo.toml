@@ -1,8 +1,8 @@
 [package]
-name = "z-rose"
+name = "semantic-analyzer-rs"
 version = "0.1.0"
 authors = ["Evgeny Ukhanov <mrlsd@ya.ru>"]
-description = "ThatRoze - programming language and compiler"
+description = " Semantic analyzer library for compilers written in Rust for semantic analysis of programming languages, with code generation for any backend."
 license = "MIT"
 edition = "2021"
 
