@@ -11,10 +11,3 @@ doctest = false
 
 [dependencies]
 nom_locate = "4.1"
-nom = "7.1.3"
-inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master" }
-thiserror = "1.0"
-
-[features]
-default = ["inkwell/llvm15-0"]
-llvm12 = ["inkwell/llvm12-0"]
