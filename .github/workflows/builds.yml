@@ -30,12 +30,6 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@master
-        with:
-          version: "12.0"
-          directory: ${{ runner.temp }}/llvm
-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -44,4 +38,4 @@ jobs:
           components: rustfmt, clippy
 
       - name: Build
-        run: cargo build --features=llvm12 --no-default-features
+        run: cargo build --release
