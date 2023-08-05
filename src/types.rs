@@ -57,22 +57,6 @@ impl ToString for InnerValueName {
     }
 }
 
-/// Inner Type - type representation
-#[derive(Debug, Clone, Eq, Hash, PartialEq)]
-pub struct InnerType(String);
-
-impl From<String> for InnerType {
-    fn from(value: String) -> Self {
-        Self(value)
-    }
-}
-
-impl ToString for InnerType {
-    fn to_string(&self) -> String {
-        self.0.clone()
-    }
-}
-
 /// Label name type
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct LabelName(String);
@@ -275,19 +259,47 @@ impl From<ast::FunctionStatement<'_>> for FunctionStatement {
     }
 }
 
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+pub struct TypeName(String);
+
+impl GetName for TypeName {
+    fn name(&self) -> String {
+        self.0.clone()
+    }
+}
+
+impl From<String> for TypeName {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl ToString for TypeName {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Type {
     Primitive(PrimitiveTypes),
     Struct(StructTypes),
     Array(Box<Self>, u32),
 }
-impl GetName for Type {
-    fn name(&self) -> String {
+
+impl Type {
+    pub fn name(&self) -> TypeName {
+        self.to_string().into()
+    }
+}
+
+impl ToString for Type {
+    fn to_string(&self) -> String {
         match self {
             Self::Primitive(primitive) => primitive.name(),
             Self::Struct(struct_type) => struct_type.name.clone(),
             Self::Array(array_type, size) => {
-                format!("[{:?};{:?}]", array_type.name(), size)
+                format!("[{:?};{:?}]", array_type.to_string(), size)
             }
         }
     }

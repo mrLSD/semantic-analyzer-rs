@@ -16,7 +16,7 @@ use crate::codegen::Codegen;
 use crate::types::error::{self, EmptyError};
 use crate::types::{
     Constant, ConstantName, ExpressionResult, ExpressionResultValue, Function, FunctionName,
-    InnerType, InnerValueName, LabelName, StateResult, Type, Value, ValueName,
+    InnerValueName, LabelName, StateResult, Type, TypeName, Value, ValueName,
 };
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -211,7 +211,7 @@ impl BlockState {
 #[derive(Debug)]
 pub struct GlobalState {
     pub constants: HashMap<ConstantName, Constant>,
-    pub types: HashSet<InnerType>,
+    pub types: HashMap<TypeName, Type>,
     pub functions: HashMap<FunctionName, Function>,
 }
 
@@ -232,7 +232,7 @@ impl<T: Codegen> State<T> {
         Self {
             global: GlobalState {
                 functions: HashMap::new(),
-                types: HashSet::new(),
+                types: HashMap::new(),
                 constants: HashMap::new(),
             },
             codegen,
@@ -278,7 +278,7 @@ impl<T: Codegen> State<T> {
     pub fn types(&mut self, data: &ast::StructTypes<'_>) {
         let _inner_type: Type = ast::Type::Struct(data.clone()).into();
         //inner_type.name()
-        if self.global.types.contains(&data.name().into()) {
+        if self.global.types.contains_key(&data.name().into()) {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::TypeAlreadyExist,
                 data.name(),
@@ -286,7 +286,9 @@ impl<T: Codegen> State<T> {
             ));
             return;
         }
-        self.global.types.insert(data.name().into());
+        self.global
+            .types
+            .insert(data.name().into(), Type::Struct(data.clone().into()));
         self.codegen.types(&data.clone().into());
     }
 
@@ -320,11 +322,11 @@ impl<T: Codegen> State<T> {
             data.name().into(),
             Function {
                 inner_name: data.name().into(),
-                inner_type: data.result_type.into(),
+                inner_type: data.result_type.clone().into(),
                 parameters: data
                     .parameters
                     .iter()
-                    .map(|p| p.parameter_type.into())
+                    .map(|p| p.parameter_type.clone().into())
                     .collect(),
             },
         );
@@ -552,7 +554,7 @@ impl<T: Codegen> State<T> {
             if expr_result.expr_type != func_data.parameters[i] {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::FunctionParameterTypeWrong,
-                    expr_result.expr_type.name(),
+                    expr_result.expr_type.to_string(),
                     data.location(),
                 ));
                 continue;
@@ -1148,7 +1150,7 @@ impl<T: Codegen> State<T> {
             if left_value.expr_type != right_value.expr_type {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::WrongExpressionType,
-                    left_value.expr_type.name(),
+                    left_value.expr_type.to_string(),
                     right_expression.location(),
                 ));
             }
