@@ -300,14 +300,9 @@ impl<T: Codegen> State<T> {
             ));
             return;
         }
-        self.global.constants.insert(
-            data.name().into(),
-            Constant {
-                name: data.name().into(),
-                constant_type: data.constant_type.name().into(),
-                constant_value: data.constant_value.clone().into(),
-            },
-        );
+        self.global
+            .constants
+            .insert(data.name().into(), data.clone().into());
         self.codegen.constant(&data.clone().into());
     }
 
@@ -325,11 +320,11 @@ impl<T: Codegen> State<T> {
             data.name().into(),
             Function {
                 inner_name: data.name().into(),
-                inner_type: data.result_type.name().into(),
+                inner_type: data.result_type.into(),
                 parameters: data
                     .parameters
                     .iter()
-                    .map(|p| p.parameter_type.name().into())
+                    .map(|p| p.parameter_type.into())
                     .collect(),
             },
         );
@@ -434,7 +429,7 @@ impl<T: Codegen> State<T> {
         let expr_result = self.expression(&data.value, state)?;
 
         if let Some(ty) = data.clone().value_type {
-            if expr_result.expr_type != ty.name().into() {
+            if expr_result.expr_type != ty.into() {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::WrongLetType,
                     data.name(),
@@ -537,7 +532,7 @@ impl<T: Codegen> State<T> {
         &mut self,
         data: &ast::FunctionCall<'_>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> Result<InnerType, EmptyError> {
+    ) -> Result<Type, EmptyError> {
         // Check is function exists in global functions stat
         let Some(func_data) = self.global.functions.get(&data.name().into()).cloned() else {
             self.add_error(error::StateErrorResult::new(
@@ -557,7 +552,7 @@ impl<T: Codegen> State<T> {
             if expr_result.expr_type != func_data.parameters[i] {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::FunctionParameterTypeWrong,
-                    expr_result.expr_type.to_string(),
+                    expr_result.expr_type.name(),
                     data.location(),
                 ));
                 continue;
@@ -1087,7 +1082,7 @@ impl<T: Codegen> State<T> {
             ast::ExpressionValue::PrimitiveValue(value) => {
                 // Just return primitive value itself
                 ExpressionResult {
-                    expr_type: value.get_type().name().into(),
+                    expr_type: value.get_type().into(),
                     expr_value: ExpressionResultValue::PrimitiveValue(value.clone()),
                 }
             }
@@ -1153,7 +1148,7 @@ impl<T: Codegen> State<T> {
             if left_value.expr_type != right_value.expr_type {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::WrongExpressionType,
-                    left_value.expr_type.to_string(),
+                    left_value.expr_type.name(),
                     right_expression.location(),
                 ));
             }

@@ -168,7 +168,7 @@ impl From<ast::ConstantExpression<'_>> for ConstantExpression {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Constant {
     pub name: ConstantName,
-    pub constant_type: InnerType,
+    pub constant_type: Type,
     pub constant_value: ConstantExpression,
 }
 
@@ -176,7 +176,7 @@ impl From<ast::Constant<'_>> for Constant {
     fn from(value: ast::Constant<'_>) -> Self {
         Self {
             name: value.name.into(),
-            constant_type: value.constant_type.name().into(),
+            constant_type: value.constant_type.into(),
             constant_value: value.constant_value.into(),
         }
     }
@@ -189,7 +189,7 @@ impl From<ast::Constant<'_>> for Constant {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Value {
     pub inner_name: InnerValueName,
-    pub inner_type: InnerType,
+    pub inner_type: Type,
     pub mutable: bool,
     pub alloca: bool,
     pub malloc: bool,
@@ -207,8 +207,8 @@ pub struct Value {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Function {
     pub inner_name: FunctionName,
-    pub inner_type: InnerType,
-    pub parameters: Vec<InnerType>,
+    pub inner_type: Type,
+    pub parameters: Vec<Type>,
 }
 
 /// # Expression result
@@ -217,7 +217,7 @@ pub struct Function {
 /// - `expr_value` - result value of expression
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExpressionResult {
-    pub expr_type: InnerType,
+    pub expr_type: Type,
     pub expr_value: ExpressionResultValue,
 }
 
@@ -422,7 +422,7 @@ impl TypeAttributes for StructTypes {
         self.attributes.contains_key(&attr_name)
     }
     fn is_method(&self, method_name: String) -> bool {
-        self.attributes.contains_key(&method_name)
+        self.methods.contains_key(&method_name)
     }
 }
 
@@ -432,10 +432,10 @@ impl From<ast::StructTypes<'_>> for StructTypes {
             name: value.name(),
             attributes: {
                 let mut res = HashMap::new();
-
-                for val in value.attributes {
+                for (index, val) in value.attributes.iter().enumerate() {
                     let name = (*val.attr_name.fragment()).to_string();
-                    let v = val.clone().into();
+                    let mut v: StructType = val.clone().into();
+                    v.attr_index = index as u32;
                     res.insert(name, v);
                 }
                 res
