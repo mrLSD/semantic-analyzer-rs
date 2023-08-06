@@ -1,8 +1,8 @@
 use crate::utils::SemanticTest;
-use semantic_analyzer_rs::ast;
-use semantic_analyzer_rs::semantic::BlockState;
-use semantic_analyzer_rs::types::error::StateErrorKind;
-use semantic_analyzer_rs::types::{ExpressionResultValue, PrimitiveTypes, Type, Value};
+use semantic_analyzer::ast;
+use semantic_analyzer::semantic::BlockState;
+use semantic_analyzer::types::error::StateErrorKind;
+use semantic_analyzer::types::{ExpressionResultValue, PrimitiveTypes, Type, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
 

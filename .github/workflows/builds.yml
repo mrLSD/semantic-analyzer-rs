@@ -5,7 +5,7 @@ on:
       - develop
   pull_request:
 
-name: build
+name: Build
 jobs:
   release:
     name: release

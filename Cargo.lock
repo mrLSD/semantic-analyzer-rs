@@ -42,8 +42,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "semantic-analyzer-rs"
-version = "0.1.0"
+name = "semantic-analyzer"
+version = "0.0.0"
 dependencies = [
  "nom_locate",
 ]

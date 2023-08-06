@@ -1,6 +1,6 @@
-use semantic_analyzer_rs::codegen::CodegenStack;
-use semantic_analyzer_rs::semantic::State;
-use semantic_analyzer_rs::types::error::StateErrorKind;
+use semantic_analyzer::codegen::CodegenStack;
+use semantic_analyzer::semantic::State;
+use semantic_analyzer::types::error::StateErrorKind;
 
 pub struct SemanticTest {
     pub state: State<CodegenStack>,
