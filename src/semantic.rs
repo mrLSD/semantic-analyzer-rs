@@ -249,14 +249,24 @@ impl<T: Codegen> State<T> {
         // Execute each kind of analyzing and return errors data.
         // For functions - fetch only declaration for fast-forward
         // identification for using it in functions body.
+
+        // First pass is Imports and Types
         for main in data.iter() {
             match main {
                 ast::MainStatement::Import(import) => self.import(import),
-                ast::MainStatement::Constant(constant) => self.constant(constant),
                 ast::MainStatement::Types(types) => self.types(types),
-                ast::MainStatement::Function(function) => self.function_declaration(function),
+                _ => (),
             }
         }
+        // Declaration pass for Constants and Functions
+        for main in data.iter() {
+            match main {
+                ast::MainStatement::Constant(constant) => self.constant(constant),
+                ast::MainStatement::Function(function) => self.function_declaration(function),
+                _ => (),
+            }
+        }
+
         // After getting all functions declarations, fetch only functions body
         for main in data.iter() {
             if let ast::MainStatement::Function(function) = main {
@@ -286,9 +296,8 @@ impl<T: Codegen> State<T> {
             ));
             return;
         }
-        self.global
-            .types
-            .insert(data.name().into(), Type::Struct(data.clone().into()));
+        let struct_type = Type::Struct(data.clone().into());
+        self.global.types.insert(struct_type.name(), struct_type);
         self.codegen.types(&data.clone().into());
     }
 
@@ -302,10 +311,25 @@ impl<T: Codegen> State<T> {
             ));
             return;
         }
+        let const_val: Constant = data.clone().into();
+        // Check types`
+        if !self
+            .global
+            .types
+            .contains_key(&const_val.constant_type.name())
+        {
+            self.add_error(error::StateErrorResult::new(
+                error::StateErrorKind::TypeNotFound,
+                const_val.name.to_string(),
+                data.location(),
+            ));
+            return;
+        }
+
         self.global
             .constants
-            .insert(data.name().into(), data.clone().into());
-        self.codegen.constant(&data.clone().into());
+            .insert(const_val.name.clone(), const_val.clone());
+        self.codegen.constant(&const_val);
     }
 
     /// Function declaration analyze. Add it to Global State/

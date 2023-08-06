@@ -924,6 +924,7 @@ pub mod error {
         FunctionParameterTypeWrong,
         ReturnNotFound,
         IfElseDuplicated,
+        TypeNotFound,
     }
 
     #[derive(Debug, Clone)]
