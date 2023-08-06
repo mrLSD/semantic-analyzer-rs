@@ -1109,7 +1109,7 @@ impl<T: Codegen> State<T> {
                 // Just return primitive value itself
                 ExpressionResult {
                     expr_type: value.get_type().into(),
-                    expr_value: ExpressionResultValue::PrimitiveValue(value.clone()),
+                    expr_value: ExpressionResultValue::PrimitiveValue(value.clone().into()),
                 }
             }
             // Check is expression Function call entity

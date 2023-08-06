@@ -1,10 +1,14 @@
 [package]
-name = "semantic-analyzer-rs"
-version = "0.1.0"
+name = "semantic-analyzer"
+version = "0.0.0"
 authors = ["Evgeny Ukhanov <mrlsd@ya.ru>"]
-description = " Semantic analyzer library for compilers written in Rust for semantic analysis of programming languages, with code generation for any backend."
+description = "Semantic analyzer library for compilers written in Rust for semantic analysis of programming languages AST"
+keywords = ["compiler", "semantic-analisis", "semantic", "semantic-alalyzer", "ast", "compiler-design", "programming-language", "compiler-constriction"]
+categories = ["compilers", "development-tools", "development-tools::build-utils"]
 license = "MIT"
 edition = "2021"
+homepage = "https://github.com/mrLSD/semantic-analyzer-rs"
+repository = "https://github.com/mrLSD/semantic-analyzer-rs"
 
 [lib]
 doctest = false

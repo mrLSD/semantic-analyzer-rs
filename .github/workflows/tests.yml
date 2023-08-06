@@ -5,10 +5,10 @@ on:
       - develop
   pull_request:
 
-name: Build
+name: Tests
 jobs:
-  release:
-    name: release
+  lint:
+    name: Tests
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -16,7 +16,7 @@ jobs:
           - ubuntu-latest
         rust:
           - stable
-    
+
     steps:
       - uses: actions/checkout@v2
         with:
@@ -37,5 +37,6 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Build
-        run: cargo build --release
+      - name: Test
+        run: cargo test --all
+

@@ -4,11 +4,14 @@ use crate::types::{
 };
 
 #[allow(dead_code, clippy::module_name_repetitions)]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct CodegenStack(Vec<StackKind>);
 
 impl CodegenStack {
-    #[allow(dead_code)]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn push(&mut self, value: StackKind) {
         self.0.push(value);
     }
