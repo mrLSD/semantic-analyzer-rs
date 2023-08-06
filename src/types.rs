@@ -51,6 +51,12 @@ impl From<String> for InnerValueName {
     }
 }
 
+impl From<&str> for InnerValueName {
+    fn from(value: &str) -> Self {
+        Self(value.to_string())
+    }
+}
+
 impl ToString for InnerValueName {
     fn to_string(&self) -> String {
         self.0.clone()
@@ -212,7 +218,7 @@ pub struct ExpressionResult {
 ///   evaluation or call.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionResultValue {
-    PrimitiveValue(ast::PrimitiveValue),
+    PrimitiveValue(PrimitiveValue),
     Register(u64),
 }
 
@@ -909,7 +915,7 @@ pub mod error {
     #[derive(Debug, Clone)]
     pub struct StateError(pub StateErrorKind);
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Eq, PartialEq)]
     pub enum StateErrorKind {
         /// Common error indicate errors in the State
         Common,

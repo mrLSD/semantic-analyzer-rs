@@ -1,10 +1,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build](https://github.com/mrLSD/z-rose/actions/workflows/builds.yml/badge.svg)](https://github.com/mrLSD/z-rose/actions/workflows/builds.yml)
 [![Lints](https://github.com/mrLSD/z-rose/actions/workflows/lints.yml/badge.svg)](https://github.com/mrLSD/z-rose/actions/workflows/lints.yml)
-<center>
-<h1><code>mrLSD/<b>semantic-analyzer-rs</b></code></h1>
-</center>
-<hr width="300px"/>
+[![Tests](https://github.com/mrLSD/z-rose/actions/workflows/tests.yml/badge.svg)](https://github.com/mrLSD/z-rose/actions/workflows/tests.yml)
+
+<div style="text-align: center;">
+    <h1><code>mrLSD/<b>semantic-analyzer-rs</b></code></h1>
+</div>
 
 Semantic analyzer is an open source semantic analyzer for programming languages 
 that makes it easy to build your own efficient compilers.
@@ -30,6 +31,8 @@ This can include dead code elimination, expression simplification, etc.
 - **Code Generation**: This is the final stage where the compiler transforms the optimized intermediate representation (IR) into 
 machine code specific to the target architecture.
 
-This libraru represent **Semantic Analysis** stage.
+This library represent **Semantic Analysis** stage.
 
-### MIT [LICENSE](LICENSE)
+### Features
+
+## MIT [LICENSE](LICENSE)
