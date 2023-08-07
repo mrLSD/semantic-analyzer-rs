@@ -16,7 +16,7 @@ use crate::codegen::Codegen;
 use crate::types::error::{self, EmptyError};
 use crate::types::{
     Constant, ConstantName, ExpressionResult, ExpressionResultValue, Function, FunctionName,
-    InnerValueName, LabelName, StateResult, Type, TypeName, Value, ValueName,
+    FunctionStatement, InnerValueName, LabelName, StateResult, Type, TypeName, Value, ValueName,
 };
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -240,8 +240,27 @@ impl<T: Codegen> State<T> {
         }
     }
 
+    /// Gather errors
     fn add_error(&mut self, err: error::StateErrorResult) {
         self.errors.push(err);
+    }
+
+    /// Check is value type exists in Global State
+    fn check_type_exists(
+        &mut self,
+        type_name: &Type,
+        val_name: &impl ToString,
+        location: &impl GetLocation,
+    ) -> Result<(), EmptyError> {
+        if !self.global.types.contains_key(&type_name.name()) {
+            self.add_error(error::StateErrorResult::new(
+                error::StateErrorKind::TypeNotFound,
+                val_name.to_string(),
+                location.location(),
+            ));
+            return Err(EmptyError);
+        }
+        Ok(())
     }
 
     /// Run semantic analyzer that covers all flow
@@ -312,20 +331,12 @@ impl<T: Codegen> State<T> {
             return;
         }
         let const_val: Constant = data.clone().into();
-        // Check types`
-        if !self
-            .global
-            .types
-            .contains_key(&const_val.constant_type.name())
+        if self
+            .check_type_exists(&const_val.constant_type, &const_val.name, data)
+            .is_err()
         {
-            self.add_error(error::StateErrorResult::new(
-                error::StateErrorKind::TypeNotFound,
-                const_val.name.to_string(),
-                data.location(),
-            ));
             return;
         }
-
         self.global
             .constants
             .insert(const_val.name.clone(), const_val.clone());
@@ -342,16 +353,36 @@ impl<T: Codegen> State<T> {
             ));
             return;
         }
+        let func_decl: FunctionStatement = data.clone().into();
+        let mut force_quite = false;
+        let _ = self
+            .check_type_exists(&func_decl.result_type, &func_decl.name, data)
+            .map_err(|_| {
+                force_quite = true;
+            });
+        // Fetch parameters and check types
+        let parameters = func_decl
+            .parameters
+            .iter()
+            .map(|p| {
+                let _ = self
+                    .check_type_exists(&p.parameter_type, p, data)
+                    .map_err(|_| {
+                        force_quite = true;
+                    });
+                p.parameter_type.clone()
+            })
+            .collect();
+        // Force quite if errors
+        if force_quite {
+            return;
+        }
         self.global.functions.insert(
             data.name().into(),
             Function {
-                inner_name: data.name().into(),
-                inner_type: data.result_type.clone().into(),
-                parameters: data
-                    .parameters
-                    .iter()
-                    .map(|p| p.parameter_type.clone().into())
-                    .collect(),
+                inner_name: func_decl.name,
+                inner_type: func_decl.result_type,
+                parameters,
             },
         );
         self.codegen.function_declaration(&data.clone().into());
@@ -385,8 +416,10 @@ impl<T: Codegen> State<T> {
                     self.loop_statement(loop_statement, &body_state);
                 }
                 ast::BodyStatement::Expression(expression) => {
-                    let expr_result = self.expression(expression, &body_state);
-                    let _ = expr_result.map(|res| {
+                    let _ = self.expression(expression, &body_state).map(|res| {
+                        // let ex: Expression = expression.into();
+                        // let _ = self.check_type_exists(&res.expr_type, expression, expression);
+
                         return_is_called = true;
                         // Check is state contain flag of manual
                         // return from other states, for example:

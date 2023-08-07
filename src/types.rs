@@ -246,6 +246,12 @@ impl From<ast::FunctionParameter<'_>> for FunctionParameter {
     }
 }
 
+impl ToString for FunctionParameter {
+    fn to_string(&self) -> String {
+        self.name.0.clone()
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionStatement {
     pub name: FunctionName,
