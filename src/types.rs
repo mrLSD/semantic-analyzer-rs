@@ -41,6 +41,12 @@ impl From<String> for ValueName {
     }
 }
 
+impl ToString for ValueName {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
 /// Inner value name type
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct InnerValueName(String);
@@ -520,6 +526,18 @@ pub enum ExpressionValue {
     Expression(Box<Expression>),
 }
 
+impl ToString for ExpressionValue {
+    fn to_string(&self) -> String {
+        match self {
+            Self::ValueName(val) => val.clone().to_string(),
+            Self::PrimitiveValue(val) => val.clone().to_string(),
+            Self::StructValue(st_val) => st_val.clone().to_string(),
+            Self::FunctionCall(fn_call) => fn_call.clone().to_string(),
+            Self::Expression(val) => val.to_string(),
+        }
+    }
+}
+
 impl From<ast::ExpressionValue<'_>> for ExpressionValue {
     fn from(value: ast::ExpressionValue<'_>) -> Self {
         match value {
@@ -579,6 +597,12 @@ impl From<ast::ExpressionOperations> for ExpressionOperations {
 pub struct Expression {
     pub expression_value: ExpressionValue,
     pub operation: Option<(ExpressionOperations, Box<Expression>)>,
+}
+
+impl ToString for Expression {
+    fn to_string(&self) -> String {
+        self.expression_value.to_string()
+    }
 }
 
 impl From<ast::Expression<'_>> for Expression {
@@ -652,6 +676,28 @@ impl From<ast::PrimitiveValue> for PrimitiveValue {
     }
 }
 
+impl ToString for PrimitiveValue {
+    fn to_string(&self) -> String {
+        match self {
+            Self::U8(val) => val.clone().to_string(),
+            Self::U16(val) => val.clone().to_string(),
+            Self::U32(val) => val.clone().to_string(),
+            Self::U64(val) => val.clone().to_string(),
+            Self::I8(val) => val.clone().to_string(),
+            Self::I16(val) => val.clone().to_string(),
+            Self::I32(val) => val.clone().to_string(),
+            Self::I64(val) => val.clone().to_string(),
+            Self::F32(val) => val.clone().to_string(),
+            Self::F64(val) => val.clone().to_string(),
+            Self::Bool(val) => val.to_string(),
+            Self::String(s) => s.clone(),
+            Self::Char(c) => format!("{}", c),
+            Self::Ptr => "ptr".to_string(),
+            Self::None => "None".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructValues {
     pub name: String,
@@ -662,6 +708,12 @@ pub struct StructValues {
 pub struct StructValue {
     pub name: ValueName,
     pub attribute: ValueName,
+}
+
+impl ToString for StructValue {
+    fn to_string(&self) -> String {
+        self.name.to_string()
+    }
 }
 
 impl From<ast::StructValue<'_>> for StructValue {
@@ -677,6 +729,12 @@ impl From<ast::StructValue<'_>> for StructValue {
 pub struct FunctionCall {
     pub name: FunctionName,
     pub parameters: Vec<Expression>,
+}
+
+impl ToString for FunctionCall {
+    fn to_string(&self) -> String {
+        self.name.to_string()
+    }
 }
 
 impl From<ast::FunctionCall<'_>> for FunctionCall {

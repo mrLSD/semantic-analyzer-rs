@@ -15,8 +15,9 @@ use crate::ast::{self, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS}
 use crate::codegen::Codegen;
 use crate::types::error::{self, EmptyError};
 use crate::types::{
-    Constant, ConstantName, ExpressionResult, ExpressionResultValue, Function, FunctionName,
-    FunctionStatement, InnerValueName, LabelName, StateResult, Type, TypeName, Value, ValueName,
+    Constant, ConstantName, Expression, ExpressionResult, ExpressionResultValue, Function,
+    FunctionName, FunctionStatement, InnerValueName, LabelName, StateResult, Type, TypeName, Value,
+    ValueName,
 };
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -417,8 +418,11 @@ impl<T: Codegen> State<T> {
                 }
                 ast::BodyStatement::Expression(expression) => {
                     let _ = self.expression(expression, &body_state).map(|res| {
-                        // let ex: Expression = expression.into();
-                        // let _ = self.check_type_exists(&res.expr_type, expression, expression);
+                        let expr: Expression = expression.clone().into();
+                        // Check expression type
+                        let _ = self.check_type_exists(&res.expr_type, &expr, &expression.clone());
+                        let fn_ty: Type = data.result_type.clone().into();
+                        if fn_ty != res.expr_type {}
 
                         return_is_called = true;
                         // Check is state contain flag of manual
