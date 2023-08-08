@@ -15,9 +15,9 @@ use crate::ast::{self, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS}
 use crate::codegen::Codegen;
 use crate::types::error::{self, EmptyError};
 use crate::types::{
-    Constant, ConstantName, Expression, ExpressionResult, ExpressionResultValue, Function,
-    FunctionName, FunctionStatement, InnerValueName, LabelName, StateResult, Type, TypeName, Value,
-    ValueName,
+    Binding, Constant, ConstantName, Expression, ExpressionResult, ExpressionResultValue, Function,
+    FunctionCall, FunctionName, FunctionStatement, InnerValueName, LabelName, LetBinding,
+    StateResult, Type, TypeName, Value, ValueName,
 };
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -422,7 +422,13 @@ impl<T: Codegen> State<T> {
                         // Check expression type
                         let _ = self.check_type_exists(&res.expr_type, &expr, &expression.clone());
                         let fn_ty: Type = data.result_type.clone().into();
-                        if fn_ty != res.expr_type {}
+                        if fn_ty != res.expr_type {
+                            self.add_error(error::StateErrorResult::new(
+                                error::StateErrorKind::WrongReturnType,
+                                expr.to_string(),
+                                expression.location(),
+                            ));
+                        }
 
                         return_is_called = true;
                         // Check is state contain flag of manual
@@ -441,8 +447,19 @@ impl<T: Codegen> State<T> {
                     });
                 }
                 ast::BodyStatement::Return(expression) => {
-                    let expr_result = self.expression(expression, &body_state);
-                    let _ = expr_result.map(|res| {
+                    let _ = self.expression(expression, &body_state).map(|res| {
+                        let expr: Expression = expression.clone().into();
+                        // Check expression type
+                        let _ = self.check_type_exists(&res.expr_type, &expr, &expression.clone());
+                        let fn_ty: Type = data.result_type.clone().into();
+                        if fn_ty != res.expr_type {
+                            self.add_error(error::StateErrorResult::new(
+                                error::StateErrorKind::WrongReturnType,
+                                expr.to_string(),
+                                expression.location(),
+                            ));
+                        }
+
                         return_is_called = true;
                         // Check is state contain flag of manual
                         // return from other states, for example:
@@ -490,27 +507,30 @@ impl<T: Codegen> State<T> {
     ) -> Result<(), EmptyError> {
         // Call value analytics before putting let-value to state
         let expr_result = self.expression(&data.value, state)?;
+        let let_data: LetBinding = data.clone().into();
 
-        if let Some(ty) = data.clone().value_type {
-            if expr_result.expr_type != ty.into() {
+        if let Some(ty) = &let_data.value_type {
+            if &expr_result.expr_type != ty {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::WrongLetType,
-                    data.name(),
+                    let_data.to_string(),
                     data.location(),
                 ));
                 return Err(EmptyError);
             }
         }
-        let let_ty = expr_result.clone().expr_type;
+        let let_ty = expr_result.expr_type.clone();
 
         // Find value in current state and parent states
-        let value = state.borrow().get_value_name(&data.name().into());
+        let value = state.borrow().get_value_name(&let_data.name);
         // Calculate `inner_name` as unique for current and all parent states
         let inner_name = value.map_or_else(
             || {
                 // if value not found in all states check and set
                 // `inner_value` from value name
-                state.borrow().get_next_inner_name(&data.name().into())
+                state
+                    .borrow()
+                    .get_next_inner_name(&let_data.name.clone().into())
             },
             |val| {
                 // Increment inner value name counter for shadowed variable
@@ -522,7 +542,7 @@ impl<T: Codegen> State<T> {
         let value = Value {
             inner_name: inner_name.clone(),
             inner_type: let_ty,
-            mutable: data.mutable,
+            mutable: let_data.mutable,
             alloca: false,
             malloc: false,
         };
@@ -530,7 +550,7 @@ impl<T: Codegen> State<T> {
         state
             .borrow_mut()
             .values
-            .insert(data.name().into(), value.clone());
+            .insert(let_data.name, value.clone());
         // Set `inner_name` to current state and all parent states
         state.borrow_mut().set_inner_value_name(&inner_name);
 
@@ -552,15 +572,16 @@ impl<T: Codegen> State<T> {
     ) -> Result<(), EmptyError> {
         // Call value analytics before putting let-value to state
         let expr_result = self.expression(&data.value, state)?;
+        let bind_data: Binding = data.clone().into();
 
         // Find value in current state and parent states
         let value = state
             .borrow()
-            .get_value_name(&data.name().into())
+            .get_value_name(&bind_data.name)
             .ok_or_else(|| {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::ValueNotFound,
-                    data.name(),
+                    bind_data.to_string(),
                     data.location(),
                 ));
                 EmptyError
@@ -569,7 +590,7 @@ impl<T: Codegen> State<T> {
         if !value.mutable {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::ValueIsNotMutable,
-                data.name(),
+                bind_data.to_string(),
                 data.location(),
             ));
             return Err(EmptyError);
@@ -596,11 +617,12 @@ impl<T: Codegen> State<T> {
         data: &ast::FunctionCall<'_>,
         body_state: &Rc<RefCell<BlockState>>,
     ) -> Result<Type, EmptyError> {
+        let func_call_data: FunctionCall = data.clone().into();
         // Check is function exists in global functions stat
-        let Some(func_data) = self.global.functions.get(&data.name().into()).cloned() else {
+        let Some(func_data) = self.global.functions.get(&func_call_data.name).cloned() else {
             self.add_error(error::StateErrorResult::new(
                  error::StateErrorKind::FunctionNotFound,
-                 data.name(),
+                 func_call_data.to_string(),
                  data.location()
              ));
             return Err(EmptyError);

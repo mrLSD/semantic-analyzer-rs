@@ -51,6 +51,12 @@ impl ToString for ValueName {
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct InnerValueName(String);
 
+impl From<ValueName> for InnerValueName {
+    fn from(value: ValueName) -> Self {
+        Self(value.0)
+    }
+}
+
 impl From<String> for InnerValueName {
     fn from(value: String) -> Self {
         Self(value)
@@ -624,6 +630,12 @@ pub struct LetBinding {
     pub value: Box<Expression>,
 }
 
+impl ToString for LetBinding {
+    fn to_string(&self) -> String {
+        self.name.to_string()
+    }
+}
+
 impl From<ast::LetBinding<'_>> for LetBinding {
     fn from(value: ast::LetBinding<'_>) -> Self {
         Self {
@@ -805,6 +817,12 @@ impl From<ast::ExpressionCondition<'_>> for ExpressionCondition {
 pub struct Binding {
     pub name: ValueName,
     pub value: Box<Expression>,
+}
+
+impl ToString for Binding {
+    fn to_string(&self) -> String {
+        self.name.to_string()
+    }
 }
 
 impl From<ast::Binding<'_>> for Binding {
@@ -995,6 +1013,7 @@ pub mod error {
         ReturnNotFound,
         IfElseDuplicated,
         TypeNotFound,
+        WrongReturnType,
     }
 
     #[derive(Debug, Clone)]
