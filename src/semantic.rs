@@ -633,6 +633,7 @@ impl<T: Codegen> State<T> {
         // and set result to array
         let mut params: Vec<ExpressionResult> = vec![];
         for (i, expr) in data.parameters.iter().enumerate() {
+            // Types checked in expression, so we don't need additional check
             let expr_result = self.expression(expr, body_state)?;
             if expr_result.expr_type != func_data.parameters[i] {
                 self.add_error(error::StateErrorResult::new(
@@ -671,6 +672,27 @@ impl<T: Codegen> State<T> {
         // Unwrap result only after analysing
         let left_res = left_res?;
         let right_res = right_res?;
+
+        // Currently strict type comparison
+        if left_res.expr_type != right_res.expr_type {
+            self.add_error(error::StateErrorResult::new(
+                error::StateErrorKind::ConditionExpressionWrongType,
+                left_res.expr_type.to_string(),
+                data.left.left.location(),
+            ));
+            return Err(EmptyError);
+        }
+        match left_res.expr_type {
+            Type::Primitive(_) => (),
+            _ => {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ConditionExpressionNotSupported,
+                    left_res.expr_type.to_string(),
+                    data.left.left.location(),
+                ));
+                return Err(EmptyError);
+            }
+        }
 
         // Increase register counter before generate condition
         function_body_state.borrow_mut().inc_register();

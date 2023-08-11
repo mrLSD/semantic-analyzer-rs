@@ -1014,6 +1014,8 @@ pub mod error {
         IfElseDuplicated,
         TypeNotFound,
         WrongReturnType,
+        ConditionExpressionWrongType,
+        ConditionExpressionNotSupported,
     }
 
     #[derive(Debug, Clone)]
