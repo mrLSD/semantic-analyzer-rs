@@ -60,6 +60,8 @@ pub struct BlockState {
     pub manual_return: bool,
     /// Parent state
     pub parent: Option<Rc<RefCell<BlockState>>>,
+    /// children states
+    pub children: Vec<Rc<RefCell<BlockState>>>,
 }
 
 impl BlockState {
@@ -81,12 +83,17 @@ impl BlockState {
             );
         Self {
             values: HashMap::new(),
+            children: vec![],
             inner_values_name,
             labels,
             last_register_number,
             manual_return,
             parent,
         }
+    }
+
+    fn set_child(&mut self, child: Rc<RefCell<BlockState>>) {
+        self.children.push(child);
     }
 
     /// Set `last_register_number` for current and parent states
@@ -918,6 +925,9 @@ impl<T: Codegen> State<T> {
         let if_body_state = Rc::new(RefCell::new(BlockState::new(Some(
             function_body_state.clone(),
         ))));
+        function_body_state
+            .borrow_mut()
+            .set_child(if_body_state.clone());
 
         // Get labels name for if-begin, and if-end
         let label_if_begin = if_body_state
@@ -973,6 +983,9 @@ impl<T: Codegen> State<T> {
             let if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
                 function_body_state.clone(),
             ))));
+            function_body_state
+                .borrow_mut()
+                .set_child(if_else_body_state.clone());
             // Analyse if-else body: data.else_statement
             if let Some(else_body) = &data.else_statement {
                 match else_body {
@@ -1027,6 +1040,9 @@ impl<T: Codegen> State<T> {
         let loop_body_state = Rc::new(RefCell::new(BlockState::new(Some(
             function_body_state.clone(),
         ))));
+        function_body_state
+            .borrow_mut()
+            .set_child(loop_body_state.clone());
         // Get labels name for loop-begin, and loop-end
         let label_loop_begin = loop_body_state
             .borrow_mut()
