@@ -403,16 +403,17 @@ impl<T: Codegen> State<T> {
     pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) {
         // Init empty function body state
         let body_state = Rc::new(RefCell::new(BlockState::new(None)));
+        //self.add_body_state(body_state.clone());
         // Flag to indicate is function return called
         let mut return_is_called = false;
         // Fetch function elements and gather errors
         for body in &data.body {
             match body {
                 ast::BodyStatement::LetBinding(bind) => {
-                    let _ = self.let_binding(bind, &body_state);
+                    self.let_binding(bind, &body_state);
                 }
                 ast::BodyStatement::Binding(bind) => {
-                    let _ = self.binding(bind, &body_state);
+                    self.binding(bind, &body_state);
                 }
                 ast::BodyStatement::FunctionCall(fn_call) => {
                     let _ = self.function_call(fn_call, &body_state);
@@ -507,13 +508,13 @@ impl<T: Codegen> State<T> {
     /// 4. Insert value to current values state map: value `name` -> `Data`
     /// 5. Store `inner_name` in current and parent states
     /// 6. Codegen
-    pub fn let_binding(
-        &mut self,
-        data: &ast::LetBinding<'_>,
-        state: &Rc<RefCell<BlockState>>,
-    ) -> Result<(), EmptyError> {
+    pub fn let_binding(&mut self, data: &ast::LetBinding<'_>, state: &Rc<RefCell<BlockState>>) {
         // Call value analytics before putting let-value to state
-        let expr_result = self.expression(&data.value, state)?;
+        let expr_result = if let Ok(ex) = self.expression(&data.value, state) {
+            ex
+        } else {
+            return;
+        };
         let let_data: LetBinding = data.clone().into();
 
         if let Some(ty) = &let_data.value_type {
@@ -523,7 +524,7 @@ impl<T: Codegen> State<T> {
                     let_data.to_string(),
                     data.location(),
                 ));
-                return Err(EmptyError);
+                return;
             }
         }
         let let_ty = expr_result.expr_type.clone();
@@ -562,7 +563,6 @@ impl<T: Codegen> State<T> {
         state.borrow_mut().set_inner_value_name(&inner_name);
 
         self.codegen.let_binding(&value, &expr_result);
-        Ok(())
     }
 
     /// # Binding statement
@@ -572,27 +572,26 @@ impl<T: Codegen> State<T> {
     /// 2. Read value for current state.
     /// 3. Update value to current values state map: value `name` -> `Data`
     /// 4. Codegen with Store action
-    pub fn binding(
-        &mut self,
-        data: &ast::Binding<'_>,
-        state: &Rc<RefCell<BlockState>>,
-    ) -> Result<(), EmptyError> {
+    pub fn binding(&mut self, data: &ast::Binding<'_>, state: &Rc<RefCell<BlockState>>) {
         // Call value analytics before putting let-value to state
-        let expr_result = self.expression(&data.value, state)?;
+        let expr_result = if let Ok(ex) = self.expression(&data.value, state) {
+            ex
+        } else {
+            return;
+        };
         let bind_data: Binding = data.clone().into();
 
         // Find value in current state and parent states
-        let value = state
-            .borrow()
-            .get_value_name(&bind_data.name)
-            .ok_or_else(|| {
-                self.add_error(error::StateErrorResult::new(
-                    error::StateErrorKind::ValueNotFound,
-                    bind_data.to_string(),
-                    data.location(),
-                ));
-                EmptyError
-            })?;
+        let value = if let Some(val) = state.borrow().get_value_name(&bind_data.name) {
+            val
+        } else {
+            self.add_error(error::StateErrorResult::new(
+                error::StateErrorKind::ValueNotFound,
+                bind_data.to_string(),
+                data.location(),
+            ));
+            return;
+        };
         // Check is value mutable
         if !value.mutable {
             self.add_error(error::StateErrorResult::new(
@@ -600,11 +599,10 @@ impl<T: Codegen> State<T> {
                 bind_data.to_string(),
                 data.location(),
             ));
-            return Err(EmptyError);
+            return;
         }
 
         self.codegen.binding(&value, &expr_result);
-        Ok(())
     }
 
     /// # Function-call
@@ -748,10 +746,10 @@ impl<T: Codegen> State<T> {
         for body in body.iter() {
             match body {
                 ast::IfBodyStatement::LetBinding(bind) => {
-                    let _ = self.let_binding(bind, if_body_state);
+                    self.let_binding(bind, if_body_state);
                 }
                 ast::IfBodyStatement::Binding(bind) => {
-                    let _ = self.binding(bind, if_body_state);
+                    self.binding(bind, if_body_state);
                 }
                 ast::IfBodyStatement::FunctionCall(fn_call) => {
                     let _ = self.function_call(fn_call, if_body_state);
@@ -790,10 +788,10 @@ impl<T: Codegen> State<T> {
         for body in body.iter() {
             match body {
                 ast::IfLoopBodyStatement::LetBinding(bind) => {
-                    let _ = self.let_binding(bind, if_body_state);
+                    self.let_binding(bind, if_body_state);
                 }
                 ast::IfLoopBodyStatement::Binding(bind) => {
-                    let _ = self.binding(bind, if_body_state);
+                    self.binding(bind, if_body_state);
                 }
                 ast::IfLoopBodyStatement::FunctionCall(fn_call) => {
                     let _ = self.function_call(fn_call, if_body_state);
@@ -1058,10 +1056,10 @@ impl<T: Codegen> State<T> {
         for body in data.iter() {
             match body {
                 ast::LoopBodyStatement::LetBinding(bind) => {
-                    let _ = self.let_binding(bind, &loop_body_state);
+                    self.let_binding(bind, &loop_body_state);
                 }
                 ast::LoopBodyStatement::Binding(bind) => {
-                    let _ = self.binding(bind, &loop_body_state).map_err(|e| vec![e]);
+                    self.binding(bind, &loop_body_state);
                 }
                 ast::LoopBodyStatement::FunctionCall(fn_call) => {
                     let _ = self.function_call(fn_call, &loop_body_state);
