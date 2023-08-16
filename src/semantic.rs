@@ -16,8 +16,8 @@ use crate::codegen::Codegen;
 use crate::types::error::{self, EmptyError};
 use crate::types::{
     Binding, Constant, ConstantName, Expression, ExpressionResult, ExpressionResultValue, Function,
-    FunctionCall, FunctionName, FunctionStatement, InnerValueName, LabelName, LetBinding,
-    StateResult, Type, TypeName, Value, ValueName,
+    FunctionCall, FunctionName, FunctionStatement, InnerValueName, LabelName, LetBinding, Type,
+    TypeName, Value, ValueName,
 };
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -272,7 +272,7 @@ impl<T: Codegen> State<T> {
     }
 
     /// Run semantic analyzer that covers all flow
-    pub fn run(&mut self, data: &ast::Main<'_>) -> StateResult<()> {
+    pub fn run(&mut self, data: &ast::Main<'_>) {
         // Execute each kind of analyzing and return errors data.
         // For functions - fetch only declaration for fast-forward
         // identification for using it in functions body.
@@ -299,11 +299,6 @@ impl<T: Codegen> State<T> {
             if let ast::MainStatement::Function(function) = main {
                 self.function_body(function);
             }
-        }
-        if self.errors.is_empty() {
-            Ok(())
-        } else {
-            Err(error::StateError(error::StateErrorKind::Common))
         }
     }
 
@@ -424,10 +419,12 @@ impl<T: Codegen> State<T> {
                 ast::BodyStatement::Loop(loop_statement) => {
                     self.loop_statement(loop_statement, &body_state);
                 }
-                ast::BodyStatement::Expression(expression) => {
-                    let _ = self.expression(expression, &body_state).map(|res| {
+                ast::BodyStatement::Expression(expression)
+                | ast::BodyStatement::Return(expression) => {
+                    let expr_result = self.expression(expression, &body_state);
+                    if let Ok(res) = expr_result {
                         let expr: Expression = expression.clone().into();
-                        // Check expression type
+                        // Check expression type and do not exist from flow
                         let _ = self.check_type_exists(&res.expr_type, &expr, &expression.clone());
                         let fn_ty: Type = data.result_type.clone().into();
                         if fn_ty != res.expr_type {
@@ -452,37 +449,7 @@ impl<T: Codegen> State<T> {
                         } else {
                             self.codegen.expression_function_return(&res);
                         }
-                    });
-                }
-                ast::BodyStatement::Return(expression) => {
-                    let _ = self.expression(expression, &body_state).map(|res| {
-                        let expr: Expression = expression.clone().into();
-                        // Check expression type
-                        let _ = self.check_type_exists(&res.expr_type, &expr, &expression.clone());
-                        let fn_ty: Type = data.result_type.clone().into();
-                        if fn_ty != res.expr_type {
-                            self.add_error(error::StateErrorResult::new(
-                                error::StateErrorKind::WrongReturnType,
-                                expr.to_string(),
-                                expression.location(),
-                            ));
-                        }
-
-                        return_is_called = true;
-                        // Check is state contain flag of manual
-                        // return from other states, for example:
-                        // if-flow, loop-flow
-                        if body_state.borrow().manual_return {
-                            // First we put expression return calculation for case when
-                            // before in the state was return statement. So construct
-                            // return expression and jump to return label, set return
-                            // label and invoke after that read `return` value from all
-                            // previous returns and invoke return instruction itself.
-                            self.codegen.expression_function_return_with_label(&res);
-                        } else {
-                            self.codegen.expression_function_return(&res);
-                        }
-                    });
+                    }
                 }
             }
         }
@@ -665,7 +632,7 @@ impl<T: Codegen> State<T> {
         &mut self,
         data: &ast::ExpressionLogicCondition<'_>,
         function_body_state: &Rc<RefCell<BlockState>>,
-    ) -> Result<(), EmptyError> {
+    ) {
         // Analyse left expression of left condition
         let left_expr = &data.left.left;
         let left_res = self.expression(left_expr, function_body_state);
@@ -674,9 +641,14 @@ impl<T: Codegen> State<T> {
         let right_expr = &data.left.right;
         let right_res = self.expression(right_expr, function_body_state);
 
+        let (left_res, right_res) = if let (Ok(left_res), Ok(right_res)) = (left_res, right_res) {
+            (left_res, right_res)
+        } else {
+            return;
+        };
         // Unwrap result only after analysing
-        let left_res = left_res?;
-        let right_res = right_res?;
+        // let left_res = left_res?;
+        // let right_res = right_res?;
 
         // Currently strict type comparison
         if left_res.expr_type != right_res.expr_type {
@@ -685,7 +657,7 @@ impl<T: Codegen> State<T> {
                 left_res.expr_type.to_string(),
                 data.left.left.location(),
             ));
-            return Err(EmptyError);
+            return;
         }
         match left_res.expr_type {
             Type::Primitive(_) => (),
@@ -695,7 +667,7 @@ impl<T: Codegen> State<T> {
                     left_res.expr_type.to_string(),
                     data.left.left.location(),
                 ));
-                return Err(EmptyError);
+                return;
             }
         }
 
@@ -714,7 +686,7 @@ impl<T: Codegen> State<T> {
             // Get register form left operation
             let left_register_number = function_body_state.borrow().last_register_number;
             // Analyse recursively right part of condition
-            self.condition_expression(&right.1, function_body_state)?;
+            self.condition_expression(&right.1, function_body_state);
 
             // Get register form right operation of right side analyzing
             let right_register_number = function_body_state.borrow().last_register_number;
@@ -731,8 +703,6 @@ impl<T: Codegen> State<T> {
                 function_body_state.borrow().last_register_number,
             );
         }
-
-        Ok(())
     }
 
     /// # If-condition body
@@ -762,13 +732,13 @@ impl<T: Codegen> State<T> {
                 }
                 ast::IfBodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, if_body_state);
-                    let _ = expr_result.map(|res| {
+                    if let Ok(res) = expr_result {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
                         self.codegen.jump_function_return(&res);
                         if_body_state.borrow_mut().set_return();
-                    });
+                    };
                 }
             }
         }
@@ -809,13 +779,13 @@ impl<T: Codegen> State<T> {
                 }
                 ast::IfLoopBodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, if_body_state);
-                    let _ = expr_result.map(|res| {
+                    if let Ok(res) = expr_result {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
                         self.codegen.jump_function_return(&res);
                         if_body_state.borrow_mut().set_return();
-                    });
+                    }
                 }
                 ast::IfLoopBodyStatement::Continue => {
                     // Skip next loop  step and jump to the start
@@ -841,13 +811,18 @@ impl<T: Codegen> State<T> {
         label_if_else: &LabelName,
         label_if_end: &LabelName,
         is_else: bool,
-    ) -> Result<(), EmptyError> {
+    ) {
         // Analyse if-conditions
         match condition {
             // if condition represented just as expression
             ast::IfCondition::Single(expr) => {
                 // Calculate expression for single if-condition expression
-                let expr_result = self.expression(expr, if_body_state)?;
+                let expr_result = if let Ok(expr_result) = self.expression(expr, if_body_state) {
+                    expr_result
+                } else {
+                    return;
+                };
+
                 // Codegen for if-condition from expression and if-body start
                 if is_else {
                     self.codegen.if_condition_expression(
@@ -866,7 +841,7 @@ impl<T: Codegen> State<T> {
             // If condition contains logic condition expression
             ast::IfCondition::Logic(expr_logic) => {
                 // Analyse if-condition logic
-                let _ = self.condition_expression(expr_logic, if_body_state);
+                self.condition_expression(expr_logic, if_body_state);
                 // Codegen for if-condition-logic with if-body start
                 if is_else {
                     self.codegen.if_condition_logic(
@@ -883,7 +858,6 @@ impl<T: Codegen> State<T> {
                 }
             }
         }
-        Ok(())
     }
 
     /// # If-condition
@@ -946,7 +920,7 @@ impl<T: Codegen> State<T> {
         let is_else = data.else_if_statement.is_some() || data.else_if_statement.is_some();
 
         // Analyse if-conditions
-        let _ = self.if_condition_calculation(
+        self.if_condition_calculation(
             &data.condition,
             &if_body_state,
             &label_if_begin,
@@ -1075,13 +1049,13 @@ impl<T: Codegen> State<T> {
                 }
                 ast::LoopBodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, &loop_body_state);
-                    let _ = expr_result.map(|res| {
+                    if let Ok(res) = expr_result {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
                         self.codegen.jump_function_return(&res);
                         loop_body_state.borrow_mut().set_return();
-                    });
+                    }
                 }
                 ast::LoopBodyStatement::Break => {
                     // Break loop and jump to the end of loop
