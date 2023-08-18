@@ -19,7 +19,7 @@ fn expression_value_name_not_found() {
         operation: None,
     };
     let res = t.state.expression(&expr, &block_state);
-    assert!(res.is_err());
+    assert!(res.is_none());
     assert!(t.check_error(StateErrorKind::ValueNotFound));
 }
 

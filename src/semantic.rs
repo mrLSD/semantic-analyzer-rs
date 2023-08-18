@@ -13,7 +13,7 @@
 //! of generated code for next step - compilation generated raw program code.
 use crate::ast::{self, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
 use crate::codegen::Codegen;
-use crate::types::error::{self, EmptyError};
+use crate::types::error;
 use crate::types::{
     Binding, Constant, ConstantName, Expression, ExpressionResult, ExpressionResultValue, Function,
     FunctionCall, FunctionName, FunctionStatement, InnerValueName, LabelName, LetBinding, Type,
@@ -259,16 +259,16 @@ impl<T: Codegen> State<T> {
         type_name: &Type,
         val_name: &impl ToString,
         location: &impl GetLocation,
-    ) -> Result<(), EmptyError> {
+    ) -> bool {
         if !self.global.types.contains_key(&type_name.name()) {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::TypeNotFound,
                 val_name.to_string(),
                 location.location(),
             ));
-            return Err(EmptyError);
+            return false;
         }
-        Ok(())
+        true
     }
 
     /// Run semantic analyzer that covers all flow
@@ -334,10 +334,7 @@ impl<T: Codegen> State<T> {
             return;
         }
         let const_val: Constant = data.clone().into();
-        if self
-            .check_type_exists(&const_val.constant_type, &const_val.name, data)
-            .is_err()
-        {
+        if !self.check_type_exists(&const_val.constant_type, &const_val.name, data) {
             return;
         }
         self.global
@@ -357,22 +354,15 @@ impl<T: Codegen> State<T> {
             return;
         }
         let func_decl: FunctionStatement = data.clone().into();
-        let mut force_quite = false;
-        let _ = self
-            .check_type_exists(&func_decl.result_type, &func_decl.name, data)
-            .map_err(|_| {
-                force_quite = true;
-            });
+        let mut force_quite =
+            !self.check_type_exists(&func_decl.result_type, &func_decl.name, data);
+
         // Fetch parameters and check types
         let parameters = func_decl
             .parameters
             .iter()
             .map(|p| {
-                let _ = self
-                    .check_type_exists(&p.parameter_type, p, data)
-                    .map_err(|_| {
-                        force_quite = true;
-                    });
+                force_quite = force_quite || !self.check_type_exists(&p.parameter_type, p, data);
                 p.parameter_type.clone()
             })
             .collect();
@@ -398,7 +388,7 @@ impl<T: Codegen> State<T> {
     pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) {
         // Init empty function body state
         let body_state = Rc::new(RefCell::new(BlockState::new(None)));
-        //self.add_body_state(body_state.clone());
+        //TODO: self.add_body_state(body_state.clone());
         // Flag to indicate is function return called
         let mut return_is_called = false;
         // Fetch function elements and gather errors
@@ -422,7 +412,7 @@ impl<T: Codegen> State<T> {
                 ast::BodyStatement::Expression(expression)
                 | ast::BodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, &body_state);
-                    if let Ok(res) = expr_result {
+                    if let Some(res) = expr_result {
                         let expr: Expression = expression.clone().into();
                         // Check expression type and do not exist from flow
                         let _ = self.check_type_exists(&res.expr_type, &expr, &expression.clone());
@@ -477,9 +467,7 @@ impl<T: Codegen> State<T> {
     /// 6. Codegen
     pub fn let_binding(&mut self, data: &ast::LetBinding<'_>, state: &Rc<RefCell<BlockState>>) {
         // Call value analytics before putting let-value to state
-        let expr_result = if let Ok(ex) = self.expression(&data.value, state) {
-            ex
-        } else {
+        let Some(expr_result) = self.expression(&data.value, state) else {
             return;
         };
         let let_data: LetBinding = data.clone().into();
@@ -541,9 +529,7 @@ impl<T: Codegen> State<T> {
     /// 4. Codegen with Store action
     pub fn binding(&mut self, data: &ast::Binding<'_>, state: &Rc<RefCell<BlockState>>) {
         // Call value analytics before putting let-value to state
-        let expr_result = if let Ok(ex) = self.expression(&data.value, state) {
-            ex
-        } else {
+        let Some(expr_result) = self.expression(&data.value, state) else {
             return;
         };
         let bind_data: Binding = data.clone().into();
@@ -588,16 +574,16 @@ impl<T: Codegen> State<T> {
         &mut self,
         data: &ast::FunctionCall<'_>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> Result<Type, EmptyError> {
+    ) -> Option<Type> {
         let func_call_data: FunctionCall = data.clone().into();
         // Check is function exists in global functions stat
         let Some(func_data) = self.global.functions.get(&func_call_data.name).cloned() else {
             self.add_error(error::StateErrorResult::new(
-                 error::StateErrorKind::FunctionNotFound,
-                 func_call_data.to_string(),
-                 data.location()
-             ));
-            return Err(EmptyError);
+                error::StateErrorKind::FunctionNotFound,
+                func_call_data.to_string(),
+                data.location(),
+            ));
+            return None;
         };
         let fn_type = func_data.inner_type.clone();
 
@@ -623,7 +609,7 @@ impl<T: Codegen> State<T> {
         // Store always result to register even for void result
         self.codegen
             .call(&func_data, params, body_state.borrow().last_register_number);
-        Ok(fn_type)
+        Some(fn_type)
     }
 
     /// # condition-expression
@@ -641,9 +627,7 @@ impl<T: Codegen> State<T> {
         let right_expr = &data.left.right;
         let right_res = self.expression(right_expr, function_body_state);
 
-        let (left_res, right_res) = if let (Ok(left_res), Ok(right_res)) = (left_res, right_res) {
-            (left_res, right_res)
-        } else {
+        let (Some(left_res), Some(right_res)) = (left_res, right_res) else {
             return;
         };
         // Unwrap result only after analysing
@@ -732,7 +716,7 @@ impl<T: Codegen> State<T> {
                 }
                 ast::IfBodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, if_body_state);
-                    if let Ok(res) = expr_result {
+                    if let Some(res) = expr_result {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
@@ -747,7 +731,6 @@ impl<T: Codegen> State<T> {
     /// # If-condition loop body
     /// Analyze body for ant if condition:
     /// - if, else, if-else
-    #[allow(dead_code)]
     pub fn if_condition_loop_body(
         &mut self,
         body: &[ast::IfLoopBodyStatement<'_>],
@@ -779,7 +762,7 @@ impl<T: Codegen> State<T> {
                 }
                 ast::IfLoopBodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, if_body_state);
-                    if let Ok(res) = expr_result {
+                    if let Some(res) = expr_result {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
@@ -817,9 +800,7 @@ impl<T: Codegen> State<T> {
             // if condition represented just as expression
             ast::IfCondition::Single(expr) => {
                 // Calculate expression for single if-condition expression
-                let expr_result = if let Ok(expr_result) = self.expression(expr, if_body_state) {
-                    expr_result
-                } else {
+                let Some(expr_result) = self.expression(expr, if_body_state) else {
                     return;
                 };
 
@@ -1049,7 +1030,7 @@ impl<T: Codegen> State<T> {
                 }
                 ast::LoopBodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, &loop_body_state);
-                    if let Ok(res) = expr_result {
+                    if let Some(res) = expr_result {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
@@ -1103,7 +1084,7 @@ impl<T: Codegen> State<T> {
         &mut self,
         data: &ast::Expression<'_>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> Result<ExpressionResult, EmptyError> {
+    ) -> Option<ExpressionResult> {
         // Fold expression operations priority
         let expr = Self::expression_operations_priority(data.clone());
         // To analyze expression first time, we set:
@@ -1126,7 +1107,7 @@ impl<T: Codegen> State<T> {
         right_expression: &ast::Expression<'_>,
         op: Option<&ast::ExpressionOperations>,
         body_state: &Rc<RefCell<BlockState>>,
-    ) -> Result<ExpressionResult, EmptyError> {
+    ) -> Option<ExpressionResult> {
         // Get right side value from expression.
         // If expression return error immediately return error
         // because next analyzer should use success result.
@@ -1154,7 +1135,7 @@ impl<T: Codegen> State<T> {
                             .expression_const(const_val, body_state.borrow().last_register_number);
                         const_val.constant_type.clone()
                     } else {
-                        return Err(EmptyError);
+                        return None;
                     };
                     // Return result as register
                     ExpressionResult {
@@ -1170,7 +1151,7 @@ impl<T: Codegen> State<T> {
                         value.name(),
                         value.location(),
                     ));
-                    return Err(EmptyError);
+                    return None;
                 }
             }
             // Check is expression primitive value
@@ -1230,7 +1211,7 @@ impl<T: Codegen> State<T> {
                         value.name.name(),
                         value.name.location(),
                     ));
-                    return Err(EmptyError);
+                    return None;
                 }
             }
             ast::ExpressionValue::Expression(expr) => {
@@ -1268,7 +1249,7 @@ impl<T: Codegen> State<T> {
             // side expression
             self.expression_operation(Some(&expression_result), expr, Some(operation), body_state)
         } else {
-            Ok(expression_result)
+            Some(expression_result)
         }
     }
 

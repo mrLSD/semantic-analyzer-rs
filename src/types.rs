@@ -22,9 +22,6 @@ trait TypeAttributes {
     }
 }
 
-/// State result type - for single results
-pub type StateResult<T> = Result<T, error::StateError>;
-
 /// Value name type
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct ValueName(String);
@@ -990,9 +987,6 @@ impl From<ast::IfLoopBodyStatement<'_>> for IfLoopBodyStatement {
 #[allow(clippy::module_name_repetitions)]
 pub mod error {
     use crate::ast::CodeLocation;
-
-    #[derive(Debug, Clone)]
-    pub struct EmptyError;
 
     #[derive(Debug, Clone)]
     pub struct StateError(pub StateErrorKind);
