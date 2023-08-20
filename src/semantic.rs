@@ -231,6 +231,7 @@ pub struct GlobalState {
 pub struct State<T: Codegen> {
     pub global: GlobalState,
     pub codegen: T,
+    pub context: Vec<Rc<RefCell<BlockState>>>,
     pub errors: Vec<error::StateErrorResult>,
 }
 
@@ -244,6 +245,7 @@ impl<T: Codegen> State<T> {
                 constants: HashMap::new(),
             },
             codegen,
+            context: Vec::new(),
             errors: Vec::new(),
         }
     }
@@ -251,6 +253,11 @@ impl<T: Codegen> State<T> {
     /// Gather errors
     fn add_error(&mut self, err: error::StateErrorResult) {
         self.errors.push(err);
+    }
+
+    /// Add State context with body state context block
+    fn add_state_context(&mut self, state_body: Rc<RefCell<BlockState>>) {
+        self.context.push(state_body);
     }
 
     /// Check is value type exists in Global State
@@ -307,9 +314,8 @@ impl<T: Codegen> State<T> {
     pub const fn import(&self, _data: &ast::ImportPath<'_>) {}
 
     /// Types declaration analyzer. Add types to Global State.
+    /// Currently only one type kind: Structs
     pub fn types(&mut self, data: &ast::StructTypes<'_>) {
-        let _inner_type: Type = ast::Type::Struct(data.clone()).into();
-        //inner_type.name()
         if self.global.types.contains_key(&data.name().into()) {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::TypeAlreadyExist,
@@ -388,7 +394,7 @@ impl<T: Codegen> State<T> {
     pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) {
         // Init empty function body state
         let body_state = Rc::new(RefCell::new(BlockState::new(None)));
-        //TODO: self.add_body_state(body_state.clone());
+        self.add_state_context(body_state.clone());
         // Flag to indicate is function return called
         let mut return_is_called = false;
         // Fetch function elements and gather errors
@@ -401,7 +407,7 @@ impl<T: Codegen> State<T> {
                     self.binding(bind, &body_state);
                 }
                 ast::BodyStatement::FunctionCall(fn_call) => {
-                    let _ = self.function_call(fn_call, &body_state);
+                    self.function_call(fn_call, &body_state);
                 }
                 ast::BodyStatement::If(if_condition) => {
                     self.if_condition(if_condition, &body_state, None, None);
@@ -415,7 +421,7 @@ impl<T: Codegen> State<T> {
                     if let Some(res) = expr_result {
                         let expr: Expression = expression.clone().into();
                         // Check expression type and do not exist from flow
-                        let _ = self.check_type_exists(&res.expr_type, &expr, &expression.clone());
+                        self.check_type_exists(&res.expr_type, &expr, &expression.clone());
                         let fn_ty: Type = data.result_type.clone().into();
                         if fn_ty != res.expr_type {
                             self.add_error(error::StateErrorResult::new(
@@ -706,7 +712,7 @@ impl<T: Codegen> State<T> {
                     self.binding(bind, if_body_state);
                 }
                 ast::IfBodyStatement::FunctionCall(fn_call) => {
-                    let _ = self.function_call(fn_call, if_body_state);
+                    self.function_call(fn_call, if_body_state);
                 }
                 ast::IfBodyStatement::If(if_condition) => {
                     self.if_condition(if_condition, if_body_state, None, None);
@@ -747,7 +753,7 @@ impl<T: Codegen> State<T> {
                     self.binding(bind, if_body_state);
                 }
                 ast::IfLoopBodyStatement::FunctionCall(fn_call) => {
-                    let _ = self.function_call(fn_call, if_body_state);
+                    self.function_call(fn_call, if_body_state);
                 }
                 ast::IfLoopBodyStatement::If(if_condition) => {
                     self.if_condition(
@@ -1017,7 +1023,7 @@ impl<T: Codegen> State<T> {
                     self.binding(bind, &loop_body_state);
                 }
                 ast::LoopBodyStatement::FunctionCall(fn_call) => {
-                    let _ = self.function_call(fn_call, &loop_body_state);
+                    self.function_call(fn_call, &loop_body_state);
                 }
                 ast::LoopBodyStatement::If(if_condition) => self.if_condition(
                     if_condition,
