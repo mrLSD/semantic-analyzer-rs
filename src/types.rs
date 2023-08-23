@@ -1045,3 +1045,39 @@ pub mod error {
         }
     }
 }
+
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct SemanticStack(Vec<SemanticStackContext>);
+
+impl SemanticStack {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn push(&mut self, value: SemanticStackContext) {
+        self.0.push(value);
+    }
+
+    pub fn get(self) -> Vec<SemanticStackContext> {
+        self.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SemanticStackContext {
+    ExpressionValue {
+        expression: Value,
+    },
+    ExpressionStructValue {
+        expression: Value,
+        index: u64,
+    },
+    ExpressionConst {
+        expression: Constant,
+    },
+    ExpressionOperation {
+        operation: ExpressionOperations,
+        left_value: ExpressionResult,
+        right_value: ExpressionResult,
+    },
+}

@@ -13,7 +13,7 @@
 //! of generated code for next step - compilation generated raw program code.
 use crate::ast::{self, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
 use crate::codegen::Codegen;
-use crate::types::error;
+use crate::types::{error, SemanticStack};
 use crate::types::{
     Binding, Constant, ConstantName, Expression, ExpressionResult, ExpressionResultValue, Function,
     FunctionCall, FunctionName, FunctionStatement, InnerValueName, LabelName, LetBinding, Type,
@@ -62,6 +62,8 @@ pub struct BlockState {
     pub parent: Option<Rc<RefCell<BlockState>>>,
     /// children states
     pub children: Vec<Rc<RefCell<BlockState>>>,
+    /// Semantic stack context for Block state
+    pub context: SemanticStack,
 }
 
 impl BlockState {
@@ -89,6 +91,7 @@ impl BlockState {
             last_register_number,
             manual_return,
             parent,
+            context: SemanticStack::new(),
         }
     }
 
