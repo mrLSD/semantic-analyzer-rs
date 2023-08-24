@@ -1133,15 +1133,17 @@ impl<T: Codegen> State<T> {
                     body_state.borrow_mut().inc_register();
                     // First check value in body state
                     let ty = if let Some(val) = value_from_state {
-                        // If it's value then Load it to register
-                        self.codegen
-                            .expression_value(&val, body_state.borrow().last_register_number);
+                        body_state
+                            .borrow_mut()
+                            .context
+                            .expression_value(val.clone());
                         val.inner_type
                     } else if let Some(const_val) = self.global.constants.get(&value.name().into())
                     {
-                        // If value is constant load it to register
-                        self.codegen
-                            .expression_const(const_val, body_state.borrow().last_register_number);
+                        body_state
+                            .borrow_mut()
+                            .context
+                            .expression_const(const_val.clone());
                         const_val.constant_type.clone()
                     } else {
                         return None;
@@ -1206,6 +1208,10 @@ impl<T: Codegen> State<T> {
                         attr_index,
                         body_state.borrow().last_register_number,
                     );
+                    body_state
+                        .borrow_mut()
+                        .context
+                        .expression_struct_value(val.clone(), attr_index);
 
                     ExpressionResult {
                         expr_type: field_ty,

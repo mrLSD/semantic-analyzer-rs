@@ -1061,6 +1061,18 @@ impl SemanticStack {
     pub fn get(self) -> Vec<SemanticStackContext> {
         self.0
     }
+
+    pub fn expression_value(&mut self, expression: Value) {
+        self.push(SemanticStackContext::ExpressionValue { expression });
+    }
+
+    pub fn expression_const(&mut self, expression: Constant) {
+        self.push(SemanticStackContext::ExpressionConst { expression });
+    }
+
+    pub fn expression_struct_value(&mut self, expression: Value, index: u64) {
+        self.push(SemanticStackContext::ExpressionStructValue { expression, index });
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1068,12 +1080,12 @@ pub enum SemanticStackContext {
     ExpressionValue {
         expression: Value,
     },
+    ExpressionConst {
+        expression: Constant,
+    },
     ExpressionStructValue {
         expression: Value,
         index: u64,
-    },
-    ExpressionConst {
-        expression: Constant,
     },
     ExpressionOperation {
         operation: ExpressionOperations,
