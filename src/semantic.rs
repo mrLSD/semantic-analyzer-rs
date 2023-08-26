@@ -13,7 +13,7 @@
 //! of generated code for next step - compilation generated raw program code.
 use crate::ast::{self, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
 use crate::codegen::Codegen;
-use crate::types::{error, SemanticStack};
+use crate::types::{error, SemanticStack, StructValue, TypeAttributes};
 use crate::types::{
     Binding, Constant, ConstantName, Expression, ExpressionResult, ExpressionResultValue, Function,
     FunctionCall, FunctionName, FunctionStatement, InnerValueName, LabelName, LetBinding, Type,
@@ -1151,9 +1151,7 @@ impl<T: Codegen> State<T> {
                     // Return result as register
                     ExpressionResult {
                         expr_type: ty,
-                        expr_value: ExpressionResultValue::Register(
-                            body_state.borrow().last_register_number,
-                        ),
+                        expr_value: ExpressionResultValue::Register,
                     }
                 } else {
                     // If value doesn't exist
@@ -1182,34 +1180,49 @@ impl<T: Codegen> State<T> {
                 // Return result as register
                 ExpressionResult {
                     expr_type: func_call_ty,
-                    expr_value: ExpressionResultValue::Register(
-                        body_state.borrow().last_register_number,
-                    ),
+                    expr_value: ExpressionResultValue::Register,
                 }
             }
             ast::ExpressionValue::StructValue(value) => {
-                // Can be only Value form state, not constant
+                let struct_value: StructValue = value.clone().into();
+                // Can be only Value from state, not constant
                 // Get value from block state
-                let value_from_state = body_state
-                    .borrow_mut()
-                    .get_value_name(&value.name.name().into());
+                let value_from_state = body_state.borrow_mut().get_value_name(&struct_value.name);
                 if let Some(val) = value_from_state {
-                    // TODO: For type system we should get index of struct
-                    // attribute for `value.attribute` (now set default)
-                    let attr_index = 0;
-                    // TODO: For type system get attribute type of struct
-                    // field for `value.attribute` (now dummy)
-                    let field_ty = val.inner_type.clone();
+                    // Get attribute type
+                    let ty = val.inner_type.get_struct().or({
+                        self.add_error(error::StateErrorResult::new(
+                            error::StateErrorKind::ValueNotFound,
+                            value.name.name(),
+                            value.name.location(),
+                        ));
+                        None
+                    })?;
+                    let attr_ty = ty.get_attribute_type(&struct_value.attribute).or({
+                        self.add_error(error::StateErrorResult::new(
+                            error::StateErrorKind::ValueNotFound,
+                            value.name.name(),
+                            value.name.location(),
+                        ));
+                        None
+                    })?;
+                    let attr_index = ty.get_attribute_index(&struct_value.attribute).or({
+                        self.add_error(error::StateErrorResult::new(
+                            error::StateErrorKind::ValueNotFound,
+                            value.name.name(),
+                            value.name.location(),
+                        ));
+                        None
+                    })?;
+
                     body_state
                         .borrow_mut()
                         .context
                         .expression_struct_value(val.clone(), attr_index);
 
                     ExpressionResult {
-                        expr_type: field_ty,
-                        expr_value: ExpressionResultValue::Register(
-                            body_state.borrow().last_register_number,
-                        ),
+                        expr_type: attr_ty,
+                        expr_value: ExpressionResultValue::Register,
                     }
                 } else {
                     // If value doesn't exist
@@ -1244,7 +1257,7 @@ impl<T: Codegen> State<T> {
         }
         let expression_result = ExpressionResult {
             expr_type: right_value.expr_type,
-            expr_value: ExpressionResultValue::Register(body_state.borrow().last_register_number),
+            expr_value: ExpressionResultValue::Register,
         };
 
         // Check is for right value contain next operation
