@@ -64,43 +64,6 @@ impl Codegen for CodegenStack {
         });
     }
 
-    fn expression_value(&mut self, expression: &Value, register_number: u64) {
-        self.push(StackKind::ExpressionValue {
-            expression: expression.clone(),
-            register_number,
-        });
-    }
-
-    fn expression_struct_value(&mut self, expression: &Value, index: u64, register_number: u64) {
-        self.push(StackKind::ExpressionStructValue {
-            expression: expression.clone(),
-            index,
-            register_number,
-        });
-    }
-
-    fn expression_const(&mut self, expression: &Constant, register_number: u64) {
-        self.push(StackKind::ExpressionConst {
-            expression: expression.clone(),
-            register_number,
-        });
-    }
-
-    fn expression_operation(
-        &mut self,
-        operation: &ExpressionOperations,
-        left_value: &ExpressionResult,
-        right_value: &ExpressionResult,
-        register_number: u64,
-    ) {
-        self.push(StackKind::ExpressionOperation {
-            operation: operation.clone(),
-            left_value: left_value.clone(),
-            right_value: right_value.clone(),
-            register_number,
-        });
-    }
-
     fn expression_function_return(&mut self, expr_result: &ExpressionResult) {
         self.push(StackKind::ExpressionFunctionReturnWithLabel {
             expr_result: expr_result.clone(),
@@ -283,16 +246,6 @@ pub trait Codegen {
     fn let_binding(&mut self, let_decl: &Value, expr_result: &ExpressionResult);
     fn binding(&mut self, val: &Value, expr_result: &ExpressionResult);
     fn call(&mut self, call: &Function, params: Vec<ExpressionResult>, register_number: u64);
-    fn expression_value(&mut self, expression: &Value, register_number: u64);
-    fn expression_struct_value(&mut self, expression: &Value, index: u64, register_number: u64);
-    fn expression_const(&mut self, expression: &Constant, register_number: u64);
-    fn expression_operation(
-        &mut self,
-        operation: &ExpressionOperations,
-        left_value: &ExpressionResult,
-        right_value: &ExpressionResult,
-        register_number: u64,
-    );
     fn expression_function_return(&mut self, expr_result: &ExpressionResult);
     fn jump_function_return(&mut self, expr_result: &ExpressionResult);
     fn set_label(&mut self, label: &LabelName);

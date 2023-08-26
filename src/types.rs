@@ -1073,6 +1073,19 @@ impl SemanticStack {
     pub fn expression_struct_value(&mut self, expression: Value, index: u64) {
         self.push(SemanticStackContext::ExpressionStructValue { expression, index });
     }
+
+    pub fn expression_operation(
+        &mut self,
+        operation: ExpressionOperations,
+        left_value: ExpressionResult,
+        right_value: ExpressionResult,
+    ) {
+        self.push(SemanticStackContext::ExpressionOperation {
+            operation,
+            left_value,
+            right_value,
+        });
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1200,14 +1200,6 @@ impl<T: Codegen> State<T> {
                     // TODO: For type system get attribute type of struct
                     // field for `value.attribute` (now dummy)
                     let field_ty = val.inner_type.clone();
-
-                    // Increase register counter before loading value
-                    body_state.borrow_mut().inc_register();
-                    self.codegen.expression_struct_value(
-                        &val,
-                        attr_index,
-                        body_state.borrow().last_register_number,
-                    );
                     body_state
                         .borrow_mut()
                         .context
@@ -1244,13 +1236,10 @@ impl<T: Codegen> State<T> {
                 ));
             }
             // Call expression operation for: OP(left_value, right_value)
-            // and return result of that call as register
-            body_state.borrow_mut().inc_register();
-            self.codegen.expression_operation(
-                &op.clone().into(),
-                left_value,
-                &right_value,
-                body_state.borrow().last_register_number,
+            body_state.borrow_mut().context.expression_operation(
+                op.clone().into(),
+                left_value.clone(),
+                right_value.clone(),
             );
         }
         let expression_result = ExpressionResult {
