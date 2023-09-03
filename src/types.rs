@@ -992,6 +992,8 @@ pub mod error {
         TypeAlreadyExist,
         FunctionAlreadyExist,
         ValueNotFound,
+        ValueNotStruct,
+        ValueNotStructField,
         ValueIsNotMutable,
         FunctionNotFound,
         FunctionParameterTypeWrong,
@@ -1077,6 +1079,21 @@ impl SemanticStack {
             right_value,
         });
     }
+
+    pub fn call(&mut self, call: Function, params: Vec<ExpressionResult>) {
+        self.push(SemanticStackContext::Call { call, params });
+    }
+
+    pub fn let_binding(&mut self, let_decl: Value, expr_result: ExpressionResult) {
+        self.push(SemanticStackContext::LetBinding {
+            let_decl,
+            expr_result,
+        });
+    }
+
+    pub fn binding(&mut self, val: Value, expr_result: ExpressionResult) {
+        self.push(SemanticStackContext::Binding { val, expr_result });
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1095,5 +1112,17 @@ pub enum SemanticStackContext {
         operation: ExpressionOperations,
         left_value: ExpressionResult,
         right_value: ExpressionResult,
+    },
+    Call {
+        call: Function,
+        params: Vec<ExpressionResult>,
+    },
+    LetBinding {
+        let_decl: Value,
+        expr_result: ExpressionResult,
+    },
+    Binding {
+        val: Value,
+        expr_result: ExpressionResult,
     },
 }

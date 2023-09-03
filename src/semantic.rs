@@ -474,9 +474,13 @@ impl<T: Codegen> State<T> {
     /// 4. Insert value to current values state map: value `name` -> `Data`
     /// 5. Store `inner_name` in current and parent states
     /// 6. Codegen
-    pub fn let_binding(&mut self, data: &ast::LetBinding<'_>, state: &Rc<RefCell<BlockState>>) {
+    pub fn let_binding(
+        &mut self,
+        data: &ast::LetBinding<'_>,
+        function_state: &Rc<RefCell<BlockState>>,
+    ) {
         // Call value analytics before putting let-value to state
-        let Some(expr_result) = self.expression(&data.value, state) else {
+        let Some(expr_result) = self.expression(&data.value, function_state) else {
             return;
         };
         let let_data: LetBinding = data.clone().into();
@@ -494,20 +498,20 @@ impl<T: Codegen> State<T> {
         let let_ty = expr_result.expr_type.clone();
 
         // Find value in current state and parent states
-        let value = state.borrow().get_value_name(&let_data.name);
+        let value = function_state.borrow().get_value_name(&let_data.name);
         // Calculate `inner_name` as unique for current and all parent states
         let inner_name = value.map_or_else(
             || {
                 // if value not found in all states check and set
                 // `inner_value` from value name
-                state
+                function_state
                     .borrow()
                     .get_next_inner_name(&let_data.name.clone().into())
             },
             |val| {
                 // Increment inner value name counter for shadowed variable
                 // and check variable inner_name for and inner_values in current state
-                state.borrow().get_next_inner_name(&val.inner_name)
+                function_state.borrow().get_next_inner_name(&val.inner_name)
             },
         );
         // Set value parameters
@@ -519,14 +523,19 @@ impl<T: Codegen> State<T> {
             malloc: false,
         };
         // Value inserted only to current state by Value name and Value data
-        state
+        function_state
             .borrow_mut()
             .values
             .insert(let_data.name, value.clone());
         // Set `inner_name` to current state and all parent states
-        state.borrow_mut().set_inner_value_name(&inner_name);
+        function_state
+            .borrow_mut()
+            .set_inner_value_name(&inner_name);
 
-        self.codegen.let_binding(&value, &expr_result);
+        function_state
+            .borrow_mut()
+            .context
+            .let_binding(value, expr_result);
     }
 
     /// # Binding statement
@@ -536,15 +545,15 @@ impl<T: Codegen> State<T> {
     /// 2. Read value for current state.
     /// 3. Update value to current values state map: value `name` -> `Data`
     /// 4. Codegen with Store action
-    pub fn binding(&mut self, data: &ast::Binding<'_>, state: &Rc<RefCell<BlockState>>) {
+    pub fn binding(&mut self, data: &ast::Binding<'_>, function_state: &Rc<RefCell<BlockState>>) {
         // Call value analytics before putting let-value to state
-        let Some(expr_result) = self.expression(&data.value, state) else {
+        let Some(expr_result) = self.expression(&data.value, function_state) else {
             return;
         };
         let bind_data: Binding = data.clone().into();
 
         // Find value in current state and parent states
-        let value = if let Some(val) = state.borrow().get_value_name(&bind_data.name) {
+        let value = if let Some(val) = function_state.borrow().get_value_name(&bind_data.name) {
             val
         } else {
             self.add_error(error::StateErrorResult::new(
@@ -564,7 +573,10 @@ impl<T: Codegen> State<T> {
             return;
         }
 
-        self.codegen.binding(&value, &expr_result);
+        function_state
+            .borrow_mut()
+            .context
+            .binding(value, expr_result);
     }
 
     /// # Function-call
@@ -613,11 +625,8 @@ impl<T: Codegen> State<T> {
             params.push(expr_result);
         }
 
-        // Codegen for function-call
-        body_state.borrow_mut().inc_register();
         // Store always result to register even for void result
-        self.codegen
-            .call(&func_data, params, body_state.borrow().last_register_number);
+        body_state.borrow_mut().context.call(func_data, params);
         Some(fn_type)
     }
 
@@ -1126,34 +1135,9 @@ impl<T: Codegen> State<T> {
                 // Get value from block state
                 let value_from_state = body_state.borrow_mut().get_value_name(&value.name().into());
                 // Check is value exist in State or as Constant
-                if value_from_state.is_some()
-                    || self.global.constants.contains_key(&value.name().into())
+                if !(value_from_state.is_some()
+                    || self.global.constants.contains_key(&value.name().into()))
                 {
-                    // Increase register counter before loading value
-                    body_state.borrow_mut().inc_register();
-                    // First check value in body state
-                    let ty = if let Some(val) = value_from_state {
-                        body_state
-                            .borrow_mut()
-                            .context
-                            .expression_value(val.clone());
-                        val.inner_type
-                    } else if let Some(const_val) = self.global.constants.get(&value.name().into())
-                    {
-                        body_state
-                            .borrow_mut()
-                            .context
-                            .expression_const(const_val.clone());
-                        const_val.constant_type.clone()
-                    } else {
-                        return None;
-                    };
-                    // Return result as register
-                    ExpressionResult {
-                        expr_type: ty,
-                        expr_value: ExpressionResultValue::Register,
-                    }
-                } else {
                     // If value doesn't exist
                     self.add_error(error::StateErrorResult::new(
                         error::StateErrorKind::ValueNotFound,
@@ -1161,6 +1145,27 @@ impl<T: Codegen> State<T> {
                         value.location(),
                     ));
                     return None;
+                }
+                // First check value in body state
+                let ty = if let Some(val) = value_from_state {
+                    body_state
+                        .borrow_mut()
+                        .context
+                        .expression_value(val.clone());
+                    val.inner_type
+                } else if let Some(const_val) = self.global.constants.get(&value.name().into()) {
+                    body_state
+                        .borrow_mut()
+                        .context
+                        .expression_const(const_val.clone());
+                    const_val.constant_type.clone()
+                } else {
+                    return None;
+                };
+                // Return result as register
+                ExpressionResult {
+                    expr_type: ty,
+                    expr_value: ExpressionResultValue::Register,
                 }
             }
             // Check is expression primitive value
@@ -1187,10 +1192,11 @@ impl<T: Codegen> State<T> {
                 let struct_value: StructValue = value.clone().into();
                 // Can be only Value from state, not constant
                 // Get value from block state
-                let value_from_state = body_state.borrow_mut().get_value_name(&struct_value.name);
-                if let Some(val) = value_from_state {
-                    // Get attribute type
-                    let ty = val.inner_type.get_struct().or({
+                let val = body_state
+                    .borrow_mut()
+                    .get_value_name(&struct_value.name)
+                    .or({
+                        // If value doesn't exist
                         self.add_error(error::StateErrorResult::new(
                             error::StateErrorKind::ValueNotFound,
                             value.name.name(),
@@ -1198,40 +1204,40 @@ impl<T: Codegen> State<T> {
                         ));
                         None
                     })?;
-                    let attr_ty = ty.get_attribute_type(&struct_value.attribute).or({
-                        self.add_error(error::StateErrorResult::new(
-                            error::StateErrorKind::ValueNotFound,
-                            value.name.name(),
-                            value.name.location(),
-                        ));
-                        None
-                    })?;
-                    let attr_index = ty.get_attribute_index(&struct_value.attribute).or({
-                        self.add_error(error::StateErrorResult::new(
-                            error::StateErrorKind::ValueNotFound,
-                            value.name.name(),
-                            value.name.location(),
-                        ));
-                        None
-                    })?;
-
-                    body_state
-                        .borrow_mut()
-                        .context
-                        .expression_struct_value(val.clone(), attr_index);
-
-                    ExpressionResult {
-                        expr_type: attr_ty,
-                        expr_value: ExpressionResultValue::Register,
-                    }
-                } else {
-                    // If value doesn't exist
+                // Get attribute type
+                let ty = val.inner_type.get_struct().or({
                     self.add_error(error::StateErrorResult::new(
-                        error::StateErrorKind::ValueNotFound,
+                        error::StateErrorKind::ValueNotStruct,
                         value.name.name(),
                         value.name.location(),
                     ));
-                    return None;
+                    None
+                })?;
+                let attr_ty = ty.get_attribute_type(&struct_value.attribute).or({
+                    self.add_error(error::StateErrorResult::new(
+                        error::StateErrorKind::ValueNotStructField,
+                        value.name.name(),
+                        value.name.location(),
+                    ));
+                    None
+                })?;
+                let attr_index = ty.get_attribute_index(&struct_value.attribute).or({
+                    self.add_error(error::StateErrorResult::new(
+                        error::StateErrorKind::ValueNotStructField,
+                        value.name.name(),
+                        value.name.location(),
+                    ));
+                    None
+                })?;
+
+                body_state
+                    .borrow_mut()
+                    .context
+                    .expression_struct_value(val.clone(), attr_index);
+
+                ExpressionResult {
+                    expr_type: attr_ty,
+                    expr_value: ExpressionResultValue::Register,
                 }
             }
             ast::ExpressionValue::Expression(expr) => {
