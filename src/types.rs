@@ -1094,6 +1094,18 @@ impl SemanticStack {
     pub fn binding(&mut self, val: Value, expr_result: ExpressionResult) {
         self.push(SemanticStackContext::Binding { val, expr_result });
     }
+
+    pub fn function_declaration(&mut self, fn_decl: FunctionStatement) {
+        self.push(SemanticStackContext::FunctionDeclaration { fn_decl });
+    }
+
+    pub fn constant(&mut self, const_decl: Constant) {
+        self.push(SemanticStackContext::Constant { const_decl });
+    }
+
+    pub fn types(&mut self, type_decl: StructTypes) {
+        self.push(SemanticStackContext::Types { type_decl });
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1124,5 +1136,14 @@ pub enum SemanticStackContext {
     Binding {
         val: Value,
         expr_result: ExpressionResult,
+    },
+    FunctionDeclaration {
+        fn_decl: FunctionStatement,
+    },
+    Constant {
+        const_decl: Constant,
+    },
+    Types {
+        type_decl: StructTypes,
     },
 }

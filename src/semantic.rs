@@ -224,6 +224,7 @@ pub struct GlobalState {
     pub constants: HashMap<ConstantName, Constant>,
     pub types: HashMap<TypeName, Type>,
     pub functions: HashMap<FunctionName, Function>,
+    pub context: SemanticStack,
 }
 
 /// # State
@@ -246,6 +247,7 @@ impl<T: Codegen> State<T> {
                 functions: HashMap::new(),
                 types: HashMap::new(),
                 constants: HashMap::new(),
+                context: SemanticStack::new(),
             },
             codegen,
             context: Vec::new(),
@@ -329,7 +331,7 @@ impl<T: Codegen> State<T> {
         }
         let struct_type = Type::Struct(data.clone().into());
         self.global.types.insert(struct_type.name(), struct_type);
-        self.codegen.types(&data.clone().into());
+        self.global.context.types(data.clone().into());
     }
 
     /// Constant analyzer. Add it got Global State
@@ -349,7 +351,7 @@ impl<T: Codegen> State<T> {
         self.global
             .constants
             .insert(const_val.name.clone(), const_val.clone());
-        self.codegen.constant(&const_val);
+        self.global.context.constant(const_val);
     }
 
     /// Function declaration analyze. Add it to Global State/
@@ -387,7 +389,9 @@ impl<T: Codegen> State<T> {
                 parameters,
             },
         );
-        self.codegen.function_declaration(&data.clone().into());
+        self.global
+            .context
+            .function_declaration(data.clone().into());
     }
 
     /// Function body analyze.

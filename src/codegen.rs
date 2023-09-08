@@ -1,7 +1,4 @@
-use crate::types::{
-    Condition, Constant, ExpressionResult, FunctionStatement, LabelName, LogicCondition,
-    StructTypes,
-};
+use crate::types::{Condition, ExpressionResult, LabelName, LogicCondition};
 
 #[allow(dead_code, clippy::module_name_repetitions)]
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -18,30 +15,6 @@ impl CodegenStack {
 }
 
 impl Codegen for CodegenStack {
-    fn function_declaration(&mut self, fn_decl: &FunctionStatement) {
-        self.push(StackKind::FunctionDeclaration {
-            fn_decl: fn_decl.clone(),
-        });
-    }
-
-    fn constant(&mut self, const_decl: &Constant) {
-        self.push(StackKind::Constant {
-            const_decl: const_decl.clone(),
-        });
-    }
-
-    fn types(&mut self, type_decl: &StructTypes) {
-        self.push(StackKind::Types {
-            type_decl: type_decl.clone(),
-        });
-    }
-
-    fn function_statement(&mut self, fn_decl: &FunctionStatement) {
-        self.push(StackKind::FunctionStatement {
-            fn_decl: fn_decl.clone(),
-        });
-    }
-
     fn expression_function_return(&mut self, expr_result: &ExpressionResult) {
         self.push(StackKind::ExpressionFunctionReturnWithLabel {
             expr_result: expr_result.clone(),
@@ -132,19 +105,6 @@ impl Codegen for CodegenStack {
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum StackKind {
-    FunctionDeclaration {
-        fn_decl: FunctionStatement,
-    },
-    Constant {
-        const_decl: Constant,
-    },
-    Types {
-        type_decl: StructTypes,
-    },
-
-    FunctionStatement {
-        fn_decl: FunctionStatement,
-    },
     ExpressionFunctionReturn {
         expr_result: ExpressionResult,
     },
@@ -185,10 +145,6 @@ pub enum StackKind {
 }
 
 pub trait Codegen {
-    fn function_declaration(&mut self, fn_decl: &FunctionStatement);
-    fn constant(&mut self, const_decl: &Constant);
-    fn types(&mut self, type_decl: &StructTypes);
-    fn function_statement(&mut self, fn_decl: &FunctionStatement);
     fn expression_function_return(&mut self, expr_result: &ExpressionResult);
     fn jump_function_return(&mut self, expr_result: &ExpressionResult);
     fn set_label(&mut self, label: &LabelName);
