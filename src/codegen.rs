@@ -15,42 +15,9 @@ impl CodegenStack {
 }
 
 impl Codegen for CodegenStack {
-    fn expression_function_return(&mut self, expr_result: &ExpressionResult) {
-        self.push(StackKind::ExpressionFunctionReturnWithLabel {
-            expr_result: expr_result.clone(),
-        });
-    }
-
     fn jump_function_return(&mut self, expr_result: &ExpressionResult) {
         self.push(StackKind::JumpFunctionReturn {
             expr_result: expr_result.clone(),
-        });
-    }
-
-    fn set_label(&mut self, label: &LabelName) {
-        self.push(StackKind::SetLabel {
-            label: label.clone(),
-        });
-    }
-
-    fn expression_function_return_with_label(&mut self, expr_result: &ExpressionResult) {
-        self.push(StackKind::ExpressionFunctionReturnWithLabel {
-            expr_result: expr_result.clone(),
-        });
-    }
-
-    fn condition_expression(
-        &mut self,
-        left_result: &ExpressionResult,
-        right_result: &ExpressionResult,
-        condition: &Condition,
-        register_number: u64,
-    ) {
-        self.push(StackKind::ConditionExpression {
-            left_result: left_result.clone(),
-            right_result: right_result.clone(),
-            condition: condition.clone(),
-            register_number,
         });
     }
 
@@ -69,19 +36,6 @@ impl Codegen for CodegenStack {
         });
     }
 
-    fn if_condition_expression(
-        &mut self,
-        expr_result: &ExpressionResult,
-        label_if_begin: &LabelName,
-        label_if_end: &LabelName,
-    ) {
-        self.push(StackKind::IfConditionExpression {
-            expr_result: expr_result.clone(),
-            label_if_begin: label_if_begin.clone(),
-            label_if_end: label_if_end.clone(),
-        });
-    }
-
     fn if_condition_logic(
         &mut self,
         label_if_begin: &LabelName,
@@ -94,34 +48,13 @@ impl Codegen for CodegenStack {
             register_number,
         });
     }
-
-    fn jump_to(&mut self, label: &LabelName) {
-        self.push(StackKind::JumpTo {
-            label: label.clone(),
-        });
-    }
 }
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum StackKind {
-    ExpressionFunctionReturn {
-        expr_result: ExpressionResult,
-    },
     JumpFunctionReturn {
         expr_result: ExpressionResult,
-    },
-    SetLabel {
-        label: LabelName,
-    },
-    ExpressionFunctionReturnWithLabel {
-        expr_result: ExpressionResult,
-    },
-    ConditionExpression {
-        left_result: ExpressionResult,
-        right_result: ExpressionResult,
-        condition: Condition,
-        register_number: u64,
     },
     LogicCondition {
         left_condition_register: u64,
@@ -129,33 +62,15 @@ pub enum StackKind {
         logic_condition: LogicCondition,
         register_number: u64,
     },
-    IfConditionExpression {
-        expr_result: ExpressionResult,
-        label_if_begin: LabelName,
-        label_if_end: LabelName,
-    },
     IfConditionLogic {
         label_if_begin: LabelName,
         label_if_end: LabelName,
         register_number: u64,
     },
-    JumpTo {
-        label: LabelName,
-    },
 }
 
 pub trait Codegen {
-    fn expression_function_return(&mut self, expr_result: &ExpressionResult);
     fn jump_function_return(&mut self, expr_result: &ExpressionResult);
-    fn set_label(&mut self, label: &LabelName);
-    fn expression_function_return_with_label(&mut self, expr_result: &ExpressionResult);
-    fn condition_expression(
-        &mut self,
-        left_result: &ExpressionResult,
-        right_result: &ExpressionResult,
-        condition: &Condition,
-        register_number: u64,
-    );
     fn logic_condition(
         &mut self,
         left_condition_register: u64,
@@ -163,17 +78,10 @@ pub trait Codegen {
         logic_condition: &LogicCondition,
         register_number: u64,
     );
-    fn if_condition_expression(
-        &mut self,
-        expr_result: &ExpressionResult,
-        label_if_begin: &LabelName,
-        label_if_end: &LabelName,
-    );
     fn if_condition_logic(
         &mut self,
         label_if_begin: &LabelName,
         label_if_end: &LabelName,
         register_number: u64,
     );
-    fn jump_to(&mut self, label: &LabelName);
 }

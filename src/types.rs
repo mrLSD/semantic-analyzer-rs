@@ -1106,6 +1106,50 @@ impl SemanticStack {
     pub fn types(&mut self, type_decl: StructTypes) {
         self.push(SemanticStackContext::Types { type_decl });
     }
+
+    pub fn expression_function_return(&mut self, expr_result: ExpressionResult) {
+        self.push(SemanticStackContext::ExpressionFunctionReturnWithLabel { expr_result });
+    }
+
+    pub fn expression_function_return_with_label(&mut self, expr_result: ExpressionResult) {
+        self.push(SemanticStackContext::ExpressionFunctionReturnWithLabel { expr_result });
+    }
+
+    pub fn set_label(&mut self, label: LabelName) {
+        self.push(SemanticStackContext::SetLabel { label });
+    }
+
+    pub fn jump_to(&mut self, label: LabelName) {
+        self.push(SemanticStackContext::JumpTo { label });
+    }
+
+    pub fn if_condition_expression(
+        &mut self,
+        expr_result: ExpressionResult,
+        label_if_begin: LabelName,
+        label_if_end: LabelName,
+    ) {
+        self.push(SemanticStackContext::IfConditionExpression {
+            expr_result,
+            label_if_begin,
+            label_if_end,
+        });
+    }
+
+    pub fn condition_expression(
+        &mut self,
+        left_result: ExpressionResult,
+        right_result: ExpressionResult,
+        condition: Condition,
+        register_number: u64,
+    ) {
+        self.push(SemanticStackContext::ConditionExpression {
+            left_result,
+            right_result,
+            condition,
+            register_number,
+        });
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1145,5 +1189,28 @@ pub enum SemanticStackContext {
     },
     Types {
         type_decl: StructTypes,
+    },
+    ExpressionFunctionReturn {
+        expr_result: ExpressionResult,
+    },
+    ExpressionFunctionReturnWithLabel {
+        expr_result: ExpressionResult,
+    },
+    SetLabel {
+        label: LabelName,
+    },
+    JumpTo {
+        label: LabelName,
+    },
+    IfConditionExpression {
+        expr_result: ExpressionResult,
+        label_if_begin: LabelName,
+        label_if_end: LabelName,
+    },
+    ConditionExpression {
+        left_result: ExpressionResult,
+        right_result: ExpressionResult,
+        condition: Condition,
+        register_number: u64,
     },
 }

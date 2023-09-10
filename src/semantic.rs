@@ -448,9 +448,15 @@ impl<T: Codegen> State<T> {
                             // return expression and jump to return label, set return
                             // label and invoke after that read `return` value from all
                             // previous returns and invoke return instruction itself.
-                            self.codegen.expression_function_return_with_label(&res);
+                            body_state
+                                .borrow_mut()
+                                .context
+                                .expression_function_return_with_label(res);
                         } else {
-                            self.codegen.expression_function_return(&res);
+                            body_state
+                                .borrow_mut()
+                                .context
+                                .expression_function_return(res);
                         }
                     }
                 }
