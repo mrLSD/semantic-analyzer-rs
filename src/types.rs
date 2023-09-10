@@ -4,22 +4,12 @@ use crate::ast;
 use crate::ast::GetName;
 use std::collections::HashMap;
 
-trait TypeAttributes {
-    fn get_attribute_index(&self, _attr_name: String) -> Option<u32> {
-        None
-    }
-    fn get_attribute_type(&self, _attr_name: String) -> Option<Type> {
-        None
-    }
-    fn get_method(&self, _method_name: String) -> Option<FunctionName> {
-        None
-    }
-    fn is_attribute(&self, _name: String) -> bool {
-        false
-    }
-    fn is_method(&self, _name: String) -> bool {
-        false
-    }
+pub trait TypeAttributes {
+    fn get_attribute_index(&self, attr_name: &ValueName) -> Option<u32>;
+    fn get_attribute_type(&self, attr_name: &ValueName) -> Option<Type>;
+    fn get_method(&self, method_name: String) -> Option<FunctionName>;
+    fn is_attribute(&self, name: &ValueName) -> bool;
+    fn is_method(&self, name: String) -> bool;
 }
 
 /// Value name type
@@ -228,7 +218,7 @@ pub struct ExpressionResult {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionResultValue {
     PrimitiveValue(PrimitiveValue),
-    Register(u64),
+    Register,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -312,6 +302,13 @@ impl Type {
     pub fn name(&self) -> TypeName {
         self.to_string().into()
     }
+
+    pub fn get_struct(&self) -> Option<StructTypes> {
+        match self {
+            Self::Struct(ty) => Some(ty.clone()),
+            _ => None,
+        }
+    }
 }
 
 impl ToString for Type {
@@ -327,13 +324,13 @@ impl ToString for Type {
 }
 
 impl TypeAttributes for Type {
-    fn get_attribute_index(&self, attr_name: String) -> Option<u32> {
+    fn get_attribute_index(&self, attr_name: &ValueName) -> Option<u32> {
         match self {
             Self::Struct(st) => st.get_attribute_index(attr_name),
             _ => None,
         }
     }
-    fn get_attribute_type(&self, attr_name: String) -> Option<Type> {
+    fn get_attribute_type(&self, attr_name: &ValueName) -> Option<Type> {
         match self {
             Self::Struct(st) => st.get_attribute_type(attr_name),
             _ => None,
@@ -345,7 +342,7 @@ impl TypeAttributes for Type {
             _ => None,
         }
     }
-    fn is_attribute(&self, attr_name: String) -> bool {
+    fn is_attribute(&self, attr_name: &ValueName) -> bool {
         match self {
             Self::Struct(st) => st.is_attribute(attr_name),
             _ => false,
@@ -435,24 +432,24 @@ impl From<ast::PrimitiveTypes> for PrimitiveTypes {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct StructTypes {
     pub name: String,
-    pub attributes: HashMap<String, StructType>,
+    pub attributes: HashMap<ValueName, StructType>,
     pub methods: HashMap<String, FunctionName>,
 }
 
 impl TypeAttributes for StructTypes {
-    fn get_attribute_index(&self, attr_name: String) -> Option<u32> {
-        self.attributes.get(&attr_name).map(|attr| attr.attr_index)
+    fn get_attribute_index(&self, attr_name: &ValueName) -> Option<u32> {
+        self.attributes.get(attr_name).map(|attr| attr.attr_index)
     }
-    fn get_attribute_type(&self, attr_name: String) -> Option<Type> {
+    fn get_attribute_type(&self, attr_name: &ValueName) -> Option<Type> {
         self.attributes
-            .get(&attr_name)
+            .get(attr_name)
             .map(|attr| attr.attr_type.clone())
     }
     fn get_method(&self, method_name: String) -> Option<FunctionName> {
         self.methods.get(&method_name).cloned()
     }
-    fn is_attribute(&self, attr_name: String) -> bool {
-        self.attributes.contains_key(&attr_name)
+    fn is_attribute(&self, attr_name: &ValueName) -> bool {
+        self.attributes.contains_key(attr_name)
     }
     fn is_method(&self, method_name: String) -> bool {
         self.methods.contains_key(&method_name)
@@ -469,7 +466,7 @@ impl From<ast::StructTypes<'_>> for StructTypes {
                     let name = (*val.attr_name.fragment()).to_string();
                     let mut v: StructType = val.clone().into();
                     v.attr_index = index as u32;
-                    res.insert(name, v);
+                    res.insert(name.into(), v);
                 }
                 res
             },
@@ -480,7 +477,7 @@ impl From<ast::StructTypes<'_>> for StructTypes {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct StructType {
-    pub attr_name: String,
+    pub attr_name: ValueName,
     pub attr_index: u32,
     pub attr_type: Type,
 }
@@ -488,7 +485,7 @@ pub struct StructType {
 impl From<ast::StructType<'_>> for StructType {
     fn from(value: ast::StructType<'_>) -> Self {
         Self {
-            attr_name: value.name(),
+            attr_name: value.name().into(),
             attr_type: value.attr_type.into(),
             attr_index: 0,
         }
@@ -705,12 +702,6 @@ impl ToString for PrimitiveValue {
             Self::None => "None".to_string(),
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StructValues {
-    pub name: String,
-    pub types: Vec<StructValue>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1001,6 +992,8 @@ pub mod error {
         TypeAlreadyExist,
         FunctionAlreadyExist,
         ValueNotFound,
+        ValueNotStruct,
+        ValueNotStructField,
         ValueIsNotMutable,
         FunctionNotFound,
         FunctionParameterTypeWrong,
@@ -1044,4 +1037,213 @@ pub mod error {
             )
         }
     }
+}
+
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct SemanticStack(Vec<SemanticStackContext>);
+
+impl SemanticStack {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn push(&mut self, value: SemanticStackContext) {
+        self.0.push(value);
+    }
+
+    pub fn get(self) -> Vec<SemanticStackContext> {
+        self.0
+    }
+
+    pub fn expression_value(&mut self, expression: Value) {
+        self.push(SemanticStackContext::ExpressionValue { expression });
+    }
+
+    pub fn expression_const(&mut self, expression: Constant) {
+        self.push(SemanticStackContext::ExpressionConst { expression });
+    }
+
+    pub fn expression_struct_value(&mut self, expression: Value, index: u32) {
+        self.push(SemanticStackContext::ExpressionStructValue { expression, index });
+    }
+
+    pub fn expression_operation(
+        &mut self,
+        operation: ExpressionOperations,
+        left_value: ExpressionResult,
+        right_value: ExpressionResult,
+    ) {
+        self.push(SemanticStackContext::ExpressionOperation {
+            operation,
+            left_value,
+            right_value,
+        });
+    }
+
+    pub fn call(&mut self, call: Function, params: Vec<ExpressionResult>) {
+        self.push(SemanticStackContext::Call { call, params });
+    }
+
+    pub fn let_binding(&mut self, let_decl: Value, expr_result: ExpressionResult) {
+        self.push(SemanticStackContext::LetBinding {
+            let_decl,
+            expr_result,
+        });
+    }
+
+    pub fn binding(&mut self, val: Value, expr_result: ExpressionResult) {
+        self.push(SemanticStackContext::Binding { val, expr_result });
+    }
+
+    pub fn function_declaration(&mut self, fn_decl: FunctionStatement) {
+        self.push(SemanticStackContext::FunctionDeclaration { fn_decl });
+    }
+
+    pub fn constant(&mut self, const_decl: Constant) {
+        self.push(SemanticStackContext::Constant { const_decl });
+    }
+
+    pub fn types(&mut self, type_decl: StructTypes) {
+        self.push(SemanticStackContext::Types { type_decl });
+    }
+
+    pub fn expression_function_return(&mut self, expr_result: ExpressionResult) {
+        self.push(SemanticStackContext::ExpressionFunctionReturnWithLabel { expr_result });
+    }
+
+    pub fn expression_function_return_with_label(&mut self, expr_result: ExpressionResult) {
+        self.push(SemanticStackContext::ExpressionFunctionReturnWithLabel { expr_result });
+    }
+
+    pub fn set_label(&mut self, label: LabelName) {
+        self.push(SemanticStackContext::SetLabel { label });
+    }
+
+    pub fn jump_to(&mut self, label: LabelName) {
+        self.push(SemanticStackContext::JumpTo { label });
+    }
+
+    pub fn if_condition_expression(
+        &mut self,
+        expr_result: ExpressionResult,
+        label_if_begin: LabelName,
+        label_if_end: LabelName,
+    ) {
+        self.push(SemanticStackContext::IfConditionExpression {
+            expr_result,
+            label_if_begin,
+            label_if_end,
+        });
+    }
+
+    pub fn condition_expression(
+        &mut self,
+        left_result: ExpressionResult,
+        right_result: ExpressionResult,
+        condition: Condition,
+    ) {
+        self.push(SemanticStackContext::ConditionExpression {
+            left_result,
+            right_result,
+            condition,
+        });
+    }
+
+    pub fn jump_function_return(&mut self, expr_result: ExpressionResult) {
+        self.push(SemanticStackContext::JumpFunctionReturn { expr_result });
+    }
+
+    pub fn logic_condition(
+        &mut self,
+        left_condition_register: u64,
+        right_condition_register: u64,
+        logic_condition: LogicCondition,
+    ) {
+        self.push(SemanticStackContext::LogicCondition {
+            left_condition_register,
+            right_condition_register,
+            logic_condition,
+        });
+    }
+
+    pub fn if_condition_logic(&mut self, label_if_begin: LabelName, label_if_end: LabelName) {
+        self.push(SemanticStackContext::IfConditionLogic {
+            label_if_begin,
+            label_if_end,
+        });
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SemanticStackContext {
+    ExpressionValue {
+        expression: Value,
+    },
+    ExpressionConst {
+        expression: Constant,
+    },
+    ExpressionStructValue {
+        expression: Value,
+        index: u32,
+    },
+    ExpressionOperation {
+        operation: ExpressionOperations,
+        left_value: ExpressionResult,
+        right_value: ExpressionResult,
+    },
+    Call {
+        call: Function,
+        params: Vec<ExpressionResult>,
+    },
+    LetBinding {
+        let_decl: Value,
+        expr_result: ExpressionResult,
+    },
+    Binding {
+        val: Value,
+        expr_result: ExpressionResult,
+    },
+    FunctionDeclaration {
+        fn_decl: FunctionStatement,
+    },
+    Constant {
+        const_decl: Constant,
+    },
+    Types {
+        type_decl: StructTypes,
+    },
+    ExpressionFunctionReturn {
+        expr_result: ExpressionResult,
+    },
+    ExpressionFunctionReturnWithLabel {
+        expr_result: ExpressionResult,
+    },
+    SetLabel {
+        label: LabelName,
+    },
+    JumpTo {
+        label: LabelName,
+    },
+    IfConditionExpression {
+        expr_result: ExpressionResult,
+        label_if_begin: LabelName,
+        label_if_end: LabelName,
+    },
+    ConditionExpression {
+        left_result: ExpressionResult,
+        right_result: ExpressionResult,
+        condition: Condition,
+    },
+    JumpFunctionReturn {
+        expr_result: ExpressionResult,
+    },
+    LogicCondition {
+        left_condition_register: u64,
+        right_condition_register: u64,
+        logic_condition: LogicCondition,
+    },
+    IfConditionLogic {
+        label_if_begin: LabelName,
+        label_if_end: LabelName,
+    },
 }

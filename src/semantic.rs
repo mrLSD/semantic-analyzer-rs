@@ -12,8 +12,7 @@
 //! Codegen is result of Semantic analyzer and contains prepared data tree
 //! of generated code for next step - compilation generated raw program code.
 use crate::ast::{self, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
-use crate::codegen::Codegen;
-use crate::types::error;
+use crate::types::{error, SemanticStack, StructValue, TypeAttributes};
 use crate::types::{
     Binding, Constant, ConstantName, Expression, ExpressionResult, ExpressionResultValue, Function,
     FunctionCall, FunctionName, FunctionStatement, InnerValueName, LabelName, LetBinding, Type,
@@ -62,6 +61,8 @@ pub struct BlockState {
     pub parent: Option<Rc<RefCell<BlockState>>>,
     /// children states
     pub children: Vec<Rc<RefCell<BlockState>>>,
+    /// Semantic stack context for Block state
+    pub context: SemanticStack,
 }
 
 impl BlockState {
@@ -89,25 +90,12 @@ impl BlockState {
             last_register_number,
             manual_return,
             parent,
+            context: SemanticStack::new(),
         }
     }
 
     fn set_child(&mut self, child: Rc<RefCell<BlockState>>) {
         self.children.push(child);
-    }
-
-    /// Set `last_register_number` for current and parent states
-    fn set_register(&mut self, last_register_number: u64) {
-        self.last_register_number = last_register_number;
-        // Set `last_register_number` for parents
-        if let Some(parent) = &self.parent {
-            parent.borrow_mut().set_register(last_register_number);
-        }
-    }
-
-    /// Increment register
-    fn inc_register(&mut self) {
-        self.set_register(self.last_register_number + 1);
     }
 
     /// Set value inner name to current state and parent states
@@ -221,6 +209,7 @@ pub struct GlobalState {
     pub constants: HashMap<ConstantName, Constant>,
     pub types: HashMap<TypeName, Type>,
     pub functions: HashMap<FunctionName, Function>,
+    pub context: SemanticStack,
 }
 
 /// # State
@@ -228,22 +217,29 @@ pub struct GlobalState {
 /// and `Codegen` tree.
 /// - errors - State analyzing errors
 #[derive(Debug)]
-pub struct State<T: Codegen> {
+pub struct State {
     pub global: GlobalState,
-    pub codegen: T,
+    pub context: Vec<Rc<RefCell<BlockState>>>,
     pub errors: Vec<error::StateErrorResult>,
 }
 
-impl<T: Codegen> State<T> {
+impl Default for State {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl State {
     /// Init new `State`
-    pub fn new(codegen: T) -> Self {
+    pub fn new() -> Self {
         Self {
             global: GlobalState {
                 functions: HashMap::new(),
                 types: HashMap::new(),
                 constants: HashMap::new(),
+                context: SemanticStack::new(),
             },
-            codegen,
+            context: Vec::new(),
             errors: Vec::new(),
         }
     }
@@ -251,6 +247,11 @@ impl<T: Codegen> State<T> {
     /// Gather errors
     fn add_error(&mut self, err: error::StateErrorResult) {
         self.errors.push(err);
+    }
+
+    /// Add State context with body state context block
+    fn add_state_context(&mut self, state_body: Rc<RefCell<BlockState>>) {
+        self.context.push(state_body);
     }
 
     /// Check is value type exists in Global State
@@ -307,9 +308,8 @@ impl<T: Codegen> State<T> {
     pub const fn import(&self, _data: &ast::ImportPath<'_>) {}
 
     /// Types declaration analyzer. Add types to Global State.
+    /// Currently only one type kind: Structs
     pub fn types(&mut self, data: &ast::StructTypes<'_>) {
-        let _inner_type: Type = ast::Type::Struct(data.clone()).into();
-        //inner_type.name()
         if self.global.types.contains_key(&data.name().into()) {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::TypeAlreadyExist,
@@ -320,7 +320,7 @@ impl<T: Codegen> State<T> {
         }
         let struct_type = Type::Struct(data.clone().into());
         self.global.types.insert(struct_type.name(), struct_type);
-        self.codegen.types(&data.clone().into());
+        self.global.context.types(data.clone().into());
     }
 
     /// Constant analyzer. Add it got Global State
@@ -340,7 +340,7 @@ impl<T: Codegen> State<T> {
         self.global
             .constants
             .insert(const_val.name.clone(), const_val.clone());
-        self.codegen.constant(&const_val);
+        self.global.context.constant(const_val);
     }
 
     /// Function declaration analyze. Add it to Global State/
@@ -378,7 +378,9 @@ impl<T: Codegen> State<T> {
                 parameters,
             },
         );
-        self.codegen.function_declaration(&data.clone().into());
+        self.global
+            .context
+            .function_declaration(data.clone().into());
     }
 
     /// Function body analyze.
@@ -388,7 +390,7 @@ impl<T: Codegen> State<T> {
     pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) {
         // Init empty function body state
         let body_state = Rc::new(RefCell::new(BlockState::new(None)));
-        //TODO: self.add_body_state(body_state.clone());
+        self.add_state_context(body_state.clone());
         // Flag to indicate is function return called
         let mut return_is_called = false;
         // Fetch function elements and gather errors
@@ -401,7 +403,7 @@ impl<T: Codegen> State<T> {
                     self.binding(bind, &body_state);
                 }
                 ast::BodyStatement::FunctionCall(fn_call) => {
-                    let _ = self.function_call(fn_call, &body_state);
+                    self.function_call(fn_call, &body_state);
                 }
                 ast::BodyStatement::If(if_condition) => {
                     self.if_condition(if_condition, &body_state, None, None);
@@ -415,7 +417,7 @@ impl<T: Codegen> State<T> {
                     if let Some(res) = expr_result {
                         let expr: Expression = expression.clone().into();
                         // Check expression type and do not exist from flow
-                        let _ = self.check_type_exists(&res.expr_type, &expr, &expression.clone());
+                        self.check_type_exists(&res.expr_type, &expr, &expression.clone());
                         let fn_ty: Type = data.result_type.clone().into();
                         if fn_ty != res.expr_type {
                             self.add_error(error::StateErrorResult::new(
@@ -435,9 +437,15 @@ impl<T: Codegen> State<T> {
                             // return expression and jump to return label, set return
                             // label and invoke after that read `return` value from all
                             // previous returns and invoke return instruction itself.
-                            self.codegen.expression_function_return_with_label(&res);
+                            body_state
+                                .borrow_mut()
+                                .context
+                                .expression_function_return_with_label(res);
                         } else {
-                            self.codegen.expression_function_return(&res);
+                            body_state
+                                .borrow_mut()
+                                .context
+                                .expression_function_return(res);
                         }
                     }
                 }
@@ -465,9 +473,13 @@ impl<T: Codegen> State<T> {
     /// 4. Insert value to current values state map: value `name` -> `Data`
     /// 5. Store `inner_name` in current and parent states
     /// 6. Codegen
-    pub fn let_binding(&mut self, data: &ast::LetBinding<'_>, state: &Rc<RefCell<BlockState>>) {
+    pub fn let_binding(
+        &mut self,
+        data: &ast::LetBinding<'_>,
+        function_state: &Rc<RefCell<BlockState>>,
+    ) {
         // Call value analytics before putting let-value to state
-        let Some(expr_result) = self.expression(&data.value, state) else {
+        let Some(expr_result) = self.expression(&data.value, function_state) else {
             return;
         };
         let let_data: LetBinding = data.clone().into();
@@ -485,20 +497,20 @@ impl<T: Codegen> State<T> {
         let let_ty = expr_result.expr_type.clone();
 
         // Find value in current state and parent states
-        let value = state.borrow().get_value_name(&let_data.name);
+        let value = function_state.borrow().get_value_name(&let_data.name);
         // Calculate `inner_name` as unique for current and all parent states
         let inner_name = value.map_or_else(
             || {
                 // if value not found in all states check and set
                 // `inner_value` from value name
-                state
+                function_state
                     .borrow()
                     .get_next_inner_name(&let_data.name.clone().into())
             },
             |val| {
                 // Increment inner value name counter for shadowed variable
                 // and check variable inner_name for and inner_values in current state
-                state.borrow().get_next_inner_name(&val.inner_name)
+                function_state.borrow().get_next_inner_name(&val.inner_name)
             },
         );
         // Set value parameters
@@ -510,14 +522,19 @@ impl<T: Codegen> State<T> {
             malloc: false,
         };
         // Value inserted only to current state by Value name and Value data
-        state
+        function_state
             .borrow_mut()
             .values
             .insert(let_data.name, value.clone());
         // Set `inner_name` to current state and all parent states
-        state.borrow_mut().set_inner_value_name(&inner_name);
+        function_state
+            .borrow_mut()
+            .set_inner_value_name(&inner_name);
 
-        self.codegen.let_binding(&value, &expr_result);
+        function_state
+            .borrow_mut()
+            .context
+            .let_binding(value, expr_result);
     }
 
     /// # Binding statement
@@ -527,15 +544,15 @@ impl<T: Codegen> State<T> {
     /// 2. Read value for current state.
     /// 3. Update value to current values state map: value `name` -> `Data`
     /// 4. Codegen with Store action
-    pub fn binding(&mut self, data: &ast::Binding<'_>, state: &Rc<RefCell<BlockState>>) {
+    pub fn binding(&mut self, data: &ast::Binding<'_>, function_state: &Rc<RefCell<BlockState>>) {
         // Call value analytics before putting let-value to state
-        let Some(expr_result) = self.expression(&data.value, state) else {
+        let Some(expr_result) = self.expression(&data.value, function_state) else {
             return;
         };
         let bind_data: Binding = data.clone().into();
 
         // Find value in current state and parent states
-        let value = if let Some(val) = state.borrow().get_value_name(&bind_data.name) {
+        let value = if let Some(val) = function_state.borrow().get_value_name(&bind_data.name) {
             val
         } else {
             self.add_error(error::StateErrorResult::new(
@@ -555,7 +572,10 @@ impl<T: Codegen> State<T> {
             return;
         }
 
-        self.codegen.binding(&value, &expr_result);
+        function_state
+            .borrow_mut()
+            .context
+            .binding(value, expr_result);
     }
 
     /// # Function-call
@@ -604,11 +624,8 @@ impl<T: Codegen> State<T> {
             params.push(expr_result);
         }
 
-        // Codegen for function-call
-        body_state.borrow_mut().inc_register();
         // Store always result to register even for void result
-        self.codegen
-            .call(&func_data, params, body_state.borrow().last_register_number);
+        body_state.borrow_mut().context.call(func_data, params);
         Some(fn_type)
     }
 
@@ -655,15 +672,11 @@ impl<T: Codegen> State<T> {
             }
         }
 
-        // Increase register counter before generate condition
-        function_body_state.borrow_mut().inc_register();
         // Codegen for left condition and set result to register
-        self.codegen.condition_expression(
-            &left_res,
-            &right_res,
-            &data.left.condition.clone().into(),
-            function_body_state.borrow().last_register_number,
-        );
+        function_body_state
+            .borrow_mut()
+            .context
+            .condition_expression(left_res, right_res, data.left.condition.clone().into());
 
         // Analyze right condition
         if let Some(right) = &data.right {
@@ -674,17 +687,14 @@ impl<T: Codegen> State<T> {
 
             // Get register form right operation of right side analyzing
             let right_register_number = function_body_state.borrow().last_register_number;
-            // Increase register counter before generate logic condition
-            function_body_state.borrow_mut().inc_register();
 
             // Codegen for logical condition for: left [LOGIC-OP] right
             // The result generated from registers, and stored to
             // new register
-            self.codegen.logic_condition(
+            function_body_state.borrow_mut().context.logic_condition(
                 left_register_number,
                 right_register_number,
-                &right.0.clone().into(),
-                function_body_state.borrow().last_register_number,
+                right.0.clone().into(),
             );
         }
     }
@@ -706,7 +716,7 @@ impl<T: Codegen> State<T> {
                     self.binding(bind, if_body_state);
                 }
                 ast::IfBodyStatement::FunctionCall(fn_call) => {
-                    let _ = self.function_call(fn_call, if_body_state);
+                    self.function_call(fn_call, if_body_state);
                 }
                 ast::IfBodyStatement::If(if_condition) => {
                     self.if_condition(if_condition, if_body_state, None, None);
@@ -720,7 +730,7 @@ impl<T: Codegen> State<T> {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
-                        self.codegen.jump_function_return(&res);
+                        if_body_state.borrow_mut().context.jump_function_return(res);
                         if_body_state.borrow_mut().set_return();
                     };
                 }
@@ -747,7 +757,7 @@ impl<T: Codegen> State<T> {
                     self.binding(bind, if_body_state);
                 }
                 ast::IfLoopBodyStatement::FunctionCall(fn_call) => {
-                    let _ = self.function_call(fn_call, if_body_state);
+                    self.function_call(fn_call, if_body_state);
                 }
                 ast::IfLoopBodyStatement::If(if_condition) => {
                     self.if_condition(
@@ -766,18 +776,24 @@ impl<T: Codegen> State<T> {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
-                        self.codegen.jump_function_return(&res);
+                        if_body_state.borrow_mut().context.jump_function_return(res);
                         if_body_state.borrow_mut().set_return();
                     }
                 }
                 ast::IfLoopBodyStatement::Continue => {
                     // Skip next loop  step and jump to the start
                     // of loop
-                    self.codegen.jump_to(label_loop_start);
+                    if_body_state
+                        .borrow_mut()
+                        .context
+                        .jump_to(label_loop_start.clone());
                 }
                 ast::IfLoopBodyStatement::Break => {
                     // Break loop and jump to the end of loop
-                    self.codegen.jump_to(label_loop_end);
+                    if_body_state
+                        .borrow_mut()
+                        .context
+                        .jump_to(label_loop_end.clone());
                 }
             }
         }
@@ -804,18 +820,18 @@ impl<T: Codegen> State<T> {
                     return;
                 };
 
-                // Codegen for if-condition from expression and if-body start
+                // State for if-condition from expression and if-body start
                 if is_else {
-                    self.codegen.if_condition_expression(
-                        &expr_result,
-                        label_if_begin,
-                        label_if_else,
+                    if_body_state.borrow_mut().context.if_condition_expression(
+                        expr_result,
+                        label_if_begin.clone(),
+                        label_if_else.clone(),
                     );
                 } else {
-                    self.codegen.if_condition_expression(
-                        &expr_result,
-                        label_if_begin,
-                        label_if_end,
+                    if_body_state.borrow_mut().context.if_condition_expression(
+                        expr_result,
+                        label_if_begin.clone(),
+                        label_if_end.clone(),
                     );
                 }
             }
@@ -823,19 +839,17 @@ impl<T: Codegen> State<T> {
             ast::IfCondition::Logic(expr_logic) => {
                 // Analyse if-condition logic
                 self.condition_expression(expr_logic, if_body_state);
-                // Codegen for if-condition-logic with if-body start
+                // State for if-condition-logic with if-body start
                 if is_else {
-                    self.codegen.if_condition_logic(
-                        label_if_begin,
-                        label_if_else,
-                        if_body_state.borrow().last_register_number,
-                    );
+                    if_body_state
+                        .borrow_mut()
+                        .context
+                        .if_condition_logic(label_if_begin.clone(), label_if_else.clone());
                 } else {
-                    self.codegen.if_condition_logic(
-                        label_if_begin,
-                        label_if_end,
-                        if_body_state.borrow().last_register_number,
-                    );
+                    if_body_state
+                        .borrow_mut()
+                        .context
+                        .if_condition_logic(label_if_begin.clone(), label_if_end.clone());
                 }
             }
         }
@@ -912,7 +926,7 @@ impl<T: Codegen> State<T> {
 
         //== If condition main body
         // Set if-begin label
-        self.codegen.set_label(&label_if_begin);
+        if_body_state.borrow_mut().context.set_label(label_if_begin);
         // Analyze if-conditions body kind
         match &data.body {
             ast::IfBodyStatements::If(body) => {
@@ -926,12 +940,15 @@ impl<T: Codegen> State<T> {
             }
         }
         // Codegen for jump to if-end statement -return to program flow
-        self.codegen.jump_to(&label_if_end);
+        if_body_state
+            .borrow_mut()
+            .context
+            .jump_to(label_if_end.clone());
 
         // Check else statements: else, else-if
         if is_else {
             // Set if-else label
-            self.codegen.set_label(&label_if_else);
+            if_body_state.borrow_mut().context.set_label(label_if_else);
             // if-else has own state, different from if-state
             let if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
                 function_body_state.clone(),
@@ -960,7 +977,10 @@ impl<T: Codegen> State<T> {
                 }
 
                 // Codegen for jump to if-end statement -return to program flow
-                self.codegen.jump_to(&label_if_end);
+                if_body_state
+                    .borrow_mut()
+                    .context
+                    .jump_to(label_if_end.clone());
             } else if let Some(else_if_statement) = &data.else_if_statement {
                 // Analyse  else-if statement
                 self.if_condition(
@@ -973,7 +993,7 @@ impl<T: Codegen> State<T> {
         }
 
         // End label for all if statement
-        self.codegen.set_label(&label_if_end);
+        if_body_state.borrow_mut().context.set_label(label_if_end);
     }
 
     /// # Loop
@@ -1005,8 +1025,14 @@ impl<T: Codegen> State<T> {
             .borrow_mut()
             .get_and_set_next_label(&LOOP_END.to_string().into());
 
-        self.codegen.jump_to(&label_loop_begin);
-        self.codegen.set_label(&label_loop_begin);
+        loop_body_state
+            .borrow_mut()
+            .context
+            .jump_to(label_loop_begin.clone());
+        loop_body_state
+            .borrow_mut()
+            .context
+            .set_label(label_loop_begin.clone());
 
         for body in data.iter() {
             match body {
@@ -1017,7 +1043,7 @@ impl<T: Codegen> State<T> {
                     self.binding(bind, &loop_body_state);
                 }
                 ast::LoopBodyStatement::FunctionCall(fn_call) => {
-                    let _ = self.function_call(fn_call, &loop_body_state);
+                    self.function_call(fn_call, &loop_body_state);
                 }
                 ast::LoopBodyStatement::If(if_condition) => self.if_condition(
                     if_condition,
@@ -1034,24 +1060,36 @@ impl<T: Codegen> State<T> {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
-                        self.codegen.jump_function_return(&res);
+                        loop_body_state
+                            .borrow_mut()
+                            .context
+                            .jump_function_return(res);
                         loop_body_state.borrow_mut().set_return();
                     }
                 }
                 ast::LoopBodyStatement::Break => {
                     // Break loop and jump to the end of loop
-                    self.codegen.jump_to(&label_loop_end);
+                    loop_body_state
+                        .borrow_mut()
+                        .context
+                        .jump_to(label_loop_end.clone());
                 }
                 ast::LoopBodyStatement::Continue => {
                     // Skip next loop  step and jump to the start
                     // of loop
-                    self.codegen.jump_to(&label_loop_begin);
+                    loop_body_state
+                        .borrow_mut()
+                        .context
+                        .jump_to(label_loop_begin.clone());
                 }
             }
         }
 
         // Loop ending
-        self.codegen.set_label(&label_loop_end);
+        loop_body_state
+            .borrow_mut()
+            .context
+            .set_label(label_loop_end);
     }
 
     #[allow(clippy::doc_markdown)]
@@ -1117,34 +1155,9 @@ impl<T: Codegen> State<T> {
                 // Get value from block state
                 let value_from_state = body_state.borrow_mut().get_value_name(&value.name().into());
                 // Check is value exist in State or as Constant
-                if value_from_state.is_some()
-                    || self.global.constants.contains_key(&value.name().into())
+                if !(value_from_state.is_some()
+                    || self.global.constants.contains_key(&value.name().into()))
                 {
-                    // Increase register counter before loading value
-                    body_state.borrow_mut().inc_register();
-                    // First check value in body state
-                    let ty = if let Some(val) = value_from_state {
-                        // If it's value then Load it to register
-                        self.codegen
-                            .expression_value(&val, body_state.borrow().last_register_number);
-                        val.inner_type
-                    } else if let Some(const_val) = self.global.constants.get(&value.name().into())
-                    {
-                        // If value is constant load it to register
-                        self.codegen
-                            .expression_const(const_val, body_state.borrow().last_register_number);
-                        const_val.constant_type.clone()
-                    } else {
-                        return None;
-                    };
-                    // Return result as register
-                    ExpressionResult {
-                        expr_type: ty,
-                        expr_value: ExpressionResultValue::Register(
-                            body_state.borrow().last_register_number,
-                        ),
-                    }
-                } else {
                     // If value doesn't exist
                     self.add_error(error::StateErrorResult::new(
                         error::StateErrorKind::ValueNotFound,
@@ -1152,6 +1165,27 @@ impl<T: Codegen> State<T> {
                         value.location(),
                     ));
                     return None;
+                }
+                // First check value in body state
+                let ty = if let Some(val) = value_from_state {
+                    body_state
+                        .borrow_mut()
+                        .context
+                        .expression_value(val.clone());
+                    val.inner_type
+                } else if let Some(const_val) = self.global.constants.get(&value.name().into()) {
+                    body_state
+                        .borrow_mut()
+                        .context
+                        .expression_const(const_val.clone());
+                    const_val.constant_type.clone()
+                } else {
+                    return None;
+                };
+                // Return result as register
+                ExpressionResult {
+                    expr_type: ty,
+                    expr_value: ExpressionResultValue::Register,
                 }
             }
             // Check is expression primitive value
@@ -1171,47 +1205,59 @@ impl<T: Codegen> State<T> {
                 // Return result as register
                 ExpressionResult {
                     expr_type: func_call_ty,
-                    expr_value: ExpressionResultValue::Register(
-                        body_state.borrow().last_register_number,
-                    ),
+                    expr_value: ExpressionResultValue::Register,
                 }
             }
             ast::ExpressionValue::StructValue(value) => {
-                // Can be only Value form state, not constant
+                let struct_value: StructValue = value.clone().into();
+                // Can be only Value from state, not constant
                 // Get value from block state
-                let value_from_state = body_state
+                let val = body_state
                     .borrow_mut()
-                    .get_value_name(&value.name.name().into());
-                if let Some(val) = value_from_state {
-                    // TODO: For type system we should get index of struct
-                    // attribute for `value.attribute` (now set default)
-                    let attr_index = 0;
-                    // TODO: For type system get attribute type of struct
-                    // field for `value.attribute` (now dummy)
-                    let field_ty = val.inner_type.clone();
-
-                    // Increase register counter before loading value
-                    body_state.borrow_mut().inc_register();
-                    self.codegen.expression_struct_value(
-                        &val,
-                        attr_index,
-                        body_state.borrow().last_register_number,
-                    );
-
-                    ExpressionResult {
-                        expr_type: field_ty,
-                        expr_value: ExpressionResultValue::Register(
-                            body_state.borrow().last_register_number,
-                        ),
-                    }
-                } else {
-                    // If value doesn't exist
+                    .get_value_name(&struct_value.name)
+                    .or({
+                        // If value doesn't exist
+                        self.add_error(error::StateErrorResult::new(
+                            error::StateErrorKind::ValueNotFound,
+                            value.name.name(),
+                            value.name.location(),
+                        ));
+                        None
+                    })?;
+                // Get attribute type
+                let ty = val.inner_type.get_struct().or({
                     self.add_error(error::StateErrorResult::new(
-                        error::StateErrorKind::ValueNotFound,
+                        error::StateErrorKind::ValueNotStruct,
                         value.name.name(),
                         value.name.location(),
                     ));
-                    return None;
+                    None
+                })?;
+                let attr_ty = ty.get_attribute_type(&struct_value.attribute).or({
+                    self.add_error(error::StateErrorResult::new(
+                        error::StateErrorKind::ValueNotStructField,
+                        value.name.name(),
+                        value.name.location(),
+                    ));
+                    None
+                })?;
+                let attr_index = ty.get_attribute_index(&struct_value.attribute).or({
+                    self.add_error(error::StateErrorResult::new(
+                        error::StateErrorKind::ValueNotStructField,
+                        value.name.name(),
+                        value.name.location(),
+                    ));
+                    None
+                })?;
+
+                body_state
+                    .borrow_mut()
+                    .context
+                    .expression_struct_value(val.clone(), attr_index);
+
+                ExpressionResult {
+                    expr_type: attr_ty,
+                    expr_value: ExpressionResultValue::Register,
                 }
             }
             ast::ExpressionValue::Expression(expr) => {
@@ -1229,18 +1275,15 @@ impl<T: Codegen> State<T> {
                 ));
             }
             // Call expression operation for: OP(left_value, right_value)
-            // and return result of that call as register
-            body_state.borrow_mut().inc_register();
-            self.codegen.expression_operation(
-                &op.clone().into(),
-                left_value,
-                &right_value,
-                body_state.borrow().last_register_number,
+            body_state.borrow_mut().context.expression_operation(
+                op.clone().into(),
+                left_value.clone(),
+                right_value.clone(),
             );
         }
         let expression_result = ExpressionResult {
             expr_type: right_value.expr_type,
-            expr_value: ExpressionResultValue::Register(body_state.borrow().last_register_number),
+            expr_value: ExpressionResultValue::Register,
         };
 
         // Check is for right value contain next operation

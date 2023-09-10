@@ -45,5 +45,5 @@ fn expression_value_name_exists() {
         .values
         .insert(value_name.into(), value);
     let res = t.state.expression(&expr, &block_state).unwrap();
-    assert_eq!(res.expr_value, ExpressionResultValue::Register(1));
+    assert_eq!(res.expr_value, ExpressionResultValue::Register);
 }
