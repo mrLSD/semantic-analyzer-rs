@@ -1,9 +1,8 @@
-use semantic_analyzer::codegen::CodegenStack;
 use semantic_analyzer::semantic::State;
 use semantic_analyzer::types::error::StateErrorKind;
 
 pub struct SemanticTest {
-    pub state: State<CodegenStack>,
+    pub state: State,
 }
 
 impl Default for SemanticTest {
@@ -14,9 +13,8 @@ impl Default for SemanticTest {
 
 impl SemanticTest {
     pub fn new() -> Self {
-        let backend = CodegenStack::new();
         Self {
-            state: State::new(backend),
+            state: State::new(),
         }
     }
     pub fn check_error(&self, err_kind: StateErrorKind) -> bool {

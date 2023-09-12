@@ -12,7 +12,6 @@
 //! Codegen is result of Semantic analyzer and contains prepared data tree
 //! of generated code for next step - compilation generated raw program code.
 use crate::ast::{self, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
-use crate::codegen::Codegen;
 use crate::types::{error, SemanticStack, StructValue, TypeAttributes};
 use crate::types::{
     Binding, Constant, ConstantName, Expression, ExpressionResult, ExpressionResultValue, Function,
@@ -97,20 +96,6 @@ impl BlockState {
 
     fn set_child(&mut self, child: Rc<RefCell<BlockState>>) {
         self.children.push(child);
-    }
-
-    /// Set `last_register_number` for current and parent states
-    fn set_register(&mut self, last_register_number: u64) {
-        self.last_register_number = last_register_number;
-        // Set `last_register_number` for parents
-        if let Some(parent) = &self.parent {
-            parent.borrow_mut().set_register(last_register_number);
-        }
-    }
-
-    /// Increment register
-    fn inc_register(&mut self) {
-        self.set_register(self.last_register_number + 1);
     }
 
     /// Set value inner name to current state and parent states
@@ -232,16 +217,21 @@ pub struct GlobalState {
 /// and `Codegen` tree.
 /// - errors - State analyzing errors
 #[derive(Debug)]
-pub struct State<T: Codegen> {
+pub struct State {
     pub global: GlobalState,
-    pub codegen: T,
     pub context: Vec<Rc<RefCell<BlockState>>>,
     pub errors: Vec<error::StateErrorResult>,
 }
 
-impl<T: Codegen> State<T> {
+impl Default for State {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl State {
     /// Init new `State`
-    pub fn new(codegen: T) -> Self {
+    pub fn new() -> Self {
         Self {
             global: GlobalState {
                 functions: HashMap::new(),
@@ -249,7 +239,6 @@ impl<T: Codegen> State<T> {
                 constants: HashMap::new(),
                 context: SemanticStack::new(),
             },
-            codegen,
             context: Vec::new(),
             errors: Vec::new(),
         }
@@ -683,15 +672,11 @@ impl<T: Codegen> State<T> {
             }
         }
 
-        // Increase register counter before generate condition
-        function_body_state.borrow_mut().inc_register();
         // Codegen for left condition and set result to register
-        self.codegen.condition_expression(
-            &left_res,
-            &right_res,
-            &data.left.condition.clone().into(),
-            function_body_state.borrow().last_register_number,
-        );
+        function_body_state
+            .borrow_mut()
+            .context
+            .condition_expression(left_res, right_res, data.left.condition.clone().into());
 
         // Analyze right condition
         if let Some(right) = &data.right {
@@ -702,17 +687,14 @@ impl<T: Codegen> State<T> {
 
             // Get register form right operation of right side analyzing
             let right_register_number = function_body_state.borrow().last_register_number;
-            // Increase register counter before generate logic condition
-            function_body_state.borrow_mut().inc_register();
 
             // Codegen for logical condition for: left [LOGIC-OP] right
             // The result generated from registers, and stored to
             // new register
-            self.codegen.logic_condition(
+            function_body_state.borrow_mut().context.logic_condition(
                 left_register_number,
                 right_register_number,
-                &right.0.clone().into(),
-                function_body_state.borrow().last_register_number,
+                right.0.clone().into(),
             );
         }
     }
@@ -748,7 +730,7 @@ impl<T: Codegen> State<T> {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
-                        self.codegen.jump_function_return(&res);
+                        if_body_state.borrow_mut().context.jump_function_return(res);
                         if_body_state.borrow_mut().set_return();
                     };
                 }
@@ -794,18 +776,24 @@ impl<T: Codegen> State<T> {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
-                        self.codegen.jump_function_return(&res);
+                        if_body_state.borrow_mut().context.jump_function_return(res);
                         if_body_state.borrow_mut().set_return();
                     }
                 }
                 ast::IfLoopBodyStatement::Continue => {
                     // Skip next loop  step and jump to the start
                     // of loop
-                    self.codegen.jump_to(label_loop_start);
+                    if_body_state
+                        .borrow_mut()
+                        .context
+                        .jump_to(label_loop_start.clone());
                 }
                 ast::IfLoopBodyStatement::Break => {
                     // Break loop and jump to the end of loop
-                    self.codegen.jump_to(label_loop_end);
+                    if_body_state
+                        .borrow_mut()
+                        .context
+                        .jump_to(label_loop_end.clone());
                 }
             }
         }
@@ -832,18 +820,18 @@ impl<T: Codegen> State<T> {
                     return;
                 };
 
-                // Codegen for if-condition from expression and if-body start
+                // State for if-condition from expression and if-body start
                 if is_else {
-                    self.codegen.if_condition_expression(
-                        &expr_result,
-                        label_if_begin,
-                        label_if_else,
+                    if_body_state.borrow_mut().context.if_condition_expression(
+                        expr_result,
+                        label_if_begin.clone(),
+                        label_if_else.clone(),
                     );
                 } else {
-                    self.codegen.if_condition_expression(
-                        &expr_result,
-                        label_if_begin,
-                        label_if_end,
+                    if_body_state.borrow_mut().context.if_condition_expression(
+                        expr_result,
+                        label_if_begin.clone(),
+                        label_if_end.clone(),
                     );
                 }
             }
@@ -851,19 +839,17 @@ impl<T: Codegen> State<T> {
             ast::IfCondition::Logic(expr_logic) => {
                 // Analyse if-condition logic
                 self.condition_expression(expr_logic, if_body_state);
-                // Codegen for if-condition-logic with if-body start
+                // State for if-condition-logic with if-body start
                 if is_else {
-                    self.codegen.if_condition_logic(
-                        label_if_begin,
-                        label_if_else,
-                        if_body_state.borrow().last_register_number,
-                    );
+                    if_body_state
+                        .borrow_mut()
+                        .context
+                        .if_condition_logic(label_if_begin.clone(), label_if_else.clone());
                 } else {
-                    self.codegen.if_condition_logic(
-                        label_if_begin,
-                        label_if_end,
-                        if_body_state.borrow().last_register_number,
-                    );
+                    if_body_state
+                        .borrow_mut()
+                        .context
+                        .if_condition_logic(label_if_begin.clone(), label_if_end.clone());
                 }
             }
         }
@@ -940,7 +926,7 @@ impl<T: Codegen> State<T> {
 
         //== If condition main body
         // Set if-begin label
-        self.codegen.set_label(&label_if_begin);
+        if_body_state.borrow_mut().context.set_label(label_if_begin);
         // Analyze if-conditions body kind
         match &data.body {
             ast::IfBodyStatements::If(body) => {
@@ -954,12 +940,15 @@ impl<T: Codegen> State<T> {
             }
         }
         // Codegen for jump to if-end statement -return to program flow
-        self.codegen.jump_to(&label_if_end);
+        if_body_state
+            .borrow_mut()
+            .context
+            .jump_to(label_if_end.clone());
 
         // Check else statements: else, else-if
         if is_else {
             // Set if-else label
-            self.codegen.set_label(&label_if_else);
+            if_body_state.borrow_mut().context.set_label(label_if_else);
             // if-else has own state, different from if-state
             let if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
                 function_body_state.clone(),
@@ -988,7 +977,10 @@ impl<T: Codegen> State<T> {
                 }
 
                 // Codegen for jump to if-end statement -return to program flow
-                self.codegen.jump_to(&label_if_end);
+                if_body_state
+                    .borrow_mut()
+                    .context
+                    .jump_to(label_if_end.clone());
             } else if let Some(else_if_statement) = &data.else_if_statement {
                 // Analyse  else-if statement
                 self.if_condition(
@@ -1001,7 +993,7 @@ impl<T: Codegen> State<T> {
         }
 
         // End label for all if statement
-        self.codegen.set_label(&label_if_end);
+        if_body_state.borrow_mut().context.set_label(label_if_end);
     }
 
     /// # Loop
@@ -1033,8 +1025,14 @@ impl<T: Codegen> State<T> {
             .borrow_mut()
             .get_and_set_next_label(&LOOP_END.to_string().into());
 
-        self.codegen.jump_to(&label_loop_begin);
-        self.codegen.set_label(&label_loop_begin);
+        loop_body_state
+            .borrow_mut()
+            .context
+            .jump_to(label_loop_begin.clone());
+        loop_body_state
+            .borrow_mut()
+            .context
+            .set_label(label_loop_begin.clone());
 
         for body in data.iter() {
             match body {
@@ -1062,24 +1060,36 @@ impl<T: Codegen> State<T> {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
-                        self.codegen.jump_function_return(&res);
+                        loop_body_state
+                            .borrow_mut()
+                            .context
+                            .jump_function_return(res);
                         loop_body_state.borrow_mut().set_return();
                     }
                 }
                 ast::LoopBodyStatement::Break => {
                     // Break loop and jump to the end of loop
-                    self.codegen.jump_to(&label_loop_end);
+                    loop_body_state
+                        .borrow_mut()
+                        .context
+                        .jump_to(label_loop_end.clone());
                 }
                 ast::LoopBodyStatement::Continue => {
                     // Skip next loop  step and jump to the start
                     // of loop
-                    self.codegen.jump_to(&label_loop_begin);
+                    loop_body_state
+                        .borrow_mut()
+                        .context
+                        .jump_to(label_loop_begin.clone());
                 }
             }
         }
 
         // Loop ending
-        self.codegen.set_label(&label_loop_end);
+        loop_body_state
+            .borrow_mut()
+            .context
+            .set_label(label_loop_end);
     }
 
     #[allow(clippy::doc_markdown)]

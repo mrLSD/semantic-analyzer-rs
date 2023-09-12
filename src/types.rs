@@ -1141,13 +1141,35 @@ impl SemanticStack {
         left_result: ExpressionResult,
         right_result: ExpressionResult,
         condition: Condition,
-        register_number: u64,
     ) {
         self.push(SemanticStackContext::ConditionExpression {
             left_result,
             right_result,
             condition,
-            register_number,
+        });
+    }
+
+    pub fn jump_function_return(&mut self, expr_result: ExpressionResult) {
+        self.push(SemanticStackContext::JumpFunctionReturn { expr_result });
+    }
+
+    pub fn logic_condition(
+        &mut self,
+        left_condition_register: u64,
+        right_condition_register: u64,
+        logic_condition: LogicCondition,
+    ) {
+        self.push(SemanticStackContext::LogicCondition {
+            left_condition_register,
+            right_condition_register,
+            logic_condition,
+        });
+    }
+
+    pub fn if_condition_logic(&mut self, label_if_begin: LabelName, label_if_end: LabelName) {
+        self.push(SemanticStackContext::IfConditionLogic {
+            label_if_begin,
+            label_if_end,
         });
     }
 }
@@ -1211,6 +1233,17 @@ pub enum SemanticStackContext {
         left_result: ExpressionResult,
         right_result: ExpressionResult,
         condition: Condition,
-        register_number: u64,
+    },
+    JumpFunctionReturn {
+        expr_result: ExpressionResult,
+    },
+    LogicCondition {
+        left_condition_register: u64,
+        right_condition_register: u64,
+        logic_condition: LogicCondition,
+    },
+    IfConditionLogic {
+        label_if_begin: LabelName,
+        label_if_end: LabelName,
     },
 }
