@@ -507,22 +507,16 @@ impl State {
 
         // Analyze right condition
         if let Some(right) = &data.right {
-            // Get register form left operation
-            let left_register_number = function_body_state.borrow().last_register_number;
             // Analyse recursively right part of condition
             self.condition_expression(&right.1, function_body_state);
 
-            // Get register form right operation of right side analyzing
-            let right_register_number = function_body_state.borrow().last_register_number;
-
-            // Codegen for logical condition for: left [LOGIC-OP] right
+            // Stategen for logical condition for: left [LOGIC-OP] right
             // The result generated from registers, and stored to
             // new register
-            function_body_state.borrow_mut().context.logic_condition(
-                left_register_number,
-                right_register_number,
-                right.0.clone().into(),
-            );
+            function_body_state
+                .borrow_mut()
+                .context
+                .logic_condition(right.0.clone().into());
         }
     }
 
