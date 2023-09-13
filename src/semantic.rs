@@ -1092,8 +1092,8 @@ impl State {
                 self.expression(expr, body_state)?
             }
         };
-        // Check left expression side and generate code
-        if let (Some(left_value), Some(op)) = (left_value, op) {
+        // Check left expression side and generate expression operation code
+        let expression_result = if let (Some(left_value), Some(op)) = (left_value, op) {
             if left_value.expr_type != right_value.expr_type {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::WrongExpressionType,
@@ -1107,10 +1107,13 @@ impl State {
                 left_value.clone(),
                 right_value.clone(),
             );
-        }
-        let expression_result = ExpressionResult {
-            expr_type: right_value.expr_type,
-            expr_value: ExpressionResultValue::Register,
+            // Expression result value  for Operations is always should be "register"
+            ExpressionResult {
+                expr_type: right_value.expr_type,
+                expr_value: ExpressionResultValue::Register,
+            }
+        } else {
+            right_value
         };
 
         // Check is for right value contain next operation
