@@ -29,14 +29,14 @@ fn expression_value_name_not_found() {
     assert!(t.check_error(StateErrorKind::ValueNotFound));
     let state = block_state.borrow().context.clone().get();
     assert!(state.is_empty());
+    assert_eq!(t.state.errors.len(), 1);
 }
 
 #[test]
 fn expression_value_name_exists() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
-    let src = ast::Ident::new("x");
-    let value_name = ast::ValueName::new(src);
+    let value_name = ast::ValueName::new(ast::Ident::new("x"));
     let expr = ast::Expression {
         expression_value: ast::ExpressionValue::ValueName(value_name.clone()),
         operation: None,
@@ -62,6 +62,7 @@ fn expression_value_name_exists() {
         state[0],
         SemanticStackContext::ExpressionValue { expression: value }
     );
+    assert!(t.state.errors.is_empty());
 }
 
 #[test]
@@ -94,6 +95,7 @@ fn expression_const_exists() {
         state[0],
         SemanticStackContext::ExpressionConst { expression: value }
     );
+    assert!(t.state.errors.is_empty());
 }
 
 #[test]
@@ -109,8 +111,8 @@ fn expression_primitive_value() {
         res.expr_value,
         ExpressionResultValue::PrimitiveValue(PrimitiveValue::I32(10))
     );
-    let ty = Type::Primitive(PrimitiveTypes::I32);
-    assert_eq!(res.expr_type, ty);
+    assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::I32));
     let state = block_state.borrow().context.clone().get();
     assert!(state.is_empty());
+    assert!(t.state.errors.is_empty());
 }

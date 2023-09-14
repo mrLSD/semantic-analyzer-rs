@@ -88,6 +88,9 @@ impl State {
         val_name: &impl ToString,
         location: &impl GetLocation,
     ) -> bool {
+        if let Type::Primitive(_) = type_name {
+            return true;
+        }
         if !self.global.types.contains_key(&type_name.name()) {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::TypeNotFound,

@@ -17,6 +17,7 @@ impl SemanticTest {
             state: State::new(),
         }
     }
+    #[allow(dead_code)]
     pub fn check_error(&self, err_kind: StateErrorKind) -> bool {
         if self.state.errors.len() != 1 {
             return false;
