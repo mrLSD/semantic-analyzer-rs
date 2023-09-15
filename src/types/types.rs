@@ -55,7 +55,7 @@ impl Type {
 impl ToString for Type {
     fn to_string(&self) -> String {
         match self {
-            Self::Primitive(primitive) => primitive.name(),
+            Self::Primitive(primitive) => primitive.to_string(),
             Self::Struct(struct_type) => struct_type.name.clone(),
             Self::Array(array_type, size) => {
                 format!("[{:?};{:?}]", array_type.to_string(), size)
@@ -126,25 +126,26 @@ pub enum PrimitiveTypes {
     None,
 }
 
-impl GetName for PrimitiveTypes {
-    fn name(&self) -> String {
-        match self {
-            Self::U8 => "u8".to_string(),
-            Self::U16 => "u16".to_string(),
-            Self::U32 => "u32".to_string(),
-            Self::U64 => "u64".to_string(),
-            Self::I8 => "i8".to_string(),
-            Self::I16 => "i16".to_string(),
-            Self::I32 => "i32".to_string(),
-            Self::I64 => "i64".to_string(),
-            Self::F32 => "f32".to_string(),
-            Self::F64 => "f64".to_string(),
-            Self::Bool => "bool".to_string(),
-            Self::Char => "char".to_string(),
-            Self::String => "str".to_string(),
-            Self::Ptr => "ptr".to_string(),
-            Self::None => "()".to_string(),
-        }
+impl ToString for PrimitiveTypes {
+    fn to_string(&self) -> String {
+        let s = match self {
+            Self::U8 => "u8",
+            Self::U16 => "u16",
+            Self::U32 => "u32",
+            Self::U64 => "u64",
+            Self::I8 => "i8",
+            Self::I16 => "i16",
+            Self::I32 => "i32",
+            Self::I64 => "i64",
+            Self::F32 => "f32",
+            Self::F64 => "f64",
+            Self::Bool => "bool",
+            Self::Char => "char",
+            Self::String => "str",
+            Self::Ptr => "ptr",
+            Self::None => "()",
+        };
+        s.to_string()
     }
 }
 

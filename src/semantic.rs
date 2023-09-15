@@ -960,7 +960,7 @@ impl State {
 
     /// Expression operation semantic logic:
     /// `OP(lhs, rhs)`
-    /// Left-value contains optional Exrpression result for left side
+    /// Left-value contains optional Expression result for left side
     /// of expression.
     #[allow(clippy::too_many_lines)]
     pub fn expression_operation(
