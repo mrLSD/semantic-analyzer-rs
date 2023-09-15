@@ -1,4 +1,3 @@
-
 use crate::ast::CodeLocation;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
