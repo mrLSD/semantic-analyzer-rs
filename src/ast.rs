@@ -40,6 +40,12 @@ pub type ImportPath<'a> = Vec<ImportName<'a>>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConstantName<'a>(Ident<'a>);
 
+impl<'a> ConstantName<'a> {
+    pub const fn new(name: Ident<'a>) -> Self {
+        Self(name)
+    }
+}
+
 impl GetLocation for ConstantName<'_> {
     fn location(&self) -> CodeLocation {
         CodeLocation::new(self.0.location_line(), self.0.location_offset())
@@ -56,7 +62,7 @@ impl GetName for ConstantName<'_> {
 pub struct FunctionName<'a>(Ident<'a>);
 
 impl<'a> FunctionName<'a> {
-    pub fn new(name: Ident<'a>) -> Self {
+    pub const fn new(name: Ident<'a>) -> Self {
         Self(name)
     }
 }

@@ -1,7 +1,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build](https://github.com/mrLSD/z-rose/actions/workflows/builds.yml/badge.svg)](https://github.com/mrLSD/z-rose/actions/workflows/builds.yml)
 [![Lints](https://github.com/mrLSD/z-rose/actions/workflows/lints.yml/badge.svg)](https://github.com/mrLSD/z-rose/actions/workflows/lints.yml)
 [![Tests](https://github.com/mrLSD/z-rose/actions/workflows/tests.yml/badge.svg)](https://github.com/mrLSD/z-rose/actions/workflows/tests.yml)
+[![Crates.io version](https://img.shields.io/crates/v/semantic-analyzer.svg?style=flat-square)](https://crates.io/crates/semantic-analyzer)
 
 <div style="text-align: center;">
     <h1>mrLSD<code>/semantic-analyzer-rs</code></h1>
