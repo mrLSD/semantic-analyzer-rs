@@ -1,5 +1,8 @@
-use crate::types::semantic::SemanticStack;
-use crate::types::{InnerValueName, LabelName, Value, ValueName};
+//! # Block State types
+//! Block state Semantic types.
+
+use super::semantic::SemanticStack;
+use super::{InnerValueName, LabelName, Value, ValueName};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;

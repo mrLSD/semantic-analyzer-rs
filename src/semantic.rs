@@ -1,16 +1,15 @@
 //! # Semantic analyzer
-//! Semantic analyzer provide algorithms to analyze AST for different
-//! rules and generate `Codegen`. AST represent tree n0des of language
-//! constructions and fully cover all flow of the program represented through
-//! AST.
+//! Semantic analyzer provides algorithms to analyze AST for different
+//! rules and generate `Semantic State stack` stack results. AST represent tree
+//! nodes of language constructions and fully cover all flow of the program
+//! represented through AST. And it's **Turing-complete**.
 //!
-//! Semantic contains basic entities:
-//! - `Global State` - global state of semantic analyzer.
-//! - `Block State` - state for functions and sub blocks for it.
-//! - `Codegen` - generated code as result of semantic analyzing.
-//!
-//! Codegen is result of Semantic analyzer and contains prepared data tree
-//! of generated code for next step - compilation generated raw program code.
+//! ## Semantic State
+//! Semantic State contains basic entities:
+//! - `Global State` - global state of semantic analyzer results.
+//! - `Context` - stack for `Block state` of each functions body state.
+//! - `Errors` - semantic analyzes errors.z
+
 use crate::ast::{self, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
 use crate::types::block_state::BlockState;
 use crate::types::expression::{Expression, ExpressionResult, ExpressionResultValue};
@@ -25,28 +24,43 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 /// # Global State
-/// Global state can contains state of:
+/// Global state can contains state declarations of:
 /// - Constants
 /// - Types
 /// - Functions
-/// The visibility of Global state limited by
-/// current module.
+/// And Semantic State context results for Global State context:
+/// - Context
+/// The visibility of Global state limited by current module.
+/// `Context` contains results of `Semantic` stack, as result of
+/// Semantic analyzer for Global State context. It's can be used for
+/// post-verification process, linting, Codegen.
 #[derive(Debug)]
 pub struct GlobalState {
+    /// Constants declarations
     pub constants: HashMap<ConstantName, Constant>,
+    /// Types declarations
     pub types: HashMap<TypeName, Type>,
+    /// Functions declarations
     pub functions: HashMap<FunctionName, Function>,
+    /// Context as Semantic Stack Context results contains basic semantic
+    /// result tree for Global context state.
     pub context: SemanticStack,
 }
 
 /// # State
-/// Basic entity that contains `Global State`
-/// and `Codegen` tree.
-/// - errors - State analyzing errors
+/// Basic entity that contains:
+/// - `Global State` - types, constants, functions declaration and
+///   most important - context results of Semantic State stack, that can be
+///   used for post-verification and/or Codegen.
+/// - `Context` stack for `Block state` of each functions body state
+/// - `Error State` contains errors stack as result of Semantic analyzer
 #[derive(Debug)]
 pub struct State {
+    /// Global State for current State
     pub global: GlobalState,
+    /// Context for all `Block State` stack that related to concrete functions body.
     pub context: Vec<Rc<RefCell<BlockState>>>,
+    /// Error state results stack
     pub errors: Vec<error::StateErrorResult>,
 }
 
@@ -71,17 +85,19 @@ impl State {
         }
     }
 
-    /// Gather errors
+    /// Add error to Semantic `Errors State`
     fn add_error(&mut self, err: error::StateErrorResult) {
         self.errors.push(err);
     }
 
-    /// Add State context with body state context block
+    /// Add `State context` with body state context block
     fn add_state_context(&mut self, state_body: Rc<RefCell<BlockState>>) {
         self.context.push(state_body);
     }
 
-    /// Check is value type exists in Global State
+    /// Check is value type exists in `Global State`.
+    /// `Primitive` type always return true. For other cases if type doesn't
+    /// exist in `Global State`, add errors to `Error State` and return `false` result.
     fn check_type_exists(
         &mut self,
         type_name: &Type,
@@ -102,7 +118,9 @@ impl State {
         true
     }
 
-    /// Run semantic analyzer that covers all flow
+    /// Run semantic analyzer that covers all flow for AST.
+    /// It's do not return any results, but fill results fir the `Semantic State`.
+    ///
     pub fn run(&mut self, data: &ast::Main<'_>) {
         // Execute each kind of analyzing and return errors data.
         // For functions - fetch only declaration for fast-forward
@@ -133,12 +151,13 @@ impl State {
         }
     }
 
-    /// Import analyzer
+    /// Import analyzer (TBD)
     #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
     pub const fn import(&self, _data: &ast::ImportPath<'_>) {}
 
-    /// Types declaration analyzer. Add types to Global State.
-    /// Currently only one type kind: Structs
+    /// Types declaration analyzer. Add types to `Global State`.
+    /// Currently only one type kind: Structs. And types can't be part of
+    /// the `Block State`.
     pub fn types(&mut self, data: &ast::StructTypes<'_>) {
         if self.global.types.contains_key(&data.name().into()) {
             self.add_error(error::StateErrorResult::new(
@@ -153,26 +172,44 @@ impl State {
         self.global.context.types(data.clone().into());
     }
 
-    pub fn is_constant_exist(&self, data: ast::Constant) -> bool {
-        if !self.global.constants.contains_key(&data.name().into()) {
-            self.add_error(error::StateErrorResult::new(
-                error::StateErrorKind::ConstantNotFound,
-                data.name(),
-                data.location(),
-            ));
-            return false;
-        }
-        if let Some((_, child_data)) = data.constant_value.operation {
-            match child_data.value {
-                ast::ConstantValue::Constant(val) => self.is_constant_exist(val),
-                _ => false,
+    /// Check constant value expression.
+    /// If expression contains `Constant` check is constant exists.
+    /// Values doesn't check as it's just `Primitive Values`.
+    /// Also check all expression tree branches.
+    /// If ConstantValue doesn't exist add error to `Error State` and `return` false result.
+    pub fn check_constant_value_expression(
+        &mut self,
+        data: &Option<(ast::ExpressionOperations, Box<ast::ConstantExpression<'_>>)>,
+    ) -> bool {
+        // For constant expression skip ExpressionOperations
+        if let Some((_, child_data)) = data {
+            // Check only Constant value
+            match child_data.value.clone() {
+                // Check is ConstantValue already exist in global state
+                ast::ConstantValue::Constant(const_name) => {
+                    if !self
+                        .global
+                        .constants
+                        .contains_key(&const_name.clone().into())
+                    {
+                        self.add_error(error::StateErrorResult::new(
+                            error::StateErrorKind::ConstantNotFound,
+                            const_name.name(),
+                            const_name.location(),
+                        ));
+                        return false;
+                    }
+                    self.check_constant_value_expression(&child_data.operation)
+                }
+                _ => true,
             }
         } else {
             true
         }
     }
 
-    /// Constant analyzer. Add it got Global State
+    /// Constant analyzer. Add it to `Global State`, because constants
+    /// can be only global for `Semantic state`, not for `Block state`.
     pub fn constant(&mut self, data: &ast::Constant<'_>) {
         if self.global.constants.contains_key(&data.name().into()) {
             self.add_error(error::StateErrorResult::new(
@@ -180,6 +217,9 @@ impl State {
                 data.name(),
                 data.location(),
             ));
+            return;
+        }
+        if !self.check_constant_value_expression(&data.constant_value.operation) {
             return;
         }
         let const_val: Constant = data.clone().into();

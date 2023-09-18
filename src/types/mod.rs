@@ -1,16 +1,30 @@
+//! # Types
+//! Semantic analyzer type.
+//! Contains basic entities:
+//! - Semantic types system
+//! - Semantic basic elements types
+//! - Block state types
+//! - Error types
+
 #![allow(clippy::module_inception)]
+/// Block state types
 pub mod block_state;
+/// Condition types
 pub mod condition;
+/// Error types
 pub mod error;
+/// Expression types
 pub mod expression;
+/// Basic semantic types
 pub mod semantic;
+/// Types for type system
 pub mod types;
 
+use self::condition::{IfStatement, LoopBodyStatement};
+use self::expression::{Expression, ExpressionOperations};
+use self::types::Type;
 use crate::ast;
 use crate::ast::GetName;
-use crate::types::condition::{IfStatement, LoopBodyStatement};
-use crate::types::expression::{Expression, ExpressionOperations};
-use crate::types::types::Type;
 
 /// Value name type
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]

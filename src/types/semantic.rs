@@ -1,7 +1,10 @@
-use crate::types::condition::{Condition, LogicCondition};
-use crate::types::expression::{ExpressionOperations, ExpressionResult};
-use crate::types::types::StructTypes;
-use crate::types::{Constant, Function, FunctionStatement, LabelName, Value};
+//! # Semantic types
+//! Semantic analyzer result state types.
+
+use super::condition::{Condition, LogicCondition};
+use super::expression::{ExpressionOperations, ExpressionResult};
+use super::types::StructTypes;
+use super::{Constant, Function, FunctionStatement, LabelName, Value};
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct SemanticStack(Vec<SemanticStackContext>);

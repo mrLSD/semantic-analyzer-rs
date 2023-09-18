@@ -1,6 +1,9 @@
+//! # Expression types
+//! Expression types for Semantic analyzer result state.
+
+use super::types::Type;
+use super::{FunctionCall, PrimitiveValue, StructValue, ValueName};
 use crate::ast;
-use crate::types::types::Type;
-use crate::types::{FunctionCall, PrimitiveValue, StructValue, ValueName};
 
 /// # Expression result
 /// Contains analyzing results of expression:

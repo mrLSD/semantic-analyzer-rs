@@ -1,6 +1,8 @@
-use crate::ast;
-use crate::ast::GetName;
-use crate::types::{FunctionName, ValueName};
+//! # Semantic types
+//! Type-system types for Semantic analyzer State results.
+
+use super::{FunctionName, ValueName};
+use crate::ast::{self, GetName};
 use std::collections::HashMap;
 
 pub trait TypeAttributes {

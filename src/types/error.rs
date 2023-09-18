@@ -1,3 +1,6 @@
+//! # Errors types
+//! Errors types for Semantic analyzer result of Error state.
+
 use crate::ast::CodeLocation;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
