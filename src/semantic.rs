@@ -153,6 +153,25 @@ impl State {
         self.global.context.types(data.clone().into());
     }
 
+    pub fn is_constant_exist(&self, data: ast::Constant) -> bool {
+        if !self.global.constants.contains_key(&data.name().into()) {
+            self.add_error(error::StateErrorResult::new(
+                error::StateErrorKind::ConstantNotFound,
+                data.name(),
+                data.location(),
+            ));
+            return false;
+        }
+        if let Some((_, child_data)) = data.constant_value.operation {
+            match child_data.value {
+                ast::ConstantValue::Constant(val) => self.is_constant_exist(val),
+                _ => false,
+            }
+        } else {
+            true
+        }
+    }
+
     /// Constant analyzer. Add it got Global State
     pub fn constant(&mut self, data: &ast::Constant<'_>) {
         if self.global.constants.contains_key(&data.name().into()) {

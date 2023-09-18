@@ -5,6 +5,7 @@ pub enum StateErrorKind {
     /// Common error indicate errors in the State
     Common,
     ConstantAlreadyExist,
+    ConstantNotFound,
     WrongLetType,
     WrongExpressionType,
     TypeAlreadyExist,

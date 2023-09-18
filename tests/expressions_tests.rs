@@ -1,6 +1,7 @@
 use crate::utils::SemanticTest;
 use semantic_analyzer::ast;
-use semantic_analyzer::ast::GetName;
+use semantic_analyzer::ast::{GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
+use semantic_analyzer::types::expression::ExpressionOperations;
 use semantic_analyzer::types::semantic::SemanticStackContext;
 use semantic_analyzer::types::{
     block_state::BlockState,
@@ -115,4 +116,62 @@ fn expression_primitive_value() {
     let state = block_state.borrow().context.clone().get();
     assert!(state.is_empty());
     assert!(t.state.errors.is_empty());
+}
+
+#[test]
+fn ast_expression_operations() {
+    assert_eq!(ast::ExpressionOperations::Plus.priority(), 5);
+    assert_eq!(ast::ExpressionOperations::Minus.priority(), 4);
+    assert_eq!(ast::ExpressionOperations::Divide.priority(), 8);
+    assert_eq!(
+        ast::ExpressionOperations::Multiply.priority(),
+        MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS
+    );
+    assert_eq!(
+        ast::ExpressionOperations::ShiftLeft.priority(),
+        MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS
+    );
+    assert_eq!(
+        ast::ExpressionOperations::ShiftRight.priority(),
+        MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS
+    );
+    assert_eq!(ast::ExpressionOperations::Or.priority(), 6);
+    assert_eq!(ast::ExpressionOperations::Xor.priority(), 6);
+    assert_eq!(ast::ExpressionOperations::And.priority(), 7);
+    assert_eq!(ast::ExpressionOperations::Eq.priority(), 7);
+    assert_eq!(ast::ExpressionOperations::NotEq.priority(), 7);
+    assert_eq!(ast::ExpressionOperations::Great.priority(), 7);
+    assert_eq!(ast::ExpressionOperations::GreatEq.priority(), 7);
+    assert_eq!(ast::ExpressionOperations::LessEq.priority(), 7);
+
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::Plus.into();
+    assert_eq!(ex_op, ExpressionOperations::Plus);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::Minus.into();
+    assert_eq!(ex_op, ExpressionOperations::Minus);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::Multiply.into();
+    assert_eq!(ex_op, ExpressionOperations::Multiply);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::Divide.into();
+    assert_eq!(ex_op, ExpressionOperations::Divide);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::ShiftLeft.into();
+    assert_eq!(ex_op, ExpressionOperations::ShiftLeft);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::ShiftRight.into();
+    assert_eq!(ex_op, ExpressionOperations::ShiftRight);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::Or.into();
+    assert_eq!(ex_op, ExpressionOperations::Or);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::And.into();
+    assert_eq!(ex_op, ExpressionOperations::And);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::Xor.into();
+    assert_eq!(ex_op, ExpressionOperations::Xor);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::Eq.into();
+    assert_eq!(ex_op, ExpressionOperations::Eq);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::NotEq.into();
+    assert_eq!(ex_op, ExpressionOperations::NotEq);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::Great.into();
+    assert_eq!(ex_op, ExpressionOperations::Great);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::Less.into();
+    assert_eq!(ex_op, ExpressionOperations::Less);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::GreatEq.into();
+    assert_eq!(ex_op, ExpressionOperations::GreatEq);
+    let ex_op: ExpressionOperations = ast::ExpressionOperations::LessEq.into();
+    assert_eq!(ex_op, ExpressionOperations::LessEq);
 }
