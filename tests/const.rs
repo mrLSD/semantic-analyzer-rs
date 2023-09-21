@@ -1,5 +1,6 @@
 use crate::utils::SemanticTest;
 use semantic_analyzer::ast::{self, GetName};
+use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::expression::ExpressionOperations;
 use semantic_analyzer::types::{
     semantic::SemanticStackContext, Constant, ConstantExpression, ConstantName, ConstantValue,
@@ -88,7 +89,8 @@ fn const_declaration() {
     };
     t.state.constant(&const_statement);
     assert!(t.state.global.constants.contains_key(&const_name.into()));
-    assert!(t.state.errors.is_empty());
+    assert!(!t.is_error());
+
     let state = t.state.global.context.clone().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
@@ -102,13 +104,16 @@ fn const_declaration() {
 #[test]
 fn const_declaration_with_operarions() {
     let mut t = SemanticTest::new();
+    let const_name2 = ast::ConstantName::new(ast::Ident::new("cnt2"));
     let cnt_expr_prev = ast::ConstantExpression {
-        value: ast::ConstantValue::Constant(ast::ConstantName::new(ast::Ident::new("cnt2"))),
+        value: ast::ConstantValue::Constant(const_name2.clone()),
         operation: None,
     };
-    let const_name = ast::ConstantName::new(ast::Ident::new("cnt1"));
+
+    // constant1
+    let const_name1 = ast::ConstantName::new(ast::Ident::new("cnt1"));
     let const_statement = ast::Constant {
-        name: const_name.clone(),
+        name: const_name1.clone(),
         constant_type: ast::Type::Primitive(ast::PrimitiveTypes::I8),
         constant_value: ast::ConstantExpression {
             value: ast::ConstantValue::Value(ast::PrimitiveValue::I8(10)),
@@ -116,14 +121,43 @@ fn const_declaration_with_operarions() {
         },
     };
     t.state.constant(&const_statement);
-    assert!(t.state.global.constants.contains_key(&const_name.into()));
-    assert!(t.state.errors.is_empty());
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::ConstantNotFound));
+    assert!(!t
+        .state
+        .global
+        .constants
+        .contains_key(&const_name1.clone().into()));
+    t.clean_errors();
+
+    // constant2
+    let const_statement2 = ast::Constant {
+        name: const_name2.clone(),
+        constant_type: ast::Type::Primitive(ast::PrimitiveTypes::I32),
+        constant_value: ast::ConstantExpression {
+            value: ast::ConstantValue::Value(ast::PrimitiveValue::I8(10)),
+            operation: None,
+        },
+    };
+    t.state.constant(&const_statement2);
+    assert!(t.state.global.constants.contains_key(&const_name2.into()));
+
+    t.state.constant(&const_statement);
+    assert!(t.state.global.constants.contains_key(&const_name1.into()));
+    assert!(!t.is_error());
+
     let state = t.state.global.context.clone().get();
-    assert_eq!(state.len(), 1);
+    assert_eq!(state.len(), 2);
     assert_eq!(
         state[0],
         SemanticStackContext::Constant {
-            const_decl: const_statement.clone().into()
+            const_decl: const_statement2.into()
+        }
+    );
+    assert_eq!(
+        state[1],
+        SemanticStackContext::Constant {
+            const_decl: const_statement.into()
         }
     );
 }

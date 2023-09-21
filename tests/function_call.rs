@@ -20,7 +20,7 @@ fn function_declaration() {
     };
     t.state.function_declaration(&fn_statement);
     assert!(t.state.global.functions.contains_key(&fn_name.into()));
-    assert!(t.state.errors.is_empty());
+    assert!(!t.is_error());
     let state = t.state.global.context.clone().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
@@ -44,7 +44,7 @@ fn function_declaration() {
     assert!(t.state.global.functions.contains_key(&fn_name2.into()));
     let state = t.state.global.context.clone().get();
     assert_eq!(state.len(), 2);
-    assert!(t.state.errors.is_empty());
+    assert!(!t.is_error());
     assert_eq!(
         state[0],
         SemanticStackContext::FunctionDeclaration {
