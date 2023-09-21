@@ -63,7 +63,7 @@ fn expression_value_name_exists() {
         state[0],
         SemanticStackContext::ExpressionValue { expression: value }
     );
-    assert!(!t.is_error());
+    assert!(t.is_empty_error());
 }
 
 #[test]
@@ -96,7 +96,7 @@ fn expression_const_exists() {
         state[0],
         SemanticStackContext::ExpressionConst { expression: value }
     );
-    assert!(!t.is_error());
+    assert!(t.is_empty_error());
 }
 
 #[test]
@@ -115,7 +115,7 @@ fn expression_primitive_value() {
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::I32));
     let state = block_state.borrow().context.clone().get();
     assert!(state.is_empty());
-    assert!(!t.is_error());
+    assert!(t.is_empty_error());
 }
 
 #[test]

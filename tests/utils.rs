@@ -18,8 +18,9 @@ impl SemanticTest {
         }
     }
 
-    pub fn is_error(&self) -> bool {
-        !self.state.errors.is_empty()
+    #[allow(dead_code)]
+    pub fn is_empty_error(&self) -> bool {
+        self.state.errors.is_empty()
     }
 
     #[allow(dead_code)]
@@ -34,10 +35,6 @@ impl SemanticTest {
 
     #[allow(dead_code)]
     pub fn check_error(&self, err_kind: StateErrorKind) -> bool {
-        if let Some(err) = self.state.errors.get(0) {
-            err.kind == err_kind
-        } else {
-            false
-        }
+        self.state.errors.get(0).unwrap().kind == err_kind
     }
 }

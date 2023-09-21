@@ -32,6 +32,12 @@ impl GetName for ImportName<'_> {
     }
 }
 
+impl<'a> ImportName<'a> {
+    pub const fn new(ident: Ident<'a>) -> Self {
+        Self(ident)
+    }
+}
+
 /// Imports with full path of import
 pub type ImportPath<'a> = Vec<ImportName<'a>>;
 

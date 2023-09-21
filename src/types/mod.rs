@@ -42,6 +42,12 @@ impl From<String> for ValueName {
     }
 }
 
+impl From<&str> for ValueName {
+    fn from(value: &str) -> Self {
+        Self(value.to_string())
+    }
+}
+
 impl ToString for ValueName {
     fn to_string(&self) -> String {
         self.0.clone()

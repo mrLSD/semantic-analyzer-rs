@@ -1,5 +1,5 @@
 use crate::utils::SemanticTest;
-use semantic_analyzer::ast::{self};
+use semantic_analyzer::ast::{self, CodeLocation, GetLocation, Ident};
 use semantic_analyzer::types::block_state::BlockState;
 use semantic_analyzer::types::semantic::SemanticStackContext;
 use std::cell::RefCell;
@@ -7,6 +7,12 @@ use std::rc::Rc;
 
 mod utils;
 
+#[test]
+fn function_transform_ast() {
+    let fn_name = ast::FunctionName::new(Ident::new("fn1"));
+    assert_eq!(fn_name.location(), CodeLocation::new(1, 0));
+    assert_eq!(fn_name.to_string(), "fn1");
+}
 #[test]
 fn function_declaration() {
     let _block_state = Rc::new(RefCell::new(BlockState::new(None)));
@@ -20,7 +26,6 @@ fn function_declaration() {
     };
     t.state.function_declaration(&fn_statement);
     assert!(t.state.global.functions.contains_key(&fn_name.into()));
-    assert!(!t.is_error());
     let state = t.state.global.context.clone().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
@@ -44,7 +49,7 @@ fn function_declaration() {
     assert!(t.state.global.functions.contains_key(&fn_name2.into()));
     let state = t.state.global.context.clone().get();
     assert_eq!(state.len(), 2);
-    assert!(!t.is_error());
+    assert!(t.is_empty_error());
     assert_eq!(
         state[0],
         SemanticStackContext::FunctionDeclaration {

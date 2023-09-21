@@ -1,5 +1,5 @@
 use crate::utils::SemanticTest;
-use semantic_analyzer::ast::{self, GetName};
+use semantic_analyzer::ast::{self, CodeLocation, GetLocation, GetName};
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::expression::ExpressionOperations;
 use semantic_analyzer::types::{
@@ -89,7 +89,7 @@ fn const_declaration() {
     };
     t.state.constant(&const_statement);
     assert!(t.state.global.constants.contains_key(&const_name.into()));
-    assert!(!t.is_error());
+    assert!(t.is_empty_error());
 
     let state = t.state.global.context.clone().get();
     assert_eq!(state.len(), 1);
@@ -102,7 +102,7 @@ fn const_declaration() {
 }
 
 #[test]
-fn const_declaration_with_operarions() {
+fn const_declaration_with_operations() {
     let mut t = SemanticTest::new();
     let const_name2 = ast::ConstantName::new(ast::Ident::new("cnt2"));
     let cnt_expr_prev = ast::ConstantExpression {
@@ -120,6 +120,7 @@ fn const_declaration_with_operarions() {
             operation: Some((ast::ExpressionOperations::Plus, Box::new(cnt_expr_prev))),
         },
     };
+    assert_eq!(const_statement.location(), CodeLocation::new(1, 0));
     t.state.constant(&const_statement);
     assert!(t.check_errors_len(1));
     assert!(t.check_error(StateErrorKind::ConstantNotFound));
@@ -144,7 +145,7 @@ fn const_declaration_with_operarions() {
 
     t.state.constant(&const_statement);
     assert!(t.state.global.constants.contains_key(&const_name1.into()));
-    assert!(!t.is_error());
+    assert!(t.is_empty_error());
 
     let state = t.state.global.context.clone().get();
     assert_eq!(state.len(), 2);
