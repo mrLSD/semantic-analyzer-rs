@@ -1,9 +1,11 @@
 use crate::utils::SemanticTest;
 use semantic_analyzer::ast::{self, CodeLocation, GetLocation, GetName, Ident};
+use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::semantic::SemanticStackContext;
 use semantic_analyzer::types::types::{
     PrimitiveTypes, StructType, StructTypes, Type, TypeAttributes,
 };
+use semantic_analyzer::types::ValueName;
 
 mod utils;
 
@@ -83,6 +85,17 @@ fn types_ast_transform() {
         attr_name: Ident::new("attr15"),
         attr_type: ast::Type::Primitive(ast::PrimitiveTypes::None),
     };
+    let ty16 = ast::StructType {
+        attr_name: Ident::new("attr16"),
+        attr_type: ast::Type::Array(Box::new(ast::Type::Primitive(ast::PrimitiveTypes::I16)), 10),
+    };
+    let ty17 = ast::StructType {
+        attr_name: Ident::new("attr17"),
+        attr_type: ast::Type::Struct(ast::StructTypes {
+            name: Ident::new("type5"),
+            attributes: vec![],
+        }),
+    };
     let type_ast = ast::StructTypes {
         name: Ident::new("type2"),
         attributes: vec![
@@ -101,11 +114,13 @@ fn types_ast_transform() {
             ty13.clone(),
             ty14.clone(),
             ty15.clone(),
+            ty16.clone(),
+            ty17.clone(),
         ],
     };
     let type_into2: StructTypes = type_ast.clone().into();
     assert_eq!(type_into2.name, "type2");
-    assert_eq!(type_into2.attributes.len(), 15);
+    assert_eq!(type_into2.attributes.len(), 17);
 
     // Index=0 the same, so we can check directly
     assert_eq!(ty1.attr_type.name(), "u8");
@@ -187,6 +202,70 @@ fn types_ast_transform() {
     assert_eq!(attr9.attr_type.to_string(), "bool");
     assert_eq!(attr9.attr_index, 8);
 
+    let attr10 = type_into2.attributes.get(&("attr10".into())).unwrap();
+    assert_eq!(ty10.attr_type.name(), "f32");
+    let ty10: StructType = ty10.into();
+    assert_eq!(attr10.attr_name, ty10.attr_name);
+    assert_eq!(attr10.attr_type, ty10.attr_type);
+    assert_eq!(attr10.attr_type.to_string(), "f32");
+    assert_eq!(attr10.attr_index, 9);
+
+    let attr11 = type_into2.attributes.get(&("attr11".into())).unwrap();
+    assert_eq!(ty11.attr_type.name(), "f64");
+    let ty11: StructType = ty11.into();
+    assert_eq!(attr11.attr_name, ty11.attr_name);
+    assert_eq!(attr11.attr_type, ty11.attr_type);
+    assert_eq!(attr11.attr_type.to_string(), "f64");
+    assert_eq!(attr11.attr_index, 10);
+
+    let attr12 = type_into2.attributes.get(&("attr12".into())).unwrap();
+    assert_eq!(ty12.attr_type.name(), "char");
+    let ty12: StructType = ty12.into();
+    assert_eq!(attr12.attr_name, ty12.attr_name);
+    assert_eq!(attr12.attr_type, ty12.attr_type);
+    assert_eq!(attr12.attr_type.to_string(), "char");
+    assert_eq!(attr12.attr_index, 11);
+
+    let attr13 = type_into2.attributes.get(&("attr13".into())).unwrap();
+    assert_eq!(ty13.attr_type.name(), "str");
+    let ty13: StructType = ty13.into();
+    assert_eq!(attr13.attr_name, ty13.attr_name);
+    assert_eq!(attr13.attr_type, ty13.attr_type);
+    assert_eq!(attr13.attr_type.to_string(), "str");
+    assert_eq!(attr13.attr_index, 12);
+
+    let attr14 = type_into2.attributes.get(&("attr14".into())).unwrap();
+    assert_eq!(ty14.attr_type.name(), "ptr");
+    let ty14: StructType = ty14.into();
+    assert_eq!(attr14.attr_name, ty14.attr_name);
+    assert_eq!(attr14.attr_type, ty14.attr_type);
+    assert_eq!(attr14.attr_type.to_string(), "ptr");
+    assert_eq!(attr14.attr_index, 13);
+
+    let attr15 = type_into2.attributes.get(&("attr15".into())).unwrap();
+    assert_eq!(ty15.attr_type.name(), "()");
+    let ty15: StructType = ty15.into();
+    assert_eq!(attr15.attr_name, ty15.attr_name);
+    assert_eq!(attr15.attr_type, ty15.attr_type);
+    assert_eq!(attr15.attr_type.to_string(), "()");
+    assert_eq!(attr15.attr_index, 14);
+
+    let attr16 = type_into2.attributes.get(&("attr16".into())).unwrap();
+    assert_eq!(ty16.attr_type.name(), "[\"i16\";10]");
+    let ty16: StructType = ty16.into();
+    assert_eq!(attr16.attr_name, ty16.attr_name);
+    assert_eq!(attr16.attr_type, ty16.attr_type);
+    assert_eq!(attr16.attr_type.to_string(), "[\"i16\";10]");
+    assert_eq!(attr16.attr_index, 15);
+
+    let attr17 = type_into2.attributes.get(&("attr17".into())).unwrap();
+    assert_eq!(ty17.attr_type.name(), "type5");
+    let ty17: StructType = ty17.into();
+    assert_eq!(attr17.attr_name, ty17.attr_name);
+    assert_eq!(attr17.attr_type, ty17.attr_type);
+    assert_eq!(attr17.attr_type.to_string(), "type5");
+    assert_eq!(attr17.attr_index, 16);
+
     //=======================
     // Common type tests
     let pty = Type::Primitive(PrimitiveTypes::U16);
@@ -203,10 +282,19 @@ fn types_ast_transform() {
         main_type.get_attribute_type(&("attr3".into())).unwrap(),
         Type::Primitive(PrimitiveTypes::U32)
     );
-    assert_eq!(main_type.get_attribute_index(&("attr3".into())).unwrap(), 2);
+    let attr3_name: ValueName = "attr3".into();
+    assert_eq!(main_type.get_attribute_index(&attr3_name).unwrap(), 2);
+    assert_eq!(attr3_name.to_string(), "attr3");
     assert_eq!(main_type.get_method("fn1".to_string()), None);
     assert!(main_type.is_attribute(&("attr3".into())));
     assert!(!main_type.is_method("fn1".to_string()));
+
+    let st_type = ast::StructTypes {
+        name: Ident::new("type3"),
+        attributes: vec![],
+    };
+    let arr_type_ast = ast::Type::Array(Box::new(ast::Type::Struct(st_type)), 10);
+    assert_eq!(arr_type_ast.name(), "[\"type3\";10]");
 }
 
 #[test]
@@ -224,9 +312,44 @@ fn types_declaration() {
     assert_eq!(
         state[0],
         SemanticStackContext::Types {
+            type_decl: type_decl.clone().into()
+        }
+    );
+
+    let ty1 = ast::StructType {
+        attr_name: Ident::new("attr1"),
+        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::Char),
+    };
+    let ty2 = ast::StructType {
+        attr_name: Ident::new("attr2"),
+        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::String),
+    };
+    let type_decl2 = ast::StructTypes {
+        name: Ident::new("type2"),
+        attributes: vec![ty1, ty2],
+    };
+    t.state.types(&type_decl2.clone());
+    assert!(t.is_empty_error());
+    let state = t.state.global.context.clone().get();
+    assert_eq!(state.len(), 2);
+    assert_eq!(
+        state[0],
+        SemanticStackContext::Types {
             type_decl: type_decl.into()
         }
     );
+    assert_eq!(
+        state[1],
+        SemanticStackContext::Types {
+            type_decl: type_decl2.clone().into()
+        }
+    );
+
+    t.state.types(&type_decl2.clone());
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::TypeAlreadyExist));
+    let state = t.state.global.context.clone().get();
+    assert_eq!(state.len(), 2);
 }
 
 #[test]

@@ -153,7 +153,11 @@ impl State {
 
     /// Import analyzer (TBD)
     #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
-    pub const fn import(&self, _data: &ast::ImportPath<'_>) {}
+    pub fn import(&self, data: &ast::ImportPath<'_>) {
+        if !data.is_empty() {
+            let _name = data[0].name();
+        }
+    }
 
     /// Types declaration analyzer. Add types to `Global State`.
     /// Currently only one type kind: Structs. And types can't be part of
