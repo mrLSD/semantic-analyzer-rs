@@ -1,3 +1,6 @@
+//! # Errors types
+//! Errors types for Semantic analyzer result of Error state.
+
 use crate::ast::CodeLocation;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -5,6 +8,7 @@ pub enum StateErrorKind {
     /// Common error indicate errors in the State
     Common,
     ConstantAlreadyExist,
+    ConstantNotFound,
     WrongLetType,
     WrongExpressionType,
     TypeAlreadyExist,

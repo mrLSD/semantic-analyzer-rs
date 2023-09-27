@@ -1,7 +1,10 @@
-use crate::types::condition::{Condition, LogicCondition};
-use crate::types::expression::{ExpressionOperations, ExpressionResult};
-use crate::types::types::StructTypes;
-use crate::types::{Constant, Function, FunctionStatement, LabelName, Value};
+//! # Semantic types
+//! Semantic analyzer result state types.
+
+use super::condition::{Condition, LogicCondition};
+use super::expression::{ExpressionOperations, ExpressionResult};
+use super::types::StructTypes;
+use super::{Constant, Function, FunctionStatement, LabelName, Value};
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct SemanticStack(Vec<SemanticStackContext>);
@@ -117,17 +120,8 @@ impl SemanticStack {
         self.push(SemanticStackContext::JumpFunctionReturn { expr_result });
     }
 
-    pub fn logic_condition(
-        &mut self,
-        left_condition_register: u64,
-        right_condition_register: u64,
-        logic_condition: LogicCondition,
-    ) {
-        self.push(SemanticStackContext::LogicCondition {
-            left_condition_register,
-            right_condition_register,
-            logic_condition,
-        });
+    pub fn logic_condition(&mut self, logic_condition: LogicCondition) {
+        self.push(SemanticStackContext::LogicCondition { logic_condition });
     }
 
     pub fn if_condition_logic(&mut self, label_if_begin: LabelName, label_if_end: LabelName) {
@@ -202,8 +196,6 @@ pub enum SemanticStackContext {
         expr_result: ExpressionResult,
     },
     LogicCondition {
-        left_condition_register: u64,
-        right_condition_register: u64,
         logic_condition: LogicCondition,
     },
     IfConditionLogic {

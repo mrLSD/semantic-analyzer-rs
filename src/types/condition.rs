@@ -1,6 +1,9 @@
+//! # Condition types
+//! Condition types for Semantic analyzer result state.
+
+use super::expression::Expression;
+use super::{Binding, FunctionCall, LetBinding};
 use crate::ast;
-use crate::types::expression::Expression;
-use crate::types::{Binding, FunctionCall, LetBinding};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Condition {
