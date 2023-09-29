@@ -37,4 +37,9 @@ impl SemanticTest {
     pub fn check_error(&self, err_kind: StateErrorKind) -> bool {
         self.state.errors.get(0).unwrap().kind == err_kind
     }
+
+    #[allow(dead_code)]
+    pub fn check_error_index(&self, index: usize, err_kind: StateErrorKind) -> bool {
+        self.state.errors.get(index).unwrap().kind == err_kind
+    }
 }
