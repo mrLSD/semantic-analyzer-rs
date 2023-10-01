@@ -3,6 +3,7 @@
 
 use crate::ast::CodeLocation;
 
+/// Common errors kind for the State.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum StateErrorKind {
     /// Common error indicate errors in the State
@@ -27,13 +28,18 @@ pub enum StateErrorKind {
     ConditionExpressionNotSupported,
 }
 
+/// State error location. Useful to determine location of error
 #[derive(Debug, Clone)]
 pub struct StateErrorLocation(pub CodeLocation);
 
+/// State error result data representation
 #[derive(Debug, Clone)]
 pub struct StateErrorResult {
+    /// Kind of error
     pub kind: StateErrorKind,
+    /// Error value
     pub value: String,
+    /// Error location
     pub location: StateErrorLocation,
 }
 
@@ -49,6 +55,7 @@ impl StateErrorResult {
 
 impl StateErrorResult {
     #[allow(dead_code)]
+    /// Get state trace data from error result as string
     pub fn trace_state(&self) -> String {
         format!(
             "[{:?}] for value {:?} at: {:?}:{:?}",

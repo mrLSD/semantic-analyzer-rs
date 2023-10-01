@@ -12,12 +12,14 @@
 
 use crate::ast::{self, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
 use crate::types::block_state::BlockState;
-use crate::types::expression::{Expression, ExpressionResult, ExpressionResultValue};
+use crate::types::expression::{
+    Expression, ExpressionResult, ExpressionResultValue, ExpressionStructValue,
+};
 use crate::types::semantic::SemanticStack;
-use crate::types::types::{Type, TypeAttributes, TypeName};
+use crate::types::types::{Type, TypeName};
 use crate::types::{
     error, Binding, Constant, ConstantName, Function, FunctionCall, FunctionName,
-    FunctionStatement, LabelName, LetBinding, StructValue, Value,
+    FunctionStatement, LabelName, LetBinding, Value,
 };
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -1096,13 +1098,13 @@ impl State {
                 }
             }
             ast::ExpressionValue::StructValue(value) => {
-                let struct_value: StructValue = value.clone().into();
+                let struct_value: ExpressionStructValue = value.clone().into();
                 // Can be only Value from state, not constant
                 // Get value from block state
                 let val = body_state
                     .borrow_mut()
                     .get_value_name(&struct_value.name)
-                    .or({
+                    .or_else(|| {
                         // If value doesn't exist
                         self.add_error(error::StateErrorResult::new(
                             error::StateErrorKind::ValueNotFound,
@@ -1111,8 +1113,8 @@ impl State {
                         ));
                         None
                     })?;
-                // Get attribute type
-                let ty = val.inner_type.get_struct().or({
+                // Check is value type is struct
+                let ty = val.inner_type.get_struct().or_else(|| {
                     self.add_error(error::StateErrorResult::new(
                         error::StateErrorKind::ValueNotStruct,
                         value.name.name(),
@@ -1120,30 +1122,39 @@ impl State {
                     ));
                     None
                 })?;
-                let attr_ty = ty.get_attribute_type(&struct_value.attribute).or({
+                // Check is type exists
+                if !self.check_type_exists(&val.inner_type, &value.name.name(), &value.name) {
+                    return None;
+                }
+                if &Type::Struct(ty.clone()) != self.global.types.get(&val.inner_type.name())? {
                     self.add_error(error::StateErrorResult::new(
-                        error::StateErrorKind::ValueNotStructField,
+                        error::StateErrorKind::WrongExpressionType,
                         value.name.name(),
                         value.name.location(),
                     ));
-                    None
-                })?;
-                let attr_index = ty.get_attribute_index(&struct_value.attribute).or({
-                    self.add_error(error::StateErrorResult::new(
-                        error::StateErrorKind::ValueNotStructField,
-                        value.name.name(),
-                        value.name.location(),
-                    ));
-                    None
-                })?;
+                    return None;
+                }
+
+                let attributes = ty
+                    .attributes
+                    .get(&struct_value.attribute)
+                    .or_else(|| {
+                        self.add_error(error::StateErrorResult::new(
+                            error::StateErrorKind::ValueNotStructField,
+                            value.name.name(),
+                            value.name.location(),
+                        ));
+                        None
+                    })?
+                    .clone();
 
                 body_state
                     .borrow_mut()
                     .context
-                    .expression_struct_value(val.clone(), attr_index);
+                    .expression_struct_value(val.clone(), attributes.clone().attr_index);
 
                 ExpressionResult {
-                    expr_type: attr_ty,
+                    expr_type: attributes.attr_type,
                     expr_value: ExpressionResultValue::Register,
                 }
             }

@@ -5,14 +5,22 @@ use super::{FunctionName, ValueName};
 use crate::ast::{self, GetName};
 use std::collections::HashMap;
 
+/// `TypeAttributes` type attributes trait.
+/// Used for types declarations.
 pub trait TypeAttributes {
+    /// Get attribute index by value name for the parent type
     fn get_attribute_index(&self, attr_name: &ValueName) -> Option<u32>;
+    /// Get attribute type by value name for the parent type
     fn get_attribute_type(&self, attr_name: &ValueName) -> Option<Type>;
+    /// Get function name for the parent type by method name
     fn get_method(&self, method_name: String) -> Option<FunctionName>;
+    /// Check is value attribute
     fn is_attribute(&self, name: &ValueName) -> bool;
+    /// Check is name is method
     fn is_method(&self, name: String) -> bool;
 }
 
+/// Type name representation
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct TypeName(String);
 
@@ -34,6 +42,11 @@ impl ToString for TypeName {
     }
 }
 
+/// # Type
+/// Basic representation of Type. Basic entities:
+/// - primitive type
+/// - struct type
+/// - array type
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Type {
     Primitive(PrimitiveTypes),
@@ -42,10 +55,12 @@ pub enum Type {
 }
 
 impl Type {
+    /// Get type name
     pub fn name(&self) -> TypeName {
         self.to_string().into()
     }
 
+    /// Get structure type if it is
     pub fn get_struct(&self) -> Option<StructTypes> {
         match self {
             Self::Struct(ty) => Some(ty.clone()),
@@ -109,6 +124,8 @@ impl From<ast::Type<'_>> for Type {
     }
 }
 
+/// # Primitive types
+/// Most primitive type. It's basic elements for other types.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrimitiveTypes {
     U8,
@@ -173,10 +190,15 @@ impl From<ast::PrimitiveTypes> for PrimitiveTypes {
     }
 }
 
+/// # Struct types
+/// Basic entity for struct type itself.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct StructTypes {
+    /// Type name
     pub name: String,
-    pub attributes: HashMap<ValueName, StructType>,
+    /// Struct attributes
+    pub attributes: HashMap<ValueName, StructAttributeType>,
+    /// Struct methods
     pub methods: HashMap<String, FunctionName>,
 }
 
@@ -208,7 +230,7 @@ impl From<ast::StructTypes<'_>> for StructTypes {
                 let mut res = HashMap::new();
                 for (index, val) in value.attributes.iter().enumerate() {
                     let name = (*val.attr_name.fragment()).to_string();
-                    let mut v: StructType = val.clone().into();
+                    let mut v: StructAttributeType = val.clone().into();
                     v.attr_index = index as u32;
                     res.insert(name.into(), v);
                 }
@@ -219,14 +241,18 @@ impl From<ast::StructTypes<'_>> for StructTypes {
     }
 }
 
+/// `StructAttributeType` is type for Struct attributes fields.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct StructType {
+pub struct StructAttributeType {
+    /// Attribute name for struct type
     pub attr_name: ValueName,
+    /// Attribute index representation for for struct type
     pub attr_index: u32,
+    /// Attribute type for struct type
     pub attr_type: Type,
 }
 
-impl From<ast::StructType<'_>> for StructType {
+impl From<ast::StructType<'_>> for StructAttributeType {
     fn from(value: ast::StructType<'_>) -> Self {
         Self {
             attr_name: value.name().into(),

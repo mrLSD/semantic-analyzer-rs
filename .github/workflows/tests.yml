@@ -7,7 +7,7 @@ on:
 
 name: Tests
 jobs:
-  lint:
+  test:
     name: Tests
     runs-on: ${{ matrix.os }}
     strategy:
@@ -15,27 +15,60 @@ jobs:
         os:
           - ubuntu-latest
         rust:
-          - stable
+          - nightly
 
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 1
-
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
           components: rustfmt, clippy
-
+      - name: Restore cache
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo
+      - name: Build
+        run: cargo build
       - name: Test
-        run: cargo test --all
+        run: cargo test --all-targets
+        env:
+          CARGO_INCREMENTAL: '0'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Copt-level=0 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
+          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Copt-level=0 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
+      - name: Install grcov
+        run: |
+          if [[ ! -f ~/.cargo/bin/grcov ]]; then
+            cargo install grcov          
+          fi
+      - name: Save cache
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo
+      - name: Run grcov
+        run: |
+          mkdir ./target/debug/coverage/
+          grcov . -s . -b ./target/debug/ -o ./target/debug/coverage/
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          directory: ./target/debug/coverage/
+          files: ./target/debug/coverage/lcov
+          verbose: true
+          fail_ci_if_error: true
+

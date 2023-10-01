@@ -1,9 +1,9 @@
 use crate::utils::SemanticTest;
-use semantic_analyzer::ast::{self, CodeLocation, GetLocation, GetName, Ident};
+use semantic_analyzer::ast::{self, GetLocation, GetName, Ident};
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::semantic::SemanticStackContext;
 use semantic_analyzer::types::types::{
-    PrimitiveTypes, StructType, StructTypes, Type, TypeAttributes,
+    PrimitiveTypes, StructAttributeType, StructTypes, Type, TypeAttributes,
 };
 use semantic_analyzer::types::ValueName;
 
@@ -16,7 +16,7 @@ fn types_ast_transform() {
         attributes: vec![],
     };
     assert_eq!(type_ast.name(), "type1");
-    assert_eq!(type_ast.location(), CodeLocation::new(1, 0));
+    assert_eq!(type_ast.location(), ast::CodeLocation::new(1, 0));
     let main_ast_type = ast::Type::Struct(type_ast.clone());
     assert_eq!(main_ast_type.name(), "type1");
 
@@ -125,7 +125,7 @@ fn types_ast_transform() {
     // Index=0 the same, so we can check directly
     assert_eq!(ty1.attr_type.name(), "u8");
     let attr1 = type_into2.attributes.get(&("attr1".into())).unwrap();
-    let ty1: StructType = ty1.into();
+    let ty1: StructAttributeType = ty1.into();
     assert_eq!(attr1, &ty1);
     assert_eq!(type_into2.get_attribute_index(&("attr2".into())), Some(1));
     assert_eq!(
@@ -140,7 +140,7 @@ fn types_ast_transform() {
 
     let attr2 = type_into2.attributes.get(&("attr2".into())).unwrap();
     assert_eq!(ty2.attr_type.name(), "u16");
-    let ty2: StructType = ty2.into();
+    let ty2: StructAttributeType = ty2.into();
     assert_eq!(attr2.attr_name, ty2.attr_name);
     assert_eq!(attr2.attr_type, ty2.attr_type);
     assert_eq!(attr2.attr_type.to_string(), "u16");
@@ -148,7 +148,7 @@ fn types_ast_transform() {
 
     let attr3 = type_into2.attributes.get(&("attr3".into())).unwrap();
     assert_eq!(ty3.attr_type.name(), "u32");
-    let ty3: StructType = ty3.into();
+    let ty3: StructAttributeType = ty3.into();
     assert_eq!(attr3.attr_name, ty3.attr_name);
     assert_eq!(attr3.attr_type, ty3.attr_type);
     assert_eq!(attr3.attr_type.to_string(), "u32");
@@ -156,7 +156,7 @@ fn types_ast_transform() {
 
     let attr4 = type_into2.attributes.get(&("attr4".into())).unwrap();
     assert_eq!(ty4.attr_type.name(), "u64");
-    let ty4: StructType = ty4.into();
+    let ty4: StructAttributeType = ty4.into();
     assert_eq!(attr4.attr_name, ty4.attr_name);
     assert_eq!(attr4.attr_type, ty4.attr_type);
     assert_eq!(attr4.attr_type.to_string(), "u64");
@@ -164,7 +164,7 @@ fn types_ast_transform() {
 
     let attr5 = type_into2.attributes.get(&("attr5".into())).unwrap();
     assert_eq!(ty5.attr_type.name(), "i8");
-    let ty5: StructType = ty5.into();
+    let ty5: StructAttributeType = ty5.into();
     assert_eq!(attr5.attr_name, ty5.attr_name);
     assert_eq!(attr5.attr_type, ty5.attr_type);
     assert_eq!(attr5.attr_type.to_string(), "i8");
@@ -172,7 +172,7 @@ fn types_ast_transform() {
 
     let attr6 = type_into2.attributes.get(&("attr6".into())).unwrap();
     assert_eq!(ty6.attr_type.name(), "i16");
-    let ty6: StructType = ty6.into();
+    let ty6: StructAttributeType = ty6.into();
     assert_eq!(attr6.attr_name, ty6.attr_name);
     assert_eq!(attr6.attr_type, ty6.attr_type);
     assert_eq!(attr6.attr_type.to_string(), "i16");
@@ -180,7 +180,7 @@ fn types_ast_transform() {
 
     let attr7 = type_into2.attributes.get(&("attr7".into())).unwrap();
     assert_eq!(ty7.attr_type.name(), "i32");
-    let ty7: StructType = ty7.into();
+    let ty7: StructAttributeType = ty7.into();
     assert_eq!(attr7.attr_name, ty7.attr_name);
     assert_eq!(attr7.attr_type, ty7.attr_type);
     assert_eq!(attr7.attr_type.to_string(), "i32");
@@ -188,7 +188,7 @@ fn types_ast_transform() {
 
     let attr8 = type_into2.attributes.get(&("attr8".into())).unwrap();
     assert_eq!(ty8.attr_type.name(), "i64");
-    let ty8: StructType = ty8.into();
+    let ty8: StructAttributeType = ty8.into();
     assert_eq!(attr8.attr_name, ty8.attr_name);
     assert_eq!(attr8.attr_type, ty8.attr_type);
     assert_eq!(attr8.attr_type.to_string(), "i64");
@@ -196,7 +196,7 @@ fn types_ast_transform() {
 
     let attr9 = type_into2.attributes.get(&("attr9".into())).unwrap();
     assert_eq!(ty9.attr_type.name(), "bool");
-    let ty9: StructType = ty9.into();
+    let ty9: StructAttributeType = ty9.into();
     assert_eq!(attr9.attr_name, ty9.attr_name);
     assert_eq!(attr9.attr_type, ty9.attr_type);
     assert_eq!(attr9.attr_type.to_string(), "bool");
@@ -204,7 +204,7 @@ fn types_ast_transform() {
 
     let attr10 = type_into2.attributes.get(&("attr10".into())).unwrap();
     assert_eq!(ty10.attr_type.name(), "f32");
-    let ty10: StructType = ty10.into();
+    let ty10: StructAttributeType = ty10.into();
     assert_eq!(attr10.attr_name, ty10.attr_name);
     assert_eq!(attr10.attr_type, ty10.attr_type);
     assert_eq!(attr10.attr_type.to_string(), "f32");
@@ -212,7 +212,7 @@ fn types_ast_transform() {
 
     let attr11 = type_into2.attributes.get(&("attr11".into())).unwrap();
     assert_eq!(ty11.attr_type.name(), "f64");
-    let ty11: StructType = ty11.into();
+    let ty11: StructAttributeType = ty11.into();
     assert_eq!(attr11.attr_name, ty11.attr_name);
     assert_eq!(attr11.attr_type, ty11.attr_type);
     assert_eq!(attr11.attr_type.to_string(), "f64");
@@ -220,7 +220,7 @@ fn types_ast_transform() {
 
     let attr12 = type_into2.attributes.get(&("attr12".into())).unwrap();
     assert_eq!(ty12.attr_type.name(), "char");
-    let ty12: StructType = ty12.into();
+    let ty12: StructAttributeType = ty12.into();
     assert_eq!(attr12.attr_name, ty12.attr_name);
     assert_eq!(attr12.attr_type, ty12.attr_type);
     assert_eq!(attr12.attr_type.to_string(), "char");
@@ -228,7 +228,7 @@ fn types_ast_transform() {
 
     let attr13 = type_into2.attributes.get(&("attr13".into())).unwrap();
     assert_eq!(ty13.attr_type.name(), "str");
-    let ty13: StructType = ty13.into();
+    let ty13: StructAttributeType = ty13.into();
     assert_eq!(attr13.attr_name, ty13.attr_name);
     assert_eq!(attr13.attr_type, ty13.attr_type);
     assert_eq!(attr13.attr_type.to_string(), "str");
@@ -236,7 +236,7 @@ fn types_ast_transform() {
 
     let attr14 = type_into2.attributes.get(&("attr14".into())).unwrap();
     assert_eq!(ty14.attr_type.name(), "ptr");
-    let ty14: StructType = ty14.into();
+    let ty14: StructAttributeType = ty14.into();
     assert_eq!(attr14.attr_name, ty14.attr_name);
     assert_eq!(attr14.attr_type, ty14.attr_type);
     assert_eq!(attr14.attr_type.to_string(), "ptr");
@@ -244,7 +244,7 @@ fn types_ast_transform() {
 
     let attr15 = type_into2.attributes.get(&("attr15".into())).unwrap();
     assert_eq!(ty15.attr_type.name(), "()");
-    let ty15: StructType = ty15.into();
+    let ty15: StructAttributeType = ty15.into();
     assert_eq!(attr15.attr_name, ty15.attr_name);
     assert_eq!(attr15.attr_type, ty15.attr_type);
     assert_eq!(attr15.attr_type.to_string(), "()");
@@ -252,7 +252,7 @@ fn types_ast_transform() {
 
     let attr16 = type_into2.attributes.get(&("attr16".into())).unwrap();
     assert_eq!(ty16.attr_type.name(), "[\"i16\";10]");
-    let ty16: StructType = ty16.into();
+    let ty16: StructAttributeType = ty16.into();
     assert_eq!(attr16.attr_name, ty16.attr_name);
     assert_eq!(attr16.attr_type, ty16.attr_type);
     assert_eq!(attr16.attr_type.to_string(), "[\"i16\";10]");
@@ -260,7 +260,7 @@ fn types_ast_transform() {
 
     let attr17 = type_into2.attributes.get(&("attr17".into())).unwrap();
     assert_eq!(ty17.attr_type.name(), "type5");
-    let ty17: StructType = ty17.into();
+    let ty17: StructAttributeType = ty17.into();
     assert_eq!(attr17.attr_name, ty17.attr_name);
     assert_eq!(attr17.attr_type, ty17.attr_type);
     assert_eq!(attr17.attr_type.to_string(), "type5");
