@@ -7,7 +7,7 @@ on:
 
 name: Tests
 jobs:
-  lint:
+  test:
     name: Tests
     runs-on: ${{ matrix.os }}
     strategy:
@@ -15,27 +15,36 @@ jobs:
         os:
           - ubuntu-latest
         rust:
-          - stable
+          - nightly
 
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 1
-
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
           components: rustfmt, clippy
-
+      - uses: Clean
+        run: cargo clean
+      - name: Build
+        run: cargo build
       - name: Test
-        run: cargo test --all
+        run: cargo test --all-targets
+        env:
+          CARGO_INCREMENTAL: '0'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Copt-level=0 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
+          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Copt-level=0 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
+      - name: rust-grcov
+        # You may pin to the exact commit or the version.
+        # uses: actions-rs/grcov@bb47b1ed7883a1502fa6875d562727ace2511248
+        uses: actions-rs/grcov@v0.1.5
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4-beta
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          verbose: true
+          fail_ci_if_error: true
