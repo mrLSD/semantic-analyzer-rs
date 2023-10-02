@@ -485,7 +485,8 @@ pub struct Expression<'a> {
 
 impl GetLocation for Expression<'_> {
     fn location(&self) -> CodeLocation {
-        todo!()
+        // TODO: extend it
+        CodeLocation::new(1, 0)
     }
 }
 

@@ -1,14 +1,16 @@
 use crate::utils::SemanticTest;
 use semantic_analyzer::ast;
-use semantic_analyzer::ast::{GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
-use semantic_analyzer::types::expression::ExpressionOperations;
+use semantic_analyzer::ast::{
+    CodeLocation, GetLocation, GetName, Ident, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS,
+};
+use semantic_analyzer::types::expression::{Expression, ExpressionOperations};
 use semantic_analyzer::types::semantic::SemanticStackContext;
 use semantic_analyzer::types::{
     block_state::BlockState,
     error::StateErrorKind,
     expression::ExpressionResultValue,
     types::{PrimitiveTypes, Type},
-    Constant, ConstantExpression, ConstantName, ConstantValue, PrimitiveValue, Value,
+    Constant, ConstantExpression, ConstantName, ConstantValue, PrimitiveValue, Value, ValueName,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -16,10 +18,31 @@ use std::rc::Rc;
 mod utils;
 
 #[test]
+fn expression_ast_transform() {
+    let value_name = ast::ValueName::new(Ident::new("x"));
+    let expr = ast::Expression {
+        expression_value: ast::ExpressionValue::ValueName(value_name.clone()),
+        operation: None,
+    };
+    assert_eq!(expr.location(), CodeLocation::new(1, 0));
+    assert_eq!(value_name.location(), CodeLocation::new(1, 0));
+    assert_eq!(value_name.name(), "x");
+    let value_name_into: ValueName = value_name.into();
+    assert_eq!(value_name_into.to_string(), "x");
+    let expr_into: Expression = expr.into();
+    assert_eq!(expr_into.expression_value.to_string(), "x");
+    assert_eq!(expr_into.to_string(), "x");
+    let value_name_into2: ValueName = String::from("x1").into();
+    assert_eq!(value_name_into2.to_string(), "x1");
+    let value_name_into3: ValueName = "x2".into();
+    assert_eq!(value_name_into3.to_string(), "x2");
+}
+
+#[test]
 fn expression_value_name_not_found() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
-    let src = ast::Ident::new("x");
+    let src = Ident::new("x");
     let value_name = ast::ValueName::new(src);
     let expr = ast::Expression {
         expression_value: ast::ExpressionValue::ValueName(value_name),
