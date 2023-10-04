@@ -32,6 +32,9 @@ pub struct BlockState {
     pub inner_values_name: HashSet<InnerValueName>,
     /// State labels for conditional operations
     pub labels: HashSet<LabelName>,
+    /// Last register for unique register representation
+    pub last_register_number: u64,
+
     /// Manual return from other states
     pub manual_return: bool,
     /// Parent state
@@ -46,28 +49,46 @@ impl BlockState {
     /// Init block state with optional `parent` state
     pub fn new(parent: Option<Rc<RefCell<Self>>>) -> Self {
         // Get values from parent
-        let (inner_values_name, labels, manual_return) = parent.clone().map_or_else(
-            || (HashSet::new(), HashSet::new(), false),
-            |p| {
-                let parent = p.borrow();
-                (
-                    parent.inner_values_name.clone(),
-                    parent.labels.clone(),
-                    parent.manual_return,
-                )
-            },
-        );
+        let (last_register_number, inner_values_name, labels, manual_return) =
+            parent.clone().map_or_else(
+                || (0, HashSet::new(), HashSet::new(), false),
+                |p| {
+                    let parent = p.borrow();
+                    (
+                        parent.last_register_number,
+                        parent.inner_values_name.clone(),
+                        parent.labels.clone(),
+                        parent.manual_return,
+                    )
+                },
+            );
         Self {
             values: HashMap::new(),
             children: vec![],
             inner_values_name,
             labels,
+            last_register_number,
             manual_return,
             parent,
             context: SemanticStack::new(),
         }
     }
 
+    /// Set `last_register_number` for current and parent states
+    fn set_register(&mut self, last_register_number: u64) {
+        self.last_register_number = last_register_number;
+        // Set `last_register_number` for parents
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().set_register(last_register_number);
+        }
+    }
+
+    /// Increment register
+    pub fn inc_register(&mut self) {
+        self.set_register(self.last_register_number + 1);
+    }
+
+    /// Get child Block state
     pub fn set_child(&mut self, child: Rc<RefCell<BlockState>>) {
         self.children.push(child);
     }

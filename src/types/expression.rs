@@ -25,7 +25,7 @@ pub struct ExpressionResult {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionResultValue {
     PrimitiveValue(PrimitiveValue),
-    Register,
+    Register(u64),
 }
 
 /// Expression value kinds:

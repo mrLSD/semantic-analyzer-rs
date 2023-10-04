@@ -1043,18 +1043,6 @@ impl State {
             ast::ExpressionValue::ValueName(value) => {
                 // Get value from block state
                 let value_from_state = body_state.borrow_mut().get_value_name(&value.name().into());
-                // Check is value exist in State or as Constant
-                if !(value_from_state.is_some()
-                    || self.global.constants.contains_key(&value.name().into()))
-                {
-                    // If value doesn't exist
-                    self.add_error(error::StateErrorResult::new(
-                        error::StateErrorKind::ValueNotFound,
-                        value.name(),
-                        value.location(),
-                    ));
-                    return None;
-                }
                 // First check value in body state
                 let ty = if let Some(val) = value_from_state {
                     body_state
@@ -1069,12 +1057,21 @@ impl State {
                         .expression_const(const_val.clone());
                     const_val.constant_type.clone()
                 } else {
+                    // If value doesn't exist in State or as Constant
+                    self.add_error(error::StateErrorResult::new(
+                        error::StateErrorKind::ValueNotFound,
+                        value.name(),
+                        value.location(),
+                    ));
                     return None;
                 };
                 // Return result as register
+                body_state.borrow_mut().inc_register();
                 ExpressionResult {
                     expr_type: ty,
-                    expr_value: ExpressionResultValue::Register,
+                    expr_value: ExpressionResultValue::Register(
+                        body_state.borrow().last_register_number,
+                    ),
                 }
             }
             // Check is expression primitive value
@@ -1092,9 +1089,12 @@ impl State {
                 // And result of function always stored in register.
                 let func_call_ty = self.function_call(fn_call, body_state)?;
                 // Return result as register
+                body_state.borrow_mut().inc_register();
                 ExpressionResult {
                     expr_type: func_call_ty,
-                    expr_value: ExpressionResultValue::Register,
+                    expr_value: ExpressionResultValue::Register(
+                        body_state.borrow().last_register_number,
+                    ),
                 }
             }
             ast::ExpressionValue::StructValue(value) => {
@@ -1153,9 +1153,12 @@ impl State {
                     .context
                     .expression_struct_value(val.clone(), attributes.clone().attr_index);
 
+                body_state.borrow_mut().inc_register();
                 ExpressionResult {
                     expr_type: attributes.attr_type,
-                    expr_value: ExpressionResultValue::Register,
+                    expr_value: ExpressionResultValue::Register(
+                        body_state.borrow().last_register_number,
+                    ),
                 }
             }
             ast::ExpressionValue::Expression(expr) => {
@@ -1171,6 +1174,8 @@ impl State {
                     left_value.expr_type.to_string(),
                     right_expression.location(),
                 ));
+                // Do not fetch other expression flow if type is wrong
+                return None;
             }
             // Call expression operation for: OP(left_value, right_value)
             body_state.borrow_mut().context.expression_operation(
@@ -1179,9 +1184,12 @@ impl State {
                 right_value.clone(),
             );
             // Expression result value  for Operations is always should be "register"
+            body_state.borrow_mut().inc_register();
             ExpressionResult {
                 expr_type: right_value.expr_type,
-                expr_value: ExpressionResultValue::Register,
+                expr_value: ExpressionResultValue::Register(
+                    body_state.borrow().last_register_number,
+                ),
             }
         } else {
             right_value
@@ -1190,7 +1198,7 @@ impl State {
         // Check is for right value contain next operation
         if let Some((operation, expr)) = &right_expression.operation {
             // Recursively call, where current Execution result set as left
-            // side expression
+            // side expressionf
             self.expression_operation(Some(&expression_result), expr, Some(operation), body_state)
         } else {
             Some(expression_result)
@@ -1239,7 +1247,7 @@ impl State {
                         ast::ExpressionValue::Expression(Box::new(ast::Expression {
                             expression_value: data.expression_value,
                             operation: Some((
-                                op,
+                                op.clone(),
                                 Box::new(ast::Expression {
                                     expression_value: expr.expression_value,
                                     operation: None,
@@ -1256,7 +1264,16 @@ impl State {
                 } else {
                     // If priority not equal for current level just
                     // fetch right side of expression for next branches
-                    let new_expr = Self::fetch_op_priority(*expr, priority_level);
+                    let new_expr =
+                        if next_op.priority() > op.priority() && next_expr.operation.is_none() {
+                            // Pack expression to leaf
+                            ast::Expression {
+                                expression_value: ast::ExpressionValue::Expression(expr),
+                                operation: None,
+                            }
+                        } else {
+                            Self::fetch_op_priority(*expr, priority_level)
+                        };
                     // Rebuild expression tree
                     ast::Expression {
                         expression_value: data.expression_value,
