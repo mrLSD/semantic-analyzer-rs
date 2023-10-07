@@ -57,4 +57,8 @@ fn state_init() {
         bst.get_next_inner_name(&inner_value_name4).to_string(),
         "x1.1"
     );
+    let pre_bst1 = BlockState::new(None);
+    let pre_bst2 = BlockState::new(None);
+    let bloc_states = vec![pre_bst1, pre_bst2];
+    assert_eq!(bloc_states.len(), 2);
 }
