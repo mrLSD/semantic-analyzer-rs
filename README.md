@@ -2,6 +2,7 @@
 [![Lints](https://github.com/mrLSD/z-rose/actions/workflows/lints.yml/badge.svg)](https://github.com/mrLSD/z-rose/actions/workflows/lints.yml)
 [![Tests](https://github.com/mrLSD/z-rose/actions/workflows/tests.yml/badge.svg)](https://github.com/mrLSD/z-rose/actions/workflows/tests.yml)
 [![Crates.io version](https://img.shields.io/crates/v/semantic-analyzer.svg?style=flat-square)](https://crates.io/crates/semantic-analyzer)
+[![codecov](https://codecov.io/gh/mrLSD/semantic-analyzer-rs/graph/badge.svg?token=ZQ8FCYSSZX)](https://codecov.io/gh/mrLSD/semantic-analyzer-rs)
 
 <div style="text-align: center;">
     <h1>mrLSD<code>/semantic-analyzer-rs</code></h1>
