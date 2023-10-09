@@ -40,7 +40,7 @@ fn function_declaration_without_body() {
 }
 
 #[test]
-fn function_declaration_wrong_typecd() {
+fn function_declaration_wrong_type() {
     let mut t = SemanticTest::new();
     let fn_name = ast::FunctionName::new(Ident::new("fn2"));
 
