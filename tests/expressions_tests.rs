@@ -39,6 +39,249 @@ fn expression_ast_transform() {
 }
 
 #[test]
+fn expression_value_ast_transform() {
+    let val = ast::PrimitiveValue::I8(3);
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::I8)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::I8(3), expr_val);
+    assert_eq!(expr_val.to_string(), "3");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "3");
+
+    let val = ast::PrimitiveValue::I16(3);
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::I16)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::I16(3), expr_val);
+    assert_eq!(expr_val.to_string(), "3");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "3");
+
+    let val = ast::PrimitiveValue::I32(3);
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::I32)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::I32(3), expr_val);
+    assert_eq!(expr_val.to_string(), "3");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "3");
+
+    let val = ast::PrimitiveValue::I64(3);
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::I64)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::I64(3), expr_val);
+    assert_eq!(expr_val.to_string(), "3");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "3");
+
+    let val = ast::PrimitiveValue::U8(3);
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::U8)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::U8(3), expr_val);
+    assert_eq!(expr_val.to_string(), "3");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "3");
+
+    let val = ast::PrimitiveValue::U16(3);
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::U16)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::U16(3), expr_val);
+    assert_eq!(expr_val.to_string(), "3");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "3");
+
+    let val = ast::PrimitiveValue::U32(3);
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::U32)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::U32(3), expr_val);
+    assert_eq!(expr_val.to_string(), "3");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "3");
+
+    let val = ast::PrimitiveValue::U64(3);
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::U64)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::U64(3), expr_val);
+    assert_eq!(expr_val.to_string(), "3");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "3");
+
+    let val = ast::PrimitiveValue::U64(3);
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::U64)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::U64(3), expr_val);
+    assert_eq!(expr_val.to_string(), "3");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "3");
+
+    let val = ast::PrimitiveValue::F32(3.1);
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::F32)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::F32(3.1), expr_val);
+    assert_eq!(expr_val.to_string(), "3.1");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "3.1");
+
+    let val = ast::PrimitiveValue::F64(3.1);
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::F64)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::F64(3.1), expr_val);
+    assert_eq!(expr_val.to_string(), "3.1");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "3.1");
+
+    let val = ast::PrimitiveValue::Bool(true);
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::Bool)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::Bool(true), expr_val);
+    assert_eq!(expr_val.to_string(), "true");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "true");
+
+    let val = ast::PrimitiveValue::String("str".to_string());
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::String)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::String("str".to_string()), expr_val);
+    assert_eq!(expr_val.to_string(), "str");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "str");
+
+    let val = ast::PrimitiveValue::Char('a');
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::Char)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::Char('a'), expr_val);
+    assert_eq!(expr_val.to_string(), "a");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "a");
+
+    let val = ast::PrimitiveValue::Ptr;
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::Ptr)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::Ptr, expr_val);
+    assert_eq!(expr_val.to_string(), "ptr");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "ptr");
+
+    let val = ast::PrimitiveValue::None;
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::None)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::None, expr_val);
+    assert_eq!(expr_val.to_string(), "None");
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), "None");
+}
+
+#[test]
 fn expression_value_name_not_found() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
