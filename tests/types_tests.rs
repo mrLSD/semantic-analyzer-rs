@@ -1,5 +1,5 @@
 use crate::utils::SemanticTest;
-use semantic_analyzer::ast::{self, CodeLocation, GetLocation, GetName, Ident};
+use semantic_analyzer::ast::{self, GetLocation, GetName, Ident};
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::semantic::SemanticStackContext;
 use semantic_analyzer::types::types::{
@@ -16,7 +16,7 @@ fn types_ast_transform() {
         attributes: vec![],
     };
     assert_eq!(type_ast.name(), "type1");
-    assert_eq!(type_ast.location(), CodeLocation::new(1, 0));
+    assert_eq!(type_ast.location(), ast::CodeLocation::new(1, 0));
     let main_ast_type = ast::Type::Struct(type_ast.clone());
     assert_eq!(main_ast_type.name(), "type1");
 
