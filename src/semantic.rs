@@ -12,12 +12,14 @@
 
 use crate::ast::{self, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
 use crate::types::block_state::BlockState;
-use crate::types::expression::{Expression, ExpressionResult, ExpressionResultValue};
+use crate::types::expression::{
+    Expression, ExpressionResult, ExpressionResultValue, ExpressionStructValue,
+};
 use crate::types::semantic::SemanticStack;
 use crate::types::types::{Type, TypeAttributes, TypeName};
 use crate::types::{
     error, Binding, Constant, ConstantName, Function, FunctionCall, FunctionName,
-    FunctionStatement, LabelName, LetBinding, StructValue, Value,
+    FunctionStatement, LabelName, LetBinding, Value,
 };
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -1096,7 +1098,7 @@ impl State {
                 }
             }
             ast::ExpressionValue::StructValue(value) => {
-                let struct_value: StructValue = value.clone().into();
+                let struct_value: ExpressionStructValue = value.clone().into();
                 // Can be only Value from state, not constant
                 // Get value from block state
                 let val = body_state

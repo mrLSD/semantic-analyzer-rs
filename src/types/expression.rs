@@ -2,7 +2,7 @@
 //! Expression types for Semantic analyzer result state.
 
 use super::types::Type;
-use super::{FunctionCall, PrimitiveValue, StructValue, ValueName};
+use super::{FunctionCall, PrimitiveValue, ValueName};
 use crate::ast;
 
 /// # Expression result
@@ -11,7 +11,9 @@ use crate::ast;
 /// - `expr_value` - result value of expression
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExpressionResult {
+    /// Result type of expression
     pub expr_type: Type,
+    /// Result value of expression
     pub expr_value: ExpressionResultValue,
 }
 
@@ -26,11 +28,17 @@ pub enum ExpressionResultValue {
     Register,
 }
 
+/// Expression value kinds:
+/// - value name - initialized through let-binding
+/// - primitive value - most primitive value, like integers etc.
+/// - struct value - value of struct type
+/// - function call - call of function with params
+/// - expression - contains other expression
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionValue {
     ValueName(ValueName),
     PrimitiveValue(PrimitiveValue),
-    StructValue(StructValue),
+    StructValue(ExpressionStructValue),
     FunctionCall(FunctionCall),
     Expression(Box<Expression>),
 }
@@ -61,6 +69,33 @@ impl From<ast::ExpressionValue<'_>> for ExpressionValue {
     }
 }
 
+/// Expression value of struct type. It's represent access to
+/// struct attributes of values with struct type
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExpressionStructValue {
+    /// Value name for structure value
+    pub name: ValueName,
+    /// Value attribute for structure value
+    pub attribute: ValueName,
+}
+
+impl ToString for ExpressionStructValue {
+    fn to_string(&self) -> String {
+        self.name.to_string()
+    }
+}
+
+impl From<ast::ExressionStructValue<'_>> for ExpressionStructValue {
+    fn from(value: ast::ExressionStructValue<'_>) -> Self {
+        Self {
+            name: value.name.into(),
+            attribute: value.attribute.into(),
+        }
+    }
+}
+
+/// Basic  expression operations - calculations and
+/// logic operations
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExpressionOperations {
     Plus,
@@ -102,9 +137,15 @@ impl From<ast::ExpressionOperations> for ExpressionOperations {
     }
 }
 
+/// # Expression
+/// Basic expression entity representation. It contains
+/// `ExpressionValue` and optional operations with other
+/// expressions. So it's represent flat tree.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expression {
+    /// Expression value
     pub expression_value: ExpressionValue,
+    /// Optional expression operation under other `Expression`
     pub operation: Option<(ExpressionOperations, Box<Expression>)>,
 }
 

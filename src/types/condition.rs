@@ -5,6 +5,7 @@ use super::expression::Expression;
 use super::{Binding, FunctionCall, LetBinding};
 use crate::ast;
 
+/// Basic logical conditions mostly for compare expressions
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Condition {
     Great,
@@ -28,6 +29,8 @@ impl From<ast::Condition> for Condition {
     }
 }
 
+/// Logical conditions type representation.
+/// Usefulf for logical expressions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LogicCondition {
     And,
@@ -43,10 +46,14 @@ impl From<ast::LogicCondition> for LogicCondition {
     }
 }
 
+/// Expression condition for two expressions
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExpressionCondition {
+    /// Left expression
     pub left: Expression,
+    /// Condition for expressions
     pub condition: Condition,
+    /// Right expression
     pub right: Expression,
 }
 
@@ -60,9 +67,14 @@ impl From<ast::ExpressionCondition<'_>> for ExpressionCondition {
     }
 }
 
+/// Expression logic condition for expression conditions.
+/// It's build chain of expression conditions and
+/// expression logic conditions as flat tree.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExpressionLogicCondition {
+    /// Left expression condition
     pub left: ExpressionCondition,
+    /// Optional right expression condition with logic condition
     pub right: Option<(LogicCondition, Box<ExpressionLogicCondition>)>,
 }
 
@@ -77,6 +89,9 @@ impl From<ast::ExpressionLogicCondition<'_>> for ExpressionLogicCondition {
     }
 }
 
+/// If-condition representation. It can be:
+/// - simple - just expression
+/// - logic - represented through `ExpressionLogicCondition`
 #[derive(Debug, Clone, PartialEq)]
 pub enum IfCondition {
     Single(Expression),
@@ -92,11 +107,17 @@ impl From<ast::IfCondition<'_>> for IfCondition {
     }
 }
 
+/// # If statement
+/// Basic entity that represent if-statement.
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfStatement {
+    /// If-condition
     pub condition: IfCondition,
+    /// Basic if-body, if if-condition is true
     pub body: IfBodyStatements,
+    /// Basic else-body, if if-condition is false
     pub else_statement: Option<IfBodyStatements>,
+    /// Basic else-if-body
     pub else_if_statement: Option<Box<IfStatement>>,
 }
 
@@ -113,6 +134,9 @@ impl From<ast::IfStatement<'_>> for IfStatement {
     }
 }
 
+/// If-body statement can be:
+/// - if-body-statement related only
+/// - loop-body-statement related - special case for the loops
 #[derive(Debug, Clone, PartialEq)]
 pub enum IfBodyStatements {
     If(Vec<IfBodyStatement>),
@@ -130,6 +154,7 @@ impl From<ast::IfBodyStatements<'_>> for IfBodyStatements {
     }
 }
 
+/// Loop body statement represents body for the loop
 #[derive(Debug, Clone, PartialEq)]
 pub enum LoopBodyStatement {
     LetBinding(LetBinding),
@@ -159,6 +184,7 @@ impl From<ast::LoopBodyStatement<'_>> for LoopBodyStatement {
     }
 }
 
+/// If-body statement represents body for the if-body
 #[derive(Debug, Clone, PartialEq)]
 pub enum IfBodyStatement {
     LetBinding(LetBinding),
@@ -184,6 +210,8 @@ impl From<ast::IfBodyStatement<'_>> for IfBodyStatement {
     }
 }
 
+/// If-loop body statements represent body of if-body
+/// in the loops
 #[derive(Debug, Clone, PartialEq)]
 pub enum IfLoopBodyStatement {
     LetBinding(LetBinding),

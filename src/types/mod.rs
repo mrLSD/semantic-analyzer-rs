@@ -141,6 +141,7 @@ impl ToString for ConstantName {
     }
 }
 
+/// Constant value can contain other constant or primitive value
 #[derive(Debug, Clone, PartialEq)]
 pub enum ConstantValue {
     Constant(ConstantName),
@@ -156,9 +157,13 @@ impl From<ast::ConstantValue<'_>> for ConstantValue {
     }
 }
 
+/// Constant expression represent expression operation between
+/// constant values, and represent flat tree
 #[derive(Debug, Clone, PartialEq)]
 pub struct ConstantExpression {
+    /// Constant value for expression operation
     pub value: ConstantValue,
+    /// Optional expression operation and next constant expression entry point
     pub operation: Option<(ExpressionOperations, Box<ConstantExpression>)>,
 }
 
@@ -177,8 +182,11 @@ impl From<ast::ConstantExpression<'_>> for ConstantExpression {
 /// Can contain: name, type
 #[derive(Debug, Clone, PartialEq)]
 pub struct Constant {
+    /// Constant name
     pub name: ConstantName,
+    /// Constant type
     pub constant_type: Type,
+    /// Constant value represented through constant expression
     pub constant_value: ConstantExpression,
 }
 
@@ -198,10 +206,15 @@ impl From<ast::Constant<'_>> for Constant {
 /// - malloc - malloc allocation
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Value {
+    /// Inner value name
     pub inner_name: InnerValueName,
+    /// Inner value type
     pub inner_type: Type,
+    /// Mutability flag
     pub mutable: bool,
+    /// Stack allocation flag
     pub alloca: bool,
+    /// Memory allocation flag
     pub malloc: bool,
 }
 
@@ -216,11 +229,15 @@ pub struct Value {
 /// flog.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Function {
+    /// Inner function name
     pub inner_name: FunctionName,
+    /// Inner (return) type
     pub inner_type: Type,
+    /// Function parameters typesz
     pub parameters: Vec<Type>,
 }
 
+/// Parameter name type for Functions parameter
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParameterName(String);
 
@@ -230,9 +247,12 @@ impl From<ast::ParameterName<'_>> for ParameterName {
     }
 }
 
+/// Function parameter one of the basic entity for `FunctionStatement`
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FunctionParameter {
+    /// Function parameter name
     pub name: ParameterName,
+    /// Function parameter type
     pub parameter_type: Type,
 }
 
@@ -251,11 +271,22 @@ impl ToString for FunctionParameter {
     }
 }
 
+/// # Function statement
+/// Function statement is basic type that represent function itself.
+/// The basic function struct elements:
+/// - function name
+/// - function parameters
+/// - function result type
+/// - function body statements
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionStatement {
+    /// Function name
     pub name: FunctionName,
+    /// Function parameters
     pub parameters: Vec<FunctionParameter>,
+    /// Function result type
     pub result_type: Type,
+    /// Function body statements
     pub body: Vec<BodyStatement>,
 }
 
@@ -270,6 +301,9 @@ impl From<ast::FunctionStatement<'_>> for FunctionStatement {
     }
 }
 
+/// # Body statement
+/// Statement of body. Body is basic entity for functions and
+/// represent basic functions elements.
 #[derive(Debug, Clone, PartialEq)]
 pub enum BodyStatement {
     LetBinding(LetBinding),
@@ -295,11 +329,17 @@ impl From<ast::BodyStatement<'_>> for BodyStatement {
     }
 }
 
+/// # Let binding
+/// Value initialization through binding.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LetBinding {
+    /// Value name
     pub name: ValueName,
+    /// Value mutability flag
     pub mutable: bool,
+    /// Value type
     pub value_type: Option<Type>,
+    /// Value bind expression
     pub value: Box<Expression>,
 }
 
@@ -320,6 +360,8 @@ impl From<ast::LetBinding<'_>> for LetBinding {
     }
 }
 
+/// Primitive value is most primitive and basic values entity.
+/// It's basic elements for all other values elements.
 #[derive(Debug, Clone, PartialEq)]
 pub enum PrimitiveValue {
     U8(u8),
@@ -383,30 +425,13 @@ impl ToString for PrimitiveValue {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StructValue {
-    pub name: ValueName,
-    pub attribute: ValueName,
-}
-
-impl ToString for StructValue {
-    fn to_string(&self) -> String {
-        self.name.to_string()
-    }
-}
-
-impl From<ast::StructValue<'_>> for StructValue {
-    fn from(value: ast::StructValue<'_>) -> Self {
-        Self {
-            name: value.name.into(),
-            attribute: value.attribute.into(),
-        }
-    }
-}
-
+/// # Function call
+/// Basic struct for function call representation
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall {
+    /// Call function name
     pub name: FunctionName,
+    /// Call function parameters contains expressions
     pub parameters: Vec<Expression>,
 }
 
@@ -425,9 +450,12 @@ impl From<ast::FunctionCall<'_>> for FunctionCall {
     }
 }
 
+/// `Binding` represents mutable binding for previously bind values
 #[derive(Debug, Clone, PartialEq)]
 pub struct Binding {
+    /// Binding value name
     pub name: ValueName,
+    /// Value expression representation
     pub value: Box<Expression>,
 }
 
