@@ -3,7 +3,9 @@ use semantic_analyzer::ast;
 use semantic_analyzer::ast::{
     CodeLocation, GetLocation, GetName, Ident, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS,
 };
-use semantic_analyzer::types::expression::{Expression, ExpressionOperations};
+use semantic_analyzer::types::expression::{
+    Expression, ExpressionOperations, ExpressionStructValue,
+};
 use semantic_analyzer::types::semantic::SemanticStackContext;
 use semantic_analyzer::types::{
     block_state::BlockState,
@@ -39,7 +41,7 @@ fn expression_ast_transform() {
 }
 
 #[test]
-fn expression_value_ast_transform() {
+fn expression_ast_transform_primitive_value_i8() {
     let val = ast::PrimitiveValue::I8(3);
     assert_eq!(
         val.get_type(),
@@ -54,7 +56,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "3");
+}
 
+#[test]
+fn expression_ast_transform_primitive_value_i16() {
     let val = ast::PrimitiveValue::I16(3);
     assert_eq!(
         val.get_type(),
@@ -69,7 +74,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "3");
+}
 
+#[test]
+fn expression_ast_transform_primitive_value_i32() {
     let val = ast::PrimitiveValue::I32(3);
     assert_eq!(
         val.get_type(),
@@ -84,7 +92,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "3");
+}
 
+#[test]
+fn expression_ast_transform_primitive_value_i64() {
     let val = ast::PrimitiveValue::I64(3);
     assert_eq!(
         val.get_type(),
@@ -99,7 +110,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "3");
+}
 
+#[test]
+fn expression_ast_transform_primitive_value_u8() {
     let val = ast::PrimitiveValue::U8(3);
     assert_eq!(
         val.get_type(),
@@ -114,7 +128,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "3");
+}
 
+#[test]
+fn expression_ast_transform_primitive_value_u16() {
     let val = ast::PrimitiveValue::U16(3);
     assert_eq!(
         val.get_type(),
@@ -129,7 +146,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "3");
+}
 
+#[test]
+fn expression_ast_transform_primitive_value_u32() {
     let val = ast::PrimitiveValue::U32(3);
     assert_eq!(
         val.get_type(),
@@ -144,7 +164,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "3");
+}
 
+#[test]
+fn expression_ast_transform_primitive_value_u64() {
     let val = ast::PrimitiveValue::U64(3);
     assert_eq!(
         val.get_type(),
@@ -159,22 +182,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "3");
+}
 
-    let val = ast::PrimitiveValue::U64(3);
-    assert_eq!(
-        val.get_type(),
-        ast::Type::Primitive(ast::PrimitiveTypes::U64)
-    );
-    let expr_val: PrimitiveValue = val.clone().into();
-    assert_eq!(PrimitiveValue::U64(3), expr_val);
-    assert_eq!(expr_val.to_string(), "3");
-    let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
-        operation: None,
-    }
-    .into();
-    assert_eq!(expr.to_string(), "3");
-
+#[test]
+fn expression_ast_transform_primitive_value_f32() {
     let val = ast::PrimitiveValue::F32(3.1);
     assert_eq!(
         val.get_type(),
@@ -189,7 +200,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "3.1");
+}
 
+#[test]
+fn expression_ast_transform_primitive_value_f64() {
     let val = ast::PrimitiveValue::F64(3.1);
     assert_eq!(
         val.get_type(),
@@ -204,7 +218,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "3.1");
+}
 
+#[test]
+fn expression_ast_transform_primitive_value_bool() {
     let val = ast::PrimitiveValue::Bool(true);
     assert_eq!(
         val.get_type(),
@@ -219,7 +236,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "true");
+}
 
+#[test]
+fn expression_ast_transform_primitive_value_string() {
     let val = ast::PrimitiveValue::String("str".to_string());
     assert_eq!(
         val.get_type(),
@@ -234,7 +254,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "str");
+}
 
+#[test]
+fn expression_ast_transform_primitive_value_char() {
     let val = ast::PrimitiveValue::Char('a');
     assert_eq!(
         val.get_type(),
@@ -249,7 +272,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "a");
+}
 
+#[test]
+fn expression_ast_transform_primitive_value_ptr() {
     let val = ast::PrimitiveValue::Ptr;
     assert_eq!(
         val.get_type(),
@@ -264,7 +290,10 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "ptr");
+}
 
+#[test]
+fn expression_ast_transform_primitive_value_none() {
     let val = ast::PrimitiveValue::None;
     assert_eq!(
         val.get_type(),
@@ -279,6 +308,16 @@ fn expression_value_ast_transform() {
     }
     .into();
     assert_eq!(expr.to_string(), "None");
+}
+
+#[test]
+fn expression_ast_transform_primitive_struct_value() {
+    let expr_struct_val = ast::ExpressionStructValue {
+        name: ast::ValueName::new(Ident::new("val")),
+        attribute: ast::ValueName::new(Ident::new("attr1")),
+    };
+    let expr_struct_val: ExpressionStructValue = expr_struct_val.into();
+    assert_eq!(expr_struct_val.to_string(), "val");
 }
 
 #[test]
@@ -440,4 +479,80 @@ fn ast_expression_operations() {
     assert_eq!(ex_op, ExpressionOperations::GreatEq);
     let ex_op: ExpressionOperations = ast::ExpressionOperations::LessEq.into();
     assert_eq!(ex_op, ExpressionOperations::LessEq);
+}
+
+#[test]
+fn expression_struct_value_not_found() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let expr_struct_val = ast::ExpressionStructValue {
+        name: ast::ValueName::new(Ident::new("val")),
+        attribute: ast::ValueName::new(Ident::new("attr1")),
+    };
+    let expr = ast::Expression {
+        expression_value: ast::ExpressionValue::StructValue(expr_struct_val),
+        operation: None,
+    };
+    let res = t.state.expression(&expr, &block_state);
+    assert!(res.is_none());
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::ValueNotFound));
+}
+
+#[test]
+fn expression_struct_value() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let expr_struct_val = ast::ExpressionStructValue {
+        name: ast::ValueName::new(Ident::new("x")),
+        attribute: ast::ValueName::new(Ident::new("attr1")),
+    };
+    let expr = ast::Expression {
+        expression_value: ast::ExpressionValue::StructValue(expr_struct_val),
+        operation: None,
+    };
+    let mut val = Value {
+        inner_name: "x".into(),
+        inner_type: Type::Primitive(PrimitiveTypes::Bool),
+        mutable: false,
+        alloca: false,
+        malloc: false,
+    };
+    block_state
+        .borrow_mut()
+        .values
+        .insert("x".into(), val.clone());
+    assert!(t.check_errors_len(0));
+    let res = t.state.expression(&expr, &block_state);
+    assert!(res.is_none());
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::ValueNotStruct));
+    t.clean_errors();
+
+    let s_attr = ast::StructType {
+        attr_name: Ident::new("attr1"),
+        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+    };
+    let s_ty = ast::StructTypes {
+        name: "St".into(),
+        attributes: vec![s_attr],
+    };
+    val.inner_type = Type::Struct(s_ty.into());
+    block_state
+        .borrow_mut()
+        .values
+        .insert("x".into(), val.clone());
+    let res = t.state.expression(&expr, &block_state);
+    println!("{:?}", t.state.errors);
+    assert!(res.is_none());
+
+    assert!(t.check_errors_len(2));
+    // assert_eq!(
+    //     res.expr_value,
+    //     ExpressionResultValue::PrimitiveValue(PrimitiveValue::I32(10))
+    // );
+    // assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::I32));
+    // let state = block_state.borrow().context.clone().get();
+    // assert!(state.is_empty());
+    // assert!(t.is_empty_error());
 }

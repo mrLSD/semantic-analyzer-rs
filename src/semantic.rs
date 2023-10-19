@@ -1104,7 +1104,7 @@ impl State {
                 let val = body_state
                     .borrow_mut()
                     .get_value_name(&struct_value.name)
-                    .or({
+                    .or_else(|| {
                         // If value doesn't exist
                         self.add_error(error::StateErrorResult::new(
                             error::StateErrorKind::ValueNotFound,
@@ -1114,7 +1114,15 @@ impl State {
                         None
                     })?;
                 // Get attribute type
-                let ty = val.inner_type.get_struct().or({
+                if !self.check_type_exists(&val.inner_type, &value.name.name(), &value.name) {
+                    self.add_error(error::StateErrorResult::new(
+                        error::StateErrorKind::TypeNotFound,
+                        value.name.name(),
+                        value.name.location(),
+                    ));
+                    return None;
+                }
+                let ty = val.inner_type.get_struct().or_else(|| {
                     self.add_error(error::StateErrorResult::new(
                         error::StateErrorKind::ValueNotStruct,
                         value.name.name(),
@@ -1122,7 +1130,7 @@ impl State {
                     ));
                     None
                 })?;
-                let attr_ty = ty.get_attribute_type(&struct_value.attribute).or({
+                let attr_ty = ty.get_attribute_type(&struct_value.attribute).or_else(|| {
                     self.add_error(error::StateErrorResult::new(
                         error::StateErrorKind::ValueNotStructField,
                         value.name.name(),
@@ -1130,14 +1138,16 @@ impl State {
                     ));
                     None
                 })?;
-                let attr_index = ty.get_attribute_index(&struct_value.attribute).or({
-                    self.add_error(error::StateErrorResult::new(
-                        error::StateErrorKind::ValueNotStructField,
-                        value.name.name(),
-                        value.name.location(),
-                    ));
-                    None
-                })?;
+                let attr_index = ty
+                    .get_attribute_index(&struct_value.attribute)
+                    .or_else(|| {
+                        self.add_error(error::StateErrorResult::new(
+                            error::StateErrorKind::ValueNotStructField,
+                            value.name.name(),
+                            value.name.location(),
+                        ));
+                        None
+                    })?;
 
                 body_state
                     .borrow_mut()

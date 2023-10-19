@@ -201,7 +201,7 @@ impl GetName for PrimitiveTypes {
 /// - value name of struct type
 /// - value struct type attribute
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ExressionStructValue<'a> {
+pub struct ExpressionStructValue<'a> {
     /// Value name of struct typed value
     pub name: ValueName<'a>,
     /// Attribute name of struct typed value
@@ -422,7 +422,7 @@ pub enum ExpressionValue<'a> {
     /// Function call (with parameters) of expression
     FunctionCall(FunctionCall<'a>),
     /// Value of expression based on `Struct` types.
-    StructValue(ExressionStructValue<'a>),
+    StructValue(ExpressionStructValue<'a>),
     /// Expression representation (sub branch)
     Expression(Box<Expression<'a>>),
 }

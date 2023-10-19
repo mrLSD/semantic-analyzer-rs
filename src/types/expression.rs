@@ -85,8 +85,8 @@ impl ToString for ExpressionStructValue {
     }
 }
 
-impl From<ast::ExressionStructValue<'_>> for ExpressionStructValue {
-    fn from(value: ast::ExressionStructValue<'_>) -> Self {
+impl From<ast::ExpressionStructValue<'_>> for ExpressionStructValue {
+    fn from(value: ast::ExpressionStructValue<'_>) -> Self {
         Self {
             name: value.name.into(),
             attribute: value.attribute.into(),
