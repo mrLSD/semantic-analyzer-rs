@@ -500,6 +500,168 @@ fn expression_struct_value_not_found() {
 }
 
 #[test]
+fn expression_struct_value_wrong_struct_type() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let expr_struct_val = ast::ExpressionStructValue {
+        name: ast::ValueName::new(Ident::new("x")),
+        attribute: ast::ValueName::new(Ident::new("attr1")),
+    };
+    let expr = ast::Expression {
+        expression_value: ast::ExpressionValue::StructValue(expr_struct_val),
+        operation: None,
+    };
+    let val = Value {
+        inner_name: "x".into(),
+        inner_type: Type::Primitive(PrimitiveTypes::Bool),
+        mutable: false,
+        alloca: false,
+        malloc: false,
+    };
+    block_state
+        .borrow_mut()
+        .values
+        .insert("x".into(), val.clone());
+    let res = t.state.expression(&expr, &block_state);
+    assert!(res.is_none());
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::ValueNotStruct));
+}
+
+#[test]
+fn expression_struct_value_type_not_found() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let expr_struct_val = ast::ExpressionStructValue {
+        name: ast::ValueName::new(Ident::new("x")),
+        attribute: ast::ValueName::new(Ident::new("attr1")),
+    };
+    let expr = ast::Expression {
+        expression_value: ast::ExpressionValue::StructValue(expr_struct_val),
+        operation: None,
+    };
+    let s_attr = ast::StructType {
+        attr_name: Ident::new("attr1"),
+        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+    };
+    let s_ty = ast::StructTypes {
+        name: "St".into(),
+        attributes: vec![s_attr],
+    };
+    let val = Value {
+        inner_name: "x".into(),
+        inner_type: Type::Struct(s_ty.into()),
+        mutable: false,
+        alloca: false,
+        malloc: false,
+    };
+    block_state
+        .borrow_mut()
+        .values
+        .insert("x".into(), val.clone());
+    let res = t.state.expression(&expr, &block_state);
+    assert!(res.is_none());
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::TypeNotFound));
+}
+
+#[test]
+fn expression_struct_value_wrong_expression_type() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let expr_struct_val = ast::ExpressionStructValue {
+        name: ast::ValueName::new(Ident::new("x")),
+        attribute: ast::ValueName::new(Ident::new("attr1")),
+    };
+    let expr = ast::Expression {
+        expression_value: ast::ExpressionValue::StructValue(expr_struct_val),
+        operation: None,
+    };
+    let s_attr = ast::StructType {
+        attr_name: Ident::new("attr2"),
+        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+    };
+    let s_ty = ast::StructTypes {
+        name: "St".into(),
+        attributes: vec![s_attr],
+    };
+    let val = Value {
+        inner_name: "x".into(),
+        inner_type: Type::Struct(s_ty.into()),
+        mutable: false,
+        alloca: false,
+        malloc: false,
+    };
+    block_state
+        .borrow_mut()
+        .values
+        .insert("x".into(), val.clone());
+
+    let s_attr = ast::StructType {
+        attr_name: Ident::new("attr1"),
+        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+    };
+    let s_ty = ast::StructTypes {
+        name: "St".into(),
+        attributes: vec![s_attr],
+    };
+    t.state.types(&s_ty);
+    assert!(t.is_empty_error());
+    let res = t.state.expression(&expr, &block_state);
+    assert!(res.is_none());
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::WrongExpressionType));
+}
+
+#[test]
+fn expression_struct_value_wrong_struct_attribute() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let expr_struct_val = ast::ExpressionStructValue {
+        name: ast::ValueName::new(Ident::new("x")),
+        attribute: ast::ValueName::new(Ident::new("attr2")),
+    };
+    let expr = ast::Expression {
+        expression_value: ast::ExpressionValue::StructValue(expr_struct_val),
+        operation: None,
+    };
+    let s_attr = ast::StructType {
+        attr_name: Ident::new("attr1"),
+        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+    };
+    let s_ty = ast::StructTypes {
+        name: "St".into(),
+        attributes: vec![s_attr],
+    };
+    let val = Value {
+        inner_name: "x".into(),
+        inner_type: Type::Struct(s_ty.into()),
+        mutable: false,
+        alloca: false,
+        malloc: false,
+    };
+    block_state
+        .borrow_mut()
+        .values
+        .insert("x".into(), val.clone());
+
+    let s_attr = ast::StructType {
+        attr_name: Ident::new("attr1"),
+        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+    };
+    let s_ty = ast::StructTypes {
+        name: "St".into(),
+        attributes: vec![s_attr],
+    };
+    t.state.types(&s_ty);
+    assert!(t.is_empty_error());
+    let res = t.state.expression(&expr, &block_state);
+    assert!(res.is_none());
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::ValueNotStructField));
+}
+
+#[test]
 fn expression_struct_value() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
@@ -511,9 +673,17 @@ fn expression_struct_value() {
         expression_value: ast::ExpressionValue::StructValue(expr_struct_val),
         operation: None,
     };
-    let mut val = Value {
+    let s_attr = ast::StructType {
+        attr_name: Ident::new("attr1"),
+        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+    };
+    let s_ty = ast::StructTypes {
+        name: "St".into(),
+        attributes: vec![s_attr],
+    };
+    let value = Value {
         inner_name: "x".into(),
-        inner_type: Type::Primitive(PrimitiveTypes::Bool),
+        inner_type: Type::Struct(s_ty.into()),
         mutable: false,
         alloca: false,
         malloc: false,
@@ -521,13 +691,7 @@ fn expression_struct_value() {
     block_state
         .borrow_mut()
         .values
-        .insert("x".into(), val.clone());
-    assert!(t.check_errors_len(0));
-    let res = t.state.expression(&expr, &block_state);
-    assert!(res.is_none());
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ValueNotStruct));
-    t.clean_errors();
+        .insert("x".into(), value.clone());
 
     let s_attr = ast::StructType {
         attr_name: Ident::new("attr1"),
@@ -537,22 +701,19 @@ fn expression_struct_value() {
         name: "St".into(),
         attributes: vec![s_attr],
     };
-    val.inner_type = Type::Struct(s_ty.into());
-    block_state
-        .borrow_mut()
-        .values
-        .insert("x".into(), val.clone());
-    let res = t.state.expression(&expr, &block_state);
-    println!("{:?}", t.state.errors);
-    assert!(res.is_none());
-
-    assert!(t.check_errors_len(2));
-    // assert_eq!(
-    //     res.expr_value,
-    //     ExpressionResultValue::PrimitiveValue(PrimitiveValue::I32(10))
-    // );
-    // assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::I32));
-    // let state = block_state.borrow().context.clone().get();
-    // assert!(state.is_empty());
-    // assert!(t.is_empty_error());
+    t.state.types(&s_ty);
+    assert!(t.is_empty_error());
+    let res = t.state.expression(&expr, &block_state).unwrap();
+    assert!(t.is_empty_error());
+    assert_eq!(res.expr_value, ExpressionResultValue::Register);
+    assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::Bool));
+    let state = block_state.borrow().context.clone().get();
+    assert_eq!(state.len(), 1);
+    assert_eq!(
+        state[0],
+        SemanticStackContext::ExpressionStructValue {
+            expression: value,
+            index: 0
+        }
+    );
 }

@@ -16,7 +16,7 @@ use crate::types::expression::{
     Expression, ExpressionResult, ExpressionResultValue, ExpressionStructValue,
 };
 use crate::types::semantic::SemanticStack;
-use crate::types::types::{Type, TypeAttributes, TypeName};
+use crate::types::types::{Type, TypeName};
 use crate::types::{
     error, Binding, Constant, ConstantName, Function, FunctionCall, FunctionName,
     FunctionStatement, LabelName, LetBinding, Value,
@@ -1113,15 +1113,7 @@ impl State {
                         ));
                         None
                     })?;
-                // Get attribute type
-                if !self.check_type_exists(&val.inner_type, &value.name.name(), &value.name) {
-                    self.add_error(error::StateErrorResult::new(
-                        error::StateErrorKind::TypeNotFound,
-                        value.name.name(),
-                        value.name.location(),
-                    ));
-                    return None;
-                }
+                // Check is value type is struct
                 let ty = val.inner_type.get_struct().or_else(|| {
                     self.add_error(error::StateErrorResult::new(
                         error::StateErrorKind::ValueNotStruct,
@@ -1130,16 +1122,22 @@ impl State {
                     ));
                     None
                 })?;
-                let attr_ty = ty.get_attribute_type(&struct_value.attribute).or_else(|| {
+                // Check is type exists
+                if !self.check_type_exists(&val.inner_type, &value.name.name(), &value.name) {
+                    return None;
+                }
+                if &Type::Struct(ty.clone()) != self.global.types.get(&val.inner_type.name())? {
                     self.add_error(error::StateErrorResult::new(
-                        error::StateErrorKind::ValueNotStructField,
+                        error::StateErrorKind::WrongExpressionType,
                         value.name.name(),
                         value.name.location(),
                     ));
-                    None
-                })?;
-                let attr_index = ty
-                    .get_attribute_index(&struct_value.attribute)
+                    return None;
+                }
+
+                let attributes = ty
+                    .attributes
+                    .get(&struct_value.attribute)
                     .or_else(|| {
                         self.add_error(error::StateErrorResult::new(
                             error::StateErrorKind::ValueNotStructField,
@@ -1147,15 +1145,16 @@ impl State {
                             value.name.location(),
                         ));
                         None
-                    })?;
+                    })?
+                    .clone();
 
                 body_state
                     .borrow_mut()
                     .context
-                    .expression_struct_value(val.clone(), attr_index);
+                    .expression_struct_value(val.clone(), attributes.clone().attr_index);
 
                 ExpressionResult {
-                    expr_type: attr_ty,
+                    expr_type: attributes.attr_type,
                     expr_value: ExpressionResultValue::Register,
                 }
             }
