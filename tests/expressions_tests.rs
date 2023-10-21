@@ -12,7 +12,8 @@ use semantic_analyzer::types::{
     error::StateErrorKind,
     expression::ExpressionResultValue,
     types::{PrimitiveTypes, Type},
-    Constant, ConstantExpression, ConstantName, ConstantValue, PrimitiveValue, Value, ValueName,
+    Constant, ConstantExpression, ConstantName, ConstantValue, Function, PrimitiveValue, Value,
+    ValueName,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -716,4 +717,75 @@ fn expression_struct_value() {
             index: 0
         }
     );
+}
+
+#[test]
+fn expression_func_call() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let fn_name = ast::FunctionName::new(Ident::new("fn1"));
+    let fn_call = ast::FunctionCall {
+        name: fn_name.clone(),
+        parameters: vec![],
+    };
+    let expr = ast::Expression {
+        expression_value: ast::ExpressionValue::FunctionCall(fn_call),
+        operation: None,
+    };
+    let res = t.state.expression(&expr, &block_state);
+    assert!(res.is_none());
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::FunctionNotFound));
+    t.clean_errors();
+
+    // Declare function
+    let fn_statement = ast::FunctionStatement {
+        name: fn_name.clone(),
+        parameters: vec![],
+        result_type: ast::Type::Primitive(ast::PrimitiveTypes::Ptr),
+        body: vec![],
+    };
+    t.state.function_declaration(&fn_statement);
+    assert!(t.is_empty_error());
+
+    let res = t.state.expression(&expr, &block_state).unwrap();
+    assert!(t.is_empty_error());
+    assert_eq!(res.expr_value, ExpressionResultValue::Register);
+    assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::Ptr));
+    let state = block_state.borrow().context.clone().get();
+    assert_eq!(state.len(), 1);
+    assert_eq!(
+        state[0],
+        SemanticStackContext::Call {
+            call: Function {
+                inner_name: fn_name.into(),
+                inner_type: Type::Primitive(PrimitiveTypes::Ptr),
+                parameters: vec![]
+            },
+            params: vec![],
+        }
+    );
+}
+
+#[test]
+fn expression_sub_expression() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let sub_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U32(10)),
+        operation: None,
+    };
+    let expr = ast::Expression {
+        expression_value: ast::ExpressionValue::Expression(Box::new(sub_expr)),
+        operation: None,
+    };
+    let res = t.state.expression(&expr, &block_state).unwrap();
+    assert!(t.is_empty_error());
+    assert_eq!(
+        res.expr_value,
+        ExpressionResultValue::PrimitiveValue(PrimitiveValue::U32(10))
+    );
+    assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U32));
+    let state = block_state.borrow().context.clone().get();
+    assert!(state.is_empty());
 }
