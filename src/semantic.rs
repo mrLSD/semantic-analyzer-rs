@@ -1043,18 +1043,6 @@ impl State {
             ast::ExpressionValue::ValueName(value) => {
                 // Get value from block state
                 let value_from_state = body_state.borrow_mut().get_value_name(&value.name().into());
-                // Check is value exist in State or as Constant
-                if !(value_from_state.is_some()
-                    || self.global.constants.contains_key(&value.name().into()))
-                {
-                    // If value doesn't exist
-                    self.add_error(error::StateErrorResult::new(
-                        error::StateErrorKind::ValueNotFound,
-                        value.name(),
-                        value.location(),
-                    ));
-                    return None;
-                }
                 // First check value in body state
                 let ty = if let Some(val) = value_from_state {
                     body_state
@@ -1069,6 +1057,12 @@ impl State {
                         .expression_const(const_val.clone());
                     const_val.constant_type.clone()
                 } else {
+                    // If value doesn't exist in State or as Constant
+                    self.add_error(error::StateErrorResult::new(
+                        error::StateErrorKind::ValueNotFound,
+                        value.name(),
+                        value.location(),
+                    ));
                     return None;
                 };
                 // Return result as register
@@ -1171,6 +1165,8 @@ impl State {
                     left_value.expr_type.to_string(),
                     right_expression.location(),
                 ));
+                // Do not fetch other expression flow if type is wrong
+                return None;
             }
             // Call expression operation for: OP(left_value, right_value)
             body_state.borrow_mut().context.expression_operation(

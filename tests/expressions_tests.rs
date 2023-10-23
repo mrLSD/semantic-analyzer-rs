@@ -4,7 +4,7 @@ use semantic_analyzer::ast::{
     CodeLocation, GetLocation, GetName, Ident, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS,
 };
 use semantic_analyzer::types::expression::{
-    Expression, ExpressionOperations, ExpressionStructValue,
+    Expression, ExpressionOperations, ExpressionResult, ExpressionStructValue,
 };
 use semantic_analyzer::types::semantic::SemanticStackContext;
 use semantic_analyzer::types::{
@@ -750,8 +750,13 @@ fn expression_func_call() {
 
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert!(t.is_empty_error());
-    assert_eq!(res.expr_value, ExpressionResultValue::Register);
-    assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::Ptr));
+    assert_eq!(
+        res,
+        ExpressionResult {
+            expr_value: ExpressionResultValue::Register,
+            expr_type: Type::Primitive(PrimitiveTypes::Ptr)
+        }
+    );
     let state = block_state.borrow().context.clone().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
@@ -782,10 +787,71 @@ fn expression_sub_expression() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert!(t.is_empty_error());
     assert_eq!(
-        res.expr_value,
-        ExpressionResultValue::PrimitiveValue(PrimitiveValue::U32(10))
+        res,
+        ExpressionResult {
+            expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U32(10)),
+            expr_type: Type::Primitive(PrimitiveTypes::U32)
+        }
     );
-    assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U32));
+    let state = block_state.borrow().context.clone().get();
+    assert!(state.is_empty());
+}
+
+#[test]
+fn expression_operation() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let next_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Char('b')),
+        operation: None,
+    };
+    let expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Char('a')),
+        operation: Some((ast::ExpressionOperations::Plus, Box::new(next_expr))),
+    };
+    let res = t.state.expression(&expr, &block_state).unwrap();
+    assert!(t.is_empty_error());
+    assert_eq!(
+        res,
+        ExpressionResult {
+            expr_type: Type::Primitive(PrimitiveTypes::Char),
+            expr_value: ExpressionResultValue::Register
+        }
+    );
+    let state = block_state.borrow().context.clone().get();
+    assert_eq!(state.len(), 1);
+    assert_eq!(
+        state[0],
+        SemanticStackContext::ExpressionOperation {
+            operation: ExpressionOperations::Plus,
+            left_value: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Char),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Char('a'))
+            },
+            right_value: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Char),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Char('b'))
+            },
+        }
+    );
+}
+
+#[test]
+fn expression_operation_wrong_type() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let next_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::I64(10)),
+        operation: None,
+    };
+    let expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(20)),
+        operation: Some((ast::ExpressionOperations::Plus, Box::new(next_expr))),
+    };
+    let res = t.state.expression(&expr, &block_state);
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::WrongExpressionType));
+    assert!(res.is_none());
     let state = block_state.borrow().context.clone().get();
     assert!(state.is_empty());
 }
