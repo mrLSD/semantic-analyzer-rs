@@ -361,7 +361,7 @@ fn expression_value_name_exists() {
         .values
         .insert(value_name.into(), value.clone());
     let res = t.state.expression(&expr, &block_state).unwrap();
-    assert_eq!(res.expr_value, ExpressionResultValue::Register);
+    assert_eq!(res.expr_value, ExpressionResultValue::Register(1));
     assert_eq!(res.expr_type, ty);
     let state = block_state.borrow().context.clone().get();
     assert_eq!(state.len(), 1);
@@ -394,7 +394,7 @@ fn expression_const_exists() {
     };
     t.state.global.constants.insert(name, value.clone());
     let res = t.state.expression(&expr, &block_state).unwrap();
-    assert_eq!(res.expr_value, ExpressionResultValue::Register);
+    assert_eq!(res.expr_value, ExpressionResultValue::Register(1));
     assert_eq!(res.expr_type, ty);
     let state = block_state.borrow().context.clone().get();
     assert_eq!(state.len(), 1);
@@ -706,7 +706,7 @@ fn expression_struct_value() {
     assert!(t.is_empty_error());
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert!(t.is_empty_error());
-    assert_eq!(res.expr_value, ExpressionResultValue::Register);
+    assert_eq!(res.expr_value, ExpressionResultValue::Register(1));
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::Bool));
     let state = block_state.borrow().context.clone().get();
     assert_eq!(state.len(), 1);
@@ -753,7 +753,7 @@ fn expression_func_call() {
     assert_eq!(
         res,
         ExpressionResult {
-            expr_value: ExpressionResultValue::Register,
+            expr_value: ExpressionResultValue::Register(1),
             expr_type: Type::Primitive(PrimitiveTypes::Ptr)
         }
     );
@@ -815,7 +815,7 @@ fn expression_operation() {
         res,
         ExpressionResult {
             expr_type: Type::Primitive(PrimitiveTypes::Char),
-            expr_value: ExpressionResultValue::Register
+            expr_value: ExpressionResultValue::Register(1)
         }
     );
     let state = block_state.borrow().context.clone().get();
@@ -899,7 +899,7 @@ fn expression_multiple_operation1() {
         res,
         ExpressionResult {
             expr_type: Type::Primitive(PrimitiveTypes::U16),
-            expr_value: ExpressionResultValue::Register
+            expr_value: ExpressionResultValue::Register(5)
         }
     );
     // let state = block_state.borrow().context.clone().get();
@@ -955,7 +955,7 @@ fn expression_multiple_operation2() {
         res,
         ExpressionResult {
             expr_type: Type::Primitive(PrimitiveTypes::U16),
-            expr_value: ExpressionResultValue::Register
+            expr_value: ExpressionResultValue::Register(5)
         }
     );
     // let state = block_state.borrow().context.clone().get();

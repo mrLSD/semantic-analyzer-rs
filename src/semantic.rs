@@ -1066,9 +1066,12 @@ impl State {
                     return None;
                 };
                 // Return result as register
+                body_state.borrow_mut().inc_register();
                 ExpressionResult {
                     expr_type: ty,
-                    expr_value: ExpressionResultValue::Register,
+                    expr_value: ExpressionResultValue::Register(
+                        body_state.borrow().last_register_number,
+                    ),
                 }
             }
             // Check is expression primitive value
@@ -1086,9 +1089,12 @@ impl State {
                 // And result of function always stored in register.
                 let func_call_ty = self.function_call(fn_call, body_state)?;
                 // Return result as register
+                body_state.borrow_mut().inc_register();
                 ExpressionResult {
                     expr_type: func_call_ty,
-                    expr_value: ExpressionResultValue::Register,
+                    expr_value: ExpressionResultValue::Register(
+                        body_state.borrow().last_register_number,
+                    ),
                 }
             }
             ast::ExpressionValue::StructValue(value) => {
@@ -1147,9 +1153,12 @@ impl State {
                     .context
                     .expression_struct_value(val.clone(), attributes.clone().attr_index);
 
+                body_state.borrow_mut().inc_register();
                 ExpressionResult {
                     expr_type: attributes.attr_type,
-                    expr_value: ExpressionResultValue::Register,
+                    expr_value: ExpressionResultValue::Register(
+                        body_state.borrow().last_register_number,
+                    ),
                 }
             }
             ast::ExpressionValue::Expression(expr) => {
@@ -1175,9 +1184,12 @@ impl State {
                 right_value.clone(),
             );
             // Expression result value  for Operations is always should be "register"
+            body_state.borrow_mut().inc_register();
             ExpressionResult {
                 expr_type: right_value.expr_type,
-                expr_value: ExpressionResultValue::Register,
+                expr_value: ExpressionResultValue::Register(
+                    body_state.borrow().last_register_number,
+                ),
             }
         } else {
             right_value
