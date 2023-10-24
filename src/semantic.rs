@@ -1186,7 +1186,7 @@ impl State {
         // Check is for right value contain next operation
         if let Some((operation, expr)) = &right_expression.operation {
             // Recursively call, where current Execution result set as left
-            // side expression
+            // side expressionf
             self.expression_operation(Some(&expression_result), expr, Some(operation), body_state)
         } else {
             Some(expression_result)
@@ -1235,7 +1235,7 @@ impl State {
                         ast::ExpressionValue::Expression(Box::new(ast::Expression {
                             expression_value: data.expression_value,
                             operation: Some((
-                                op,
+                                op.clone(),
                                 Box::new(ast::Expression {
                                     expression_value: expr.expression_value,
                                     operation: None,
@@ -1252,7 +1252,16 @@ impl State {
                 } else {
                     // If priority not equal for current level just
                     // fetch right side of expression for next branches
-                    let new_expr = Self::fetch_op_priority(*expr, priority_level);
+                    let new_expr =
+                        if next_op.priority() > op.priority() && next_expr.operation.is_none() {
+                            // Pack expression to leaf
+                            ast::Expression {
+                                expression_value: ast::ExpressionValue::Expression(expr),
+                                operation: None,
+                            }
+                        } else {
+                            Self::fetch_op_priority(*expr, priority_level)
+                        };
                     // Rebuild expression tree
                     ast::Expression {
                         expression_value: data.expression_value,
