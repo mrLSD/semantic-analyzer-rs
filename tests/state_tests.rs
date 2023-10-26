@@ -12,6 +12,7 @@ use std::rc::Rc;
 #[test]
 fn state_init() {
     let st = State::default();
+    println!("{st:?}");
     assert!(st.global.types.is_empty());
     assert!(st.global.constants.is_empty());
     assert!(st.global.functions.is_empty());
@@ -194,4 +195,28 @@ fn block_state_value() {
     assert_eq!(bst1.borrow().get_value_name(&vn1).unwrap(), val.clone());
     assert_eq!(bst2.borrow().get_value_name(&vn1).unwrap(), val);
     assert!(bst3.borrow().get_value_name(&vn1).is_none());
+
+    assert_eq!(bst1.borrow().last_register_number, 0);
+    assert_eq!(bst2.borrow().last_register_number, 0);
+    bst2.borrow_mut().inc_register();
+    assert_eq!(bst1.borrow().last_register_number, 1);
+    assert_eq!(bst2.borrow().last_register_number, 1);
+}
+
+#[test]
+fn block_state_last_register_inc() {
+    let bst1 = Rc::new(RefCell::new(BlockState::new(None)));
+    let bst2 = Rc::new(RefCell::new(BlockState::new(Some(bst1.clone()))));
+    let mut bst3 = BlockState::new(None);
+
+    assert_eq!(bst1.borrow().last_register_number, 0);
+    assert_eq!(bst2.borrow().last_register_number, 0);
+    bst2.borrow_mut().inc_register();
+    assert_eq!(bst1.borrow().last_register_number, 1);
+    assert_eq!(bst2.borrow().last_register_number, 1);
+
+    assert_eq!(bst3.last_register_number, 0);
+    bst3.inc_register();
+    assert_eq!(bst3.last_register_number, 1);
+    println!("{bst3:?}");
 }

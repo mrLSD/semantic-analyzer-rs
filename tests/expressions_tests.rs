@@ -4,7 +4,7 @@ use semantic_analyzer::ast::{
     CodeLocation, GetLocation, GetName, Ident, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS,
 };
 use semantic_analyzer::types::expression::{
-    Expression, ExpressionOperations, ExpressionResult, ExpressionStructValue,
+    Expression, ExpressionOperations, ExpressionResult, ExpressionStructValue, ExpressionValue,
 };
 use semantic_analyzer::types::semantic::SemanticStackContext;
 use semantic_analyzer::types::{
@@ -33,6 +33,8 @@ fn expression_ast_transform() {
     let value_name_into: ValueName = value_name.into();
     assert_eq!(value_name_into.to_string(), "x");
     let expr_into: Expression = expr.into();
+    // For grcov
+    println!("{expr_into:?}");
     assert_eq!(expr_into.expression_value.to_string(), "x");
     assert_eq!(expr_into.to_string(), "x");
     let value_name_into2: ValueName = String::from("x1").into();
@@ -670,8 +672,13 @@ fn expression_struct_value() {
         name: ast::ValueName::new(Ident::new("x")),
         attribute: ast::ValueName::new(Ident::new("attr1")),
     };
+    let expression_st_value = ast::ExpressionValue::StructValue(expr_struct_val);
+    let expression_st_value_into: ExpressionValue = expression_st_value.clone().into();
+    assert_eq!(expression_st_value_into.to_string(), "x");
+    // For grcov
+    print!("{expression_st_value_into:?}");
     let expr = ast::Expression {
-        expression_value: ast::ExpressionValue::StructValue(expr_struct_val),
+        expression_value: expression_st_value,
         operation: None,
     };
     let s_attr = ast::StructType {
@@ -728,8 +735,13 @@ fn expression_func_call() {
         name: fn_name.clone(),
         parameters: vec![],
     };
+    let ast_fn_call = ast::ExpressionValue::FunctionCall(fn_call);
+    let expr_value_into: ExpressionValue = ast_fn_call.clone().into();
+    assert_eq!(expr_value_into.to_string(), "fn1");
+    // For grcov
+    println!("{expr_value_into:?}");
     let expr = ast::Expression {
-        expression_value: ast::ExpressionValue::FunctionCall(fn_call),
+        expression_value: ast_fn_call,
         operation: None,
     };
     let res = t.state.expression(&expr, &block_state);
@@ -945,11 +957,18 @@ fn expression_multiple_operation2() {
         expression_value: ast::ExpressionValue::Expression(Box::new(next_expr1)),
         operation: None,
     };
+    // Expr test Into transformation
+    let ast_expr = ast::ExpressionValue::Expression(Box::new(prev_expr.clone()));
+    let ast_expr_into: ExpressionValue = ast_expr.into();
+    assert_eq!(ast_expr_into.to_string(), "2");
     // Expr (100 + 2) * (3 - 4 - 5 * 6)
     let expr = ast::Expression {
         expression_value: ast::ExpressionValue::Expression(Box::new(prev_expr)),
         operation: Some((ast::ExpressionOperations::Multiply, Box::new(next_expr))),
     };
+    let expr_into: Expression = expr.clone().into();
+    // For grcov
+    print!("{expr_into:?}");
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(
         res,
