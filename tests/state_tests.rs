@@ -12,7 +12,8 @@ use std::rc::Rc;
 #[test]
 fn state_init() {
     let st = State::default();
-    println!("{st:?}");
+    // For grcov
+    format!("{st:?}");
     assert!(st.global.types.is_empty());
     assert!(st.global.constants.is_empty());
     assert!(st.global.functions.is_empty());
@@ -218,5 +219,6 @@ fn block_state_last_register_inc() {
     assert_eq!(bst3.last_register_number, 0);
     bst3.inc_register();
     assert_eq!(bst3.last_register_number, 1);
-    println!("{bst3:?}");
+    // For grcov
+    format!("{bst3:?}");
 }

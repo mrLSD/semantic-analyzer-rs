@@ -3,6 +3,7 @@ use semantic_analyzer::ast;
 use semantic_analyzer::ast::{
     CodeLocation, GetLocation, GetName, Ident, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS,
 };
+use semantic_analyzer::types::expression::ExpressionOperations::{Minus, Multiply, Plus};
 use semantic_analyzer::types::expression::{
     Expression, ExpressionOperations, ExpressionResult, ExpressionStructValue, ExpressionValue,
 };
@@ -20,6 +21,36 @@ use std::rc::Rc;
 
 mod utils;
 
+fn set_result_type(
+    op: ExpressionOperations,
+    reg_left: bool,
+    left: u64,
+    reg_right: bool,
+    right: u64,
+) -> SemanticStackContext {
+    let left_val = if reg_left {
+        ExpressionResultValue::Register(left)
+    } else {
+        ExpressionResultValue::PrimitiveValue(PrimitiveValue::U16(left as u16))
+    };
+    let right_val = if reg_right {
+        ExpressionResultValue::Register(right)
+    } else {
+        ExpressionResultValue::PrimitiveValue(PrimitiveValue::U16(right as u16))
+    };
+    SemanticStackContext::ExpressionOperation {
+        operation: op,
+        left_value: ExpressionResult {
+            expr_type: Type::Primitive(PrimitiveTypes::U16),
+            expr_value: left_val,
+        },
+        right_value: ExpressionResult {
+            expr_type: Type::Primitive(PrimitiveTypes::U16),
+            expr_value: right_val,
+        },
+    }
+}
+
 #[test]
 fn expression_ast_transform() {
     let value_name = ast::ValueName::new(Ident::new("x"));
@@ -34,7 +65,7 @@ fn expression_ast_transform() {
     assert_eq!(value_name_into.to_string(), "x");
     let expr_into: Expression = expr.into();
     // For grcov
-    println!("{expr_into:?}");
+    format!("{expr_into:?}");
     assert_eq!(expr_into.expression_value.to_string(), "x");
     assert_eq!(expr_into.to_string(), "x");
     let value_name_into2: ValueName = String::from("x1").into();
@@ -676,7 +707,7 @@ fn expression_struct_value() {
     let expression_st_value_into: ExpressionValue = expression_st_value.clone().into();
     assert_eq!(expression_st_value_into.to_string(), "x");
     // For grcov
-    print!("{expression_st_value_into:?}");
+    format!("{expression_st_value_into:?}");
     let expr = ast::Expression {
         expression_value: expression_st_value,
         operation: None,
@@ -739,7 +770,7 @@ fn expression_func_call() {
     let expr_value_into: ExpressionValue = ast_fn_call.clone().into();
     assert_eq!(expr_value_into.to_string(), "fn1");
     // For grcov
-    println!("{expr_value_into:?}");
+    format!("{expr_value_into:?}");
     let expr = ast::Expression {
         expression_value: ast_fn_call,
         operation: None,
@@ -874,12 +905,12 @@ fn expression_multiple_operation1() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
     let prev_next_expr = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(1)),
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(2)),
         operation: None,
     };
     // Expr: 1 + 2
     let prev_expr = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(2)),
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(1)),
         operation: Some((ast::ExpressionOperations::Plus, Box::new(prev_next_expr))),
     };
     let next_expr4 = ast::Expression {
@@ -907,15 +938,15 @@ fn expression_multiple_operation1() {
         operation: Some((ast::ExpressionOperations::Multiply, Box::new(next_expr1))),
     };
     let res = t.state.expression(&expr, &block_state).unwrap();
-    assert_eq!(
-        res,
-        ExpressionResult {
-            expr_type: Type::Primitive(PrimitiveTypes::U16),
-            expr_value: ExpressionResultValue::Register(5)
-        }
-    );
-    // let state = block_state.borrow().context.clone().get();
-    // println!("\nSTATE:{state:#?}");
+    assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
+    assert_eq!(res.expr_value, ExpressionResultValue::Register(5));
+    let state = block_state.borrow().context.clone().get();
+    assert_eq!(state.len(), 5);
+    assert_eq!(state[0], set_result_type(Plus, false, 1, false, 2));
+    assert_eq!(state[1], set_result_type(Multiply, true, 1, false, 3));
+    assert_eq!(state[2], set_result_type(Minus, true, 2, false, 4));
+    assert_eq!(state[3], set_result_type(Multiply, false, 5, false, 6));
+    assert_eq!(state[4], set_result_type(Minus, true, 3, true, 4));
     assert!(t.is_empty_error());
 }
 
@@ -925,12 +956,12 @@ fn expression_multiple_operation2() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
     let prev_next_expr = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(100)),
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(2)),
         operation: None,
     };
     // Expr: 100 + 2
     let prev_expr = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(2)),
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(100)),
         operation: Some((ast::ExpressionOperations::Plus, Box::new(prev_next_expr))),
     };
     let next_expr4 = ast::Expression {
@@ -960,30 +991,27 @@ fn expression_multiple_operation2() {
     // Expr test Into transformation
     let ast_expr = ast::ExpressionValue::Expression(Box::new(prev_expr.clone()));
     let ast_expr_into: ExpressionValue = ast_expr.into();
-    assert_eq!(ast_expr_into.to_string(), "2");
+    assert_eq!(ast_expr_into.to_string(), "100");
     // Expr (100 + 2) * (3 - 4 - 5 * 6)
     let expr = ast::Expression {
         expression_value: ast::ExpressionValue::Expression(Box::new(prev_expr)),
         operation: Some((ast::ExpressionOperations::Multiply, Box::new(next_expr))),
     };
-    let expr_into: Expression = expr.clone().into();
-    // For grcov
-    print!("{expr_into:?}");
     let res = t.state.expression(&expr, &block_state).unwrap();
-    assert_eq!(
-        res,
-        ExpressionResult {
-            expr_type: Type::Primitive(PrimitiveTypes::U16),
-            expr_value: ExpressionResultValue::Register(5)
-        }
-    );
-    // let state = block_state.borrow().context.clone().get();
-    // println!("\nSTATE:{state:#?}");
+    assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
+    assert_eq!(res.expr_value, ExpressionResultValue::Register(5));
+    let state = block_state.borrow().context.clone().get();
+    assert_eq!(state.len(), 5);
+    assert_eq!(state[0], set_result_type(Plus, false, 100, false, 2));
+    assert_eq!(state[1], set_result_type(Minus, false, 3, false, 4));
+    assert_eq!(state[2], set_result_type(Multiply, false, 5, false, 6));
+    assert_eq!(state[3], set_result_type(Minus, true, 2, true, 3));
+    assert_eq!(state[4], set_result_type(Multiply, true, 1, true, 4));
     assert!(t.is_empty_error());
 }
 
 #[test]
-fn expression_multiple_operation_simple3() {
+fn expression_multiple_operation_simple1() {
     // Expression: 100-5*6
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
@@ -1002,15 +1030,19 @@ fn expression_multiple_operation_simple3() {
         expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(100)),
         operation: Some((ast::ExpressionOperations::Minus, Box::new(prev_expr))),
     };
-    let _res = t.state.expression(&expr, &block_state).unwrap();
-    // let state = block_state.borrow().context.clone().get();
-    // println!("\nSTATE: {state:#?}");
+    let res = t.state.expression(&expr, &block_state).unwrap();
+    assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
+    assert_eq!(res.expr_value, ExpressionResultValue::Register(2));
+    let state = block_state.borrow().context.clone().get();
+    assert_eq!(state.len(), 2);
+    assert_eq!(state[0], set_result_type(Multiply, false, 5, false, 6));
+    assert_eq!(state[1], set_result_type(Minus, false, 100, true, 1));
     assert!(t.is_empty_error());
 }
 
 #[test]
-fn expression_multiple_operation_simple4() {
-    // Expression: 100-5*6
+fn expression_multiple_operation_simple2() {
+    // Expression: 20*5-40
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
     let prev_next_expr = ast::Expression {
@@ -1025,15 +1057,19 @@ fn expression_multiple_operation_simple4() {
         expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(20)),
         operation: Some((ast::ExpressionOperations::Multiply, Box::new(prev_expr))),
     };
-    let _res = t.state.expression(&expr, &block_state).unwrap();
-    // let state = block_state.borrow().context.clone().get();
-    // println!("\nSTATE: {state:#?}");
+    let res = t.state.expression(&expr, &block_state).unwrap();
+    assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
+    assert_eq!(res.expr_value, ExpressionResultValue::Register(2));
+    let state = block_state.borrow().context.clone().get();
+    assert_eq!(state.len(), 2);
+    assert_eq!(state[0], set_result_type(Multiply, false, 20, false, 5));
+    assert_eq!(state[1], set_result_type(Minus, true, 1, false, 40));
     assert!(t.is_empty_error());
 }
 
 #[test]
-fn expression_multiple_operation_simple5() {
-    // Expression: 100-5*6
+fn expression_multiple_operation_simple3() {
+    // Expression: 20*4-40-5
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
     let prev_next_expr2 = ast::Expression {
@@ -1045,22 +1081,27 @@ fn expression_multiple_operation_simple5() {
         operation: Some((ast::ExpressionOperations::Minus, Box::new(prev_next_expr2))),
     };
     let prev_expr = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(5)),
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(4)),
         operation: Some((ast::ExpressionOperations::Minus, Box::new(prev_next_expr))),
     };
     let expr = ast::Expression {
         expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(20)),
         operation: Some((ast::ExpressionOperations::Multiply, Box::new(prev_expr))),
     };
-    let _res = t.state.expression(&expr, &block_state).unwrap();
-    //let state = block_state.borrow().context.clone().get();
-    //println!("\nSTATE: {state:#?}");
+    let res = t.state.expression(&expr, &block_state).unwrap();
+    assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
+    assert_eq!(res.expr_value, ExpressionResultValue::Register(3));
+    let state = block_state.borrow().context.clone().get();
+    assert_eq!(state.len(), 3);
+    assert_eq!(state[0], set_result_type(Multiply, false, 20, false, 4));
+    assert_eq!(state[1], set_result_type(Minus, true, 1, false, 40));
+    assert_eq!(state[2], set_result_type(Minus, true, 2, false, 5));
     assert!(t.is_empty_error());
 }
 
 #[test]
-fn expression_multiple_operation_simple6() {
-    // Expression: 100-5*6
+fn expression_multiple_operation_simple4() {
+    // Expression: 100-5*6-15
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
     let prev_next_expr2 = ast::Expression {
@@ -1083,8 +1124,13 @@ fn expression_multiple_operation_simple6() {
         expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(100)),
         operation: Some((ast::ExpressionOperations::Minus, Box::new(prev_expr))),
     };
-    let _res = t.state.expression(&expr, &block_state).unwrap();
-    // let state = block_state.borrow().context.clone().get();
-    // println!("\nSTATE: {state:#?}");
+    let res = t.state.expression(&expr, &block_state).unwrap();
+    assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
+    assert_eq!(res.expr_value, ExpressionResultValue::Register(3));
+    let state = block_state.borrow().context.clone().get();
+    assert_eq!(state.len(), 3);
+    assert_eq!(state[0], set_result_type(Multiply, false, 5, false, 6));
+    assert_eq!(state[1], set_result_type(Minus, false, 100, true, 1));
+    assert_eq!(state[2], set_result_type(Minus, true, 2, false, 15));
     assert!(t.is_empty_error());
 }
