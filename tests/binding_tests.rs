@@ -110,7 +110,7 @@ fn binding_value_not_mutable() {
     );
     let binding = ast::Binding {
         name: ValueName::new(Ident::new("x")),
-        value: Box::new(expr.into()),
+        value: Box::new(expr),
     };
     t.state.binding(&binding, &block_state);
     assert!(t.check_errors_len(1));
@@ -161,7 +161,7 @@ fn binding_value_found() {
     );
     let binding = ast::Binding {
         name: ValueName::new(Ident::new("x")),
-        value: Box::new(expr.into()),
+        value: Box::new(expr),
     };
     t.state.binding(&binding, &block_state);
     assert!(t.is_empty_error());
