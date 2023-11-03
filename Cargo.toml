@@ -1,6 +1,6 @@
 [package]
 name = "semantic-analyzer"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["Evgeny Ukhanov <mrlsd@ya.ru>"]
 description = "Semantic analyzer library for compilers written in Rust for semantic analysis of programming languages AST"
 keywords = ["compiler", "semantic-analisis", "semantic-alalyzer", "compiler-design", "semantic"]
