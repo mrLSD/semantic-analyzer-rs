@@ -238,7 +238,7 @@ impl State {
         self.global.context.constant(const_val);
     }
 
-    /// Function declaration analyze. Add it to Global State/
+    /// Function declaration analyze. Add it to Global State/M
     pub fn function_declaration(&mut self, data: &ast::FunctionStatement<'_>) {
         if self.global.functions.contains_key(&data.name().into()) {
             self.add_error(error::StateErrorResult::new(
@@ -309,8 +309,16 @@ impl State {
                 ast::BodyStatement::Expression(expression)
                 | ast::BodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, &body_state);
+                    let expr: Expression = expression.clone().into();
+                    // Check is return statement previously called
+                    if return_is_called {
+                        self.add_error(error::StateErrorResult::new(
+                            error::StateErrorKind::ReturnAlreadyCalled,
+                            expr.to_string(),
+                            expression.location(),
+                        ));
+                    }
                     if let Some(res) = expr_result {
-                        let expr: Expression = expression.clone().into();
                         // Check expression type and do not exist from flow
                         self.check_type_exists(&res.expr_type, &expr, &expression.clone());
                         let fn_ty: Type = data.result_type.clone().into();
@@ -466,7 +474,6 @@ impl State {
             ));
             return;
         }
-
         function_state
             .borrow_mut()
             .context
@@ -591,10 +598,13 @@ impl State {
     /// # If-condition body
     /// Analyze body for ant if condition:
     /// - if, else, if-else
+    /// NOTE: label_end - is always already exists
     pub fn if_condition_body(
         &mut self,
         body: &[ast::IfBodyStatement<'_>],
         if_body_state: &Rc<RefCell<BlockState>>,
+        label_end: &LabelName,
+        label_loop: Option<(&LabelName, &LabelName)>,
     ) {
         for body in body.iter() {
             match body {
@@ -608,7 +618,12 @@ impl State {
                     self.function_call(fn_call, if_body_state);
                 }
                 ast::IfBodyStatement::If(if_condition) => {
-                    self.if_condition(if_condition, if_body_state, None, None);
+                    self.if_condition(
+                        if_condition,
+                        if_body_state,
+                        Some(label_end.clone()),
+                        label_loop,
+                    );
                 }
                 ast::IfBodyStatement::Loop(loop_statement) => {
                     self.loop_statement(loop_statement, if_body_state);
@@ -634,6 +649,7 @@ impl State {
         &mut self,
         body: &[ast::IfLoopBodyStatement<'_>],
         if_body_state: &Rc<RefCell<BlockState>>,
+        label_if_end: &LabelName,
         label_loop_start: &LabelName,
         label_loop_end: &LabelName,
     ) {
@@ -652,7 +668,7 @@ impl State {
                     self.if_condition(
                         if_condition,
                         if_body_state,
-                        None,
+                        Some(label_if_end.clone()),
                         Some((label_loop_start, label_loop_end)),
                     );
                 }
@@ -767,7 +783,7 @@ impl State {
         label_loop: Option<(&LabelName, &LabelName)>,
     ) {
         // It can't contain `else` and `if-else` on the same time
-        if data.else_if_statement.is_some() && data.else_if_statement.is_some() {
+        if data.else_statement.is_some() && data.else_if_statement.is_some() {
             let stm = data.else_if_statement.clone().unwrap();
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::IfElseDuplicated,
@@ -784,7 +800,6 @@ impl State {
         function_body_state
             .borrow_mut()
             .set_child(if_body_state.clone());
-
         // Get labels name for if-begin, and if-end
         let label_if_begin = if_body_state
             .borrow_mut()
@@ -792,16 +807,18 @@ impl State {
         let label_if_else = if_body_state
             .borrow_mut()
             .get_and_set_next_label(&"if_else".to_string().into());
-        // Set if-end label from previous context, if exist
-        let label_if_end = label_end.map_or_else(
+        // Set if-end label from previous context
+        let label_if_end = label_end.clone().map_or_else(
             || {
                 if_body_state
                     .borrow_mut()
-                    .get_and_set_next_label(&"if_begin".to_string().into())
+                    .get_and_set_next_label(&"if_end".to_string().into())
             },
             |label| label,
         );
-        let is_else = data.else_if_statement.is_some() || data.else_if_statement.is_some();
+        // To set if-end as single return point check is it previously set
+        let is_set_label_if_end = label_end.clone().is_some();
+        let is_else = data.else_statement.is_some() || data.else_if_statement.is_some();
 
         // Analyse if-conditions
         self.if_condition_calculation(
@@ -820,15 +837,25 @@ impl State {
         match &data.body {
             ast::IfBodyStatements::If(body) => {
                 // Analyze if-statement body
-                self.if_condition_body(body, &if_body_state);
+                self.if_condition_body(body, &if_body_state, &label_if_end, label_loop);
             }
             ast::IfBodyStatements::Loop(body) => {
-                let (label_loop_start, label_loop_end) = label_loop.expect("label should be set");
+                // It's special case for the Loop, when `label_loop` should always be set.
+                // If it doesn't set, it's unexpected behavior and program algorithm error
+                let (label_loop_start, label_loop_end) =
+                    label_loop.expect("loop label should be set");
                 // Analyze if-loop-statement body
-                self.if_condition_loop_body(body, &if_body_state, label_loop_start, label_loop_end);
+                self.if_condition_loop_body(
+                    body,
+                    &if_body_state,
+                    &label_if_end,
+                    label_loop_start,
+                    label_loop_end,
+                );
             }
         }
-        // Codegen for jump to if-end statement -return to program flow
+        // Codegen for jump to if-end statement - return to program flow
+        // TODO: issue #9
         if_body_state
             .borrow_mut()
             .context
@@ -838,19 +865,26 @@ impl State {
         if is_else {
             // Set if-else label
             if_body_state.borrow_mut().context.set_label(label_if_else);
-            // if-else has own state, different from if-state
-            let if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
-                function_body_state.clone(),
-            ))));
-            function_body_state
-                .borrow_mut()
-                .set_child(if_else_body_state.clone());
+
             // Analyse if-else body: data.else_statement
             if let Some(else_body) = &data.else_statement {
+                // if-else has own state, different from if-state
+                let if_else_body_state = Rc::new(RefCell::new(BlockState::new(Some(
+                    function_body_state.clone(),
+                ))));
+                function_body_state
+                    .borrow_mut()
+                    .set_child(if_else_body_state.clone());
+
                 match else_body {
                     ast::IfBodyStatements::If(body) => {
                         // Analyze if-statement body
-                        self.if_condition_body(body, &if_else_body_state);
+                        self.if_condition_body(
+                            body,
+                            &if_else_body_state,
+                            &label_if_end,
+                            label_loop,
+                        );
                     }
                     ast::IfBodyStatements::Loop(body) => {
                         let (label_loop_start, label_loop_end) =
@@ -859,6 +893,7 @@ impl State {
                         self.if_condition_loop_body(
                             body,
                             &if_else_body_state,
+                            &label_if_end,
                             label_loop_start,
                             label_loop_end,
                         );
@@ -866,12 +901,14 @@ impl State {
                 }
 
                 // Codegen for jump to if-end statement -return to program flow
+                // TODO: issue #9
                 if_body_state
                     .borrow_mut()
                     .context
                     .jump_to(label_if_end.clone());
             } else if let Some(else_if_statement) = &data.else_if_statement {
                 // Analyse  else-if statement
+                // Set `label_if_end` to indicate single if-end point
                 self.if_condition(
                     else_if_statement,
                     function_body_state,
@@ -881,8 +918,10 @@ impl State {
             }
         }
 
-        // End label for all if statement
-        if_body_state.borrow_mut().context.set_label(label_if_end);
+        // End label for all if statement, should be set only once
+        if !is_set_label_if_end {
+            if_body_state.borrow_mut().context.set_label(label_if_end);
+        }
     }
 
     /// # Loop
@@ -973,6 +1012,12 @@ impl State {
                 }
             }
         }
+
+        // Because it's loop jump to loop begin
+        loop_body_state
+            .borrow_mut()
+            .context
+            .jump_to(label_loop_begin.clone());
 
         // Loop ending
         loop_body_state

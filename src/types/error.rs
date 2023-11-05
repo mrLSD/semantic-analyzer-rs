@@ -21,6 +21,7 @@ pub enum StateErrorKind {
     FunctionNotFound,
     FunctionParameterTypeWrong,
     ReturnNotFound,
+    ReturnAlreadyCalled,
     IfElseDuplicated,
     TypeNotFound,
     WrongReturnType,

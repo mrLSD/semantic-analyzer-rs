@@ -159,10 +159,36 @@ fn binding_value_found() {
         block_state.borrow().values.get(&("x".into())).unwrap(),
         &val
     );
+    let new_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(100)),
+        operation: None,
+    };
     let binding = ast::Binding {
         name: ValueName::new(Ident::new("x")),
-        value: Box::new(expr),
+        value: Box::new(new_expr),
     };
     t.state.binding(&binding, &block_state);
     assert!(t.is_empty_error());
+    let state = block_state.borrow().context.clone().get();
+    assert_eq!(state.len(), 2);
+    assert_eq!(
+        state[0],
+        SemanticStackContext::LetBinding {
+            let_decl: val.clone(),
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::U64),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(30))
+            },
+        }
+    );
+    assert_eq!(
+        state[1],
+        SemanticStackContext::Binding {
+            val: val.clone(),
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::U64),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(100))
+            },
+        }
+    );
 }

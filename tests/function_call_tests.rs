@@ -1,6 +1,6 @@
 use crate::utils::SemanticTest;
 use semantic_analyzer::ast;
-use semantic_analyzer::ast::{CodeLocation, GetLocation, Ident};
+use semantic_analyzer::ast::{CodeLocation, GetLocation, GetName, Ident};
 use semantic_analyzer::types::block_state::BlockState;
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::types::{PrimitiveTypes, Type};
@@ -19,6 +19,7 @@ fn func_call_transform() {
     };
     let fn_call_into: FunctionCall = fn_call.clone().into();
     assert_eq!(fn_call.location(), CodeLocation::new(1, 0));
+    assert_eq!(fn_call.name(), "fn1");
     assert_eq!(fn_call.name.to_string(), "fn1");
     assert_eq!(fn_call_into.to_string(), "fn1");
     assert!(fn_call_into.parameters.is_empty());

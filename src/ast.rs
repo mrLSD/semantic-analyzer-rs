@@ -642,7 +642,8 @@ pub struct IfStatement<'a> {
 
 impl GetLocation for IfStatement<'_> {
     fn location(&self) -> CodeLocation {
-        todo!()
+        // TODO
+        CodeLocation::new(1, 0)
     }
 }
 
