@@ -309,8 +309,16 @@ impl State {
                 ast::BodyStatement::Expression(expression)
                 | ast::BodyStatement::Return(expression) => {
                     let expr_result = self.expression(expression, &body_state);
+                    let expr: Expression = expression.clone().into();
+                    // Check is return statement previously called
+                    if return_is_called {
+                        self.add_error(error::StateErrorResult::new(
+                            error::StateErrorKind::ReturnAlreadyCalled,
+                            expr.to_string(),
+                            expression.location(),
+                        ));
+                    }
                     if let Some(res) = expr_result {
-                        let expr: Expression = expression.clone().into();
                         // Check expression type and do not exist from flow
                         self.check_type_exists(&res.expr_type, &expr, &expression.clone());
                         let fn_ty: Type = data.result_type.clone().into();

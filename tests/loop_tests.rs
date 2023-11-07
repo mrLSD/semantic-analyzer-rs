@@ -48,6 +48,8 @@ fn loop_transform() {
         ast::LoopBodyStatement::Break,
         ast::LoopBodyStatement::Continue,
     ];
+    // For grcove
+    format!("{loop_stmts:#?}");
     for loop_stmt in loop_stmts {
         let loop_stmt_into: LoopBodyStatement = loop_stmt.into();
         match loop_stmt_into {

@@ -1,5 +1,6 @@
 use crate::utils::SemanticTest;
 use semantic_analyzer::ast::{self, GetName, Ident};
+use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::{
     expression::{ExpressionResult, ExpressionResultValue},
     semantic::SemanticStackContext,
@@ -39,7 +40,7 @@ fn main_run() {
         name: ast::FunctionName::new(Ident::new("fn1")),
         parameters: vec![],
         result_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
-        body: vec![body_return.clone()],
+        body: vec![body_return],
     };
     let fn_stm = ast::MainStatement::Function(fn1.clone());
     let main_stm: ast::Main = vec![
@@ -105,4 +106,48 @@ fn main_run() {
             fn_decl: fn1.into()
         }
     );
+}
+
+#[test]
+fn double_return() {
+    let mut t = SemanticTest::new();
+    let body_return = ast::BodyStatement::Return(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+        operation: None,
+    });
+    let body_expr = ast::BodyStatement::Expression(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+        operation: None,
+    });
+    let fn1 = ast::FunctionStatement {
+        name: ast::FunctionName::new(Ident::new("fn1")),
+        parameters: vec![],
+        result_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+        body: vec![body_return, body_expr],
+    };
+    let fn_stm = ast::MainStatement::Function(fn1);
+    let main_stm: ast::Main = vec![fn_stm];
+    t.state.run(&main_stm);
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::ReturnAlreadyCalled));
+}
+
+#[test]
+fn wrong_return_type() {
+    let mut t = SemanticTest::new();
+    let body_return = ast::BodyStatement::Return(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::I8(10)),
+        operation: None,
+    });
+    let fn1 = ast::FunctionStatement {
+        name: ast::FunctionName::new(Ident::new("fn1")),
+        parameters: vec![],
+        result_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+        body: vec![body_return],
+    };
+    let fn_stm = ast::MainStatement::Function(fn1);
+    let main_stm: ast::Main = vec![fn_stm];
+    t.state.run(&main_stm);
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::WrongReturnType));
 }
