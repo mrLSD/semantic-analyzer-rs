@@ -74,11 +74,17 @@ fn main_run() {
     assert_eq!(fn_sstate.inner_type, fn1.result_type.clone().into());
     assert!(fn_sstate.parameters.is_empty());
 
+    // Function body context
     assert_eq!(t.state.context.len(), 1);
-    let st = t.state.context[0].borrow().context.clone().get();
-    assert_eq!(st.len(), 1);
+    let ctx = t.state.context[0].borrow();
+    assert!(ctx.children.is_empty());
+    assert!(ctx.parent.is_none());
+
+    // Semantic stack context for the block
+    let st_ctx = ctx.context.clone().get();
+    assert_eq!(st_ctx.len(), 1);
     assert_eq!(
-        st[0],
+        st_ctx[0],
         SemanticStackContext::ExpressionFunctionReturnWithLabel {
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Bool),
@@ -86,22 +92,24 @@ fn main_run() {
             }
         }
     );
-    let st_context = t.state.global.context.get();
-    assert_eq!(st_context.len(), 3);
+
+    // Global semantic stack context for
+    let st_global_context = t.state.global.context.get();
+    assert_eq!(st_global_context.len(), 3);
     assert_eq!(
-        st_context[0],
+        st_global_context[0],
         SemanticStackContext::Types {
             type_decl: ty.into()
         }
     );
     assert_eq!(
-        st_context[1],
+        st_global_context[1],
         SemanticStackContext::Constant {
             const_decl: constant1.into()
         }
     );
     assert_eq!(
-        st_context[2],
+        st_global_context[2],
         SemanticStackContext::FunctionDeclaration {
             fn_decl: fn1.into()
         }
@@ -150,4 +158,161 @@ fn wrong_return_type() {
     t.state.run(&main_stm);
     assert!(t.check_errors_len(1));
     assert!(t.check_error(StateErrorKind::WrongReturnType));
+}
+
+#[test]
+fn expression_as_return() {
+    let mut t = SemanticTest::new();
+    let body_expr = ast::BodyStatement::Expression(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+        operation: None,
+    });
+    let fn1 = ast::FunctionStatement {
+        name: ast::FunctionName::new(Ident::new("fn1")),
+        parameters: vec![],
+        result_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+        body: vec![body_expr],
+    };
+    let fn_stm = ast::MainStatement::Function(fn1.clone());
+    let main_stm: ast::Main = vec![fn_stm];
+    t.state.run(&main_stm);
+    assert!(t.is_empty_error());
+
+    // Function body context
+    assert_eq!(t.state.context.len(), 1);
+    let ctx = t.state.context[0].borrow();
+    assert!(ctx.children.is_empty());
+    assert!(ctx.parent.is_none());
+
+    // Semantic stack context for the block
+    let st_ctx = ctx.context.clone().get();
+    assert_eq!(st_ctx.len(), 1);
+    assert_eq!(
+        st_ctx[0],
+        SemanticStackContext::ExpressionFunctionReturnWithLabel {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
+            }
+        }
+    );
+
+    // Global semantic stack context for
+    let st_global_context = t.state.global.context.get();
+    assert_eq!(st_global_context.len(), 1);
+    assert_eq!(
+        st_global_context[0],
+        SemanticStackContext::FunctionDeclaration {
+            fn_decl: fn1.into()
+        }
+    );
+}
+
+#[test]
+fn if_return_from_function() {
+    let mut t = SemanticTest::new();
+    let body_expr_return = ast::BodyStatement::Expression(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::I8(5)),
+        operation: None,
+    });
+    let if_expr_return = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::I8(10)),
+        operation: None,
+    };
+    let if_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+        operation: None,
+    };
+    let body_if = ast::BodyStatement::If(ast::IfStatement {
+        condition: ast::IfCondition::Single(if_expr),
+        body: ast::IfBodyStatements::If(vec![ast::IfBodyStatement::Return(if_expr_return)]),
+        else_statement: None,
+        else_if_statement: None,
+    });
+    let fn1 = ast::FunctionStatement {
+        name: ast::FunctionName::new(Ident::new("fn1")),
+        parameters: vec![],
+        result_type: ast::Type::Primitive(ast::PrimitiveTypes::I8),
+        body: vec![body_if, body_expr_return],
+    };
+    let fn_stm = ast::MainStatement::Function(fn1.clone());
+    let main_stm: ast::Main = vec![fn_stm];
+    t.state.run(&main_stm);
+    assert!(t.is_empty_error());
+
+    // Function body context
+    assert_eq!(t.state.context.len(), 1);
+    let ctx = t.state.context[0].borrow();
+    assert_eq!(ctx.children.len(), 1);
+    assert!(ctx.parent.is_none());
+
+    // Children block context
+    let children_ctx = ctx.children[0].borrow();
+    assert!(children_ctx.children.is_empty());
+    assert!(children_ctx.parent.is_some());
+
+    // Children semantic stack context for the block
+    let st_children_ctx = children_ctx.context.clone().get();
+    assert_eq!(st_children_ctx.len(), 5);
+    assert_eq!(
+        st_children_ctx[0],
+        SemanticStackContext::IfConditionExpression {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
+            },
+            label_if_begin: String::from("if_begin").into(),
+            label_if_end: String::from("if_end").into()
+        }
+    );
+    assert_eq!(
+        st_children_ctx[1],
+        SemanticStackContext::SetLabel {
+            label: String::from("if_begin").into()
+        }
+    );
+    assert_eq!(
+        st_children_ctx[2],
+        SemanticStackContext::JumpFunctionReturn {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::I8),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(10)),
+            }
+        }
+    );
+    assert_eq!(
+        st_children_ctx[3],
+        SemanticStackContext::JumpTo {
+            label: String::from("if_end").into()
+        }
+    );
+    assert_eq!(
+        st_children_ctx[4],
+        SemanticStackContext::SetLabel {
+            label: String::from("if_end").into()
+        }
+    );
+
+    // Semantic stack context for the block
+    let st_ctx = ctx.context.clone().get();
+    assert_eq!(st_ctx.len(), 1);
+    assert_eq!(
+        st_ctx[0],
+        SemanticStackContext::ExpressionFunctionReturnWithLabel {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::I8),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(5)),
+            }
+        }
+    );
+
+    // Global semantic stack context for
+    let st_global_context = t.state.global.context.get();
+    assert_eq!(st_global_context.len(), 1);
+    assert_eq!(
+        st_global_context[0],
+        SemanticStackContext::FunctionDeclaration {
+            fn_decl: fn1.into()
+        }
+    );
 }

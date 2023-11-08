@@ -474,7 +474,7 @@ impl State {
             ));
             return;
         }
-
+        println!("###");
         function_state
             .borrow_mut()
             .context
@@ -792,7 +792,6 @@ impl State {
         function_body_state
             .borrow_mut()
             .set_child(if_body_state.clone());
-
         // Get labels name for if-begin, and if-end
         let label_if_begin = if_body_state
             .borrow_mut()
@@ -805,7 +804,7 @@ impl State {
             || {
                 if_body_state
                     .borrow_mut()
-                    .get_and_set_next_label(&"if_begin".to_string().into())
+                    .get_and_set_next_label(&"if_end".to_string().into())
             },
             |label| label,
         );
