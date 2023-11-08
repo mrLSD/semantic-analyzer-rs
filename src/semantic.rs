@@ -854,12 +854,14 @@ impl State {
                 );
             }
         }
-        // Codegen for jump to if-end statement - return to program flow
-        // TODO: issue #9
-        if_body_state
-            .borrow_mut()
-            .context
-            .jump_to(label_if_end.clone());
+        // Codegen for jump to if-end statement - return to program flow.
+        // If return is set do not add jump-to-end label.
+        if !if_body_state.borrow().manual_return {
+            if_body_state
+                .borrow_mut()
+                .context
+                .jump_to(label_if_end.clone());
+        }
 
         // Check else statements: else, else-if
         if is_else {
@@ -901,11 +903,13 @@ impl State {
                 }
 
                 // Codegen for jump to if-end statement -return to program flow
-                // TODO: issue #9
-                if_body_state
-                    .borrow_mut()
-                    .context
-                    .jump_to(label_if_end.clone());
+                // If return is set do not add jump-to-end label.
+                if !if_body_state.borrow().manual_return {
+                    if_body_state
+                        .borrow_mut()
+                        .context
+                        .jump_to(label_if_end.clone());
+                }
             } else if let Some(else_if_statement) = &data.else_if_statement {
                 // Analyse  else-if statement
                 // Set `label_if_end` to indicate single if-end point

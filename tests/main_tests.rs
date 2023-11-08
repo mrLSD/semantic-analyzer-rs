@@ -466,7 +466,7 @@ fn if_return_from_function() {
 
     // Children semantic stack context for the block
     let st_children_ctx = children_ctx.context.clone().get();
-    assert_eq!(st_children_ctx.len(), 5);
+    assert_eq!(st_children_ctx.len(), 4);
     assert_eq!(
         st_children_ctx[0],
         SemanticStackContext::IfConditionExpression {
@@ -495,12 +495,6 @@ fn if_return_from_function() {
     );
     assert_eq!(
         st_children_ctx[3],
-        SemanticStackContext::JumpTo {
-            label: String::from("if_end").into()
-        }
-    );
-    assert_eq!(
-        st_children_ctx[4],
         SemanticStackContext::SetLabel {
             label: String::from("if_end").into()
         }
