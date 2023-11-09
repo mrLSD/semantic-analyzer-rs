@@ -32,6 +32,48 @@ fn main_run() {
     };
     let ty_stm = ast::MainStatement::Types(ty.clone());
 
+    let body_let_binding = ast::BodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("x")),
+        mutable: true,
+        value_type: None,
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(
+                false,
+            )),
+            operation: None,
+        }),
+    });
+    let body_binding = ast::BodyStatement::Binding(ast::Binding {
+        name: ast::ValueName::new(Ident::new("x")),
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::F32(0.1)),
+            operation: None,
+        }),
+    });
+    let body_fn_call = ast::BodyStatement::FunctionCall(ast::FunctionCall {
+        name: ast::FunctionName::new(Ident::new("fn2")),
+        parameters: vec![],
+    });
+    let body_if = ast::BodyStatement::If(ast::IfStatement {
+        condition: ast::IfCondition::Single(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+            operation: None,
+        }),
+        body: ast::IfBodyStatements::If(vec![ast::IfBodyStatement::FunctionCall(
+            ast::FunctionCall {
+                name: ast::FunctionName::new(Ident::new("fn2")),
+                parameters: vec![],
+            },
+        )]),
+        else_statement: None,
+        else_if_statement: None,
+    });
+    let body_loop = ast::BodyStatement::Loop(vec![ast::LoopBodyStatement::FunctionCall(
+        ast::FunctionCall {
+            name: ast::FunctionName::new(Ident::new("fn2")),
+            parameters: vec![],
+        },
+    )]);
     let body_return = ast::BodyStatement::Return(ast::Expression {
         expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
         operation: None,
@@ -40,15 +82,31 @@ fn main_run() {
         name: ast::FunctionName::new(Ident::new("fn1")),
         parameters: vec![],
         result_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
-        body: vec![body_return],
+        body: vec![
+            body_let_binding,
+            body_binding,
+            body_fn_call,
+            body_if,
+            body_loop,
+            body_return.clone(),
+        ],
     };
     let fn_stm = ast::MainStatement::Function(fn1.clone());
-    let main_stm: ast::Main = vec![
-        import_stm.clone(),
-        constant_stm.clone(),
-        ty_stm.clone(),
-        fn_stm.clone(),
-    ];
+
+    let body_expr_return = ast::BodyStatement::Expression(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(23)),
+        operation: None,
+    });
+    let fn2 = ast::FunctionStatement {
+        name: ast::FunctionName::new(Ident::new("fn2")),
+        parameters: vec![],
+        result_type: ast::Type::Primitive(ast::PrimitiveTypes::U16),
+        body: vec![body_expr_return],
+    };
+    let fn2_stm = ast::MainStatement::Function(fn2.clone());
+    let main_stm: ast::Main = vec![import_stm, constant_stm, ty_stm, fn_stm, fn2_stm];
+    // For grcov
+    format!("{main_stm:#?}");
     t.state.run(&main_stm);
     assert!(t.is_empty_error());
 
@@ -64,28 +122,31 @@ fn main_run() {
         t.state.global.types.get(&ty.clone().name().into()).unwrap(),
         &Type::Struct(ty.clone().into())
     );
-    let fn_sstate = t
+    let fn_state = t
         .state
         .global
         .functions
         .get(&fn1.clone().name().into())
         .unwrap();
-    assert_eq!(fn_sstate.inner_name, fn1.name.clone().into());
-    assert_eq!(fn_sstate.inner_type, fn1.result_type.clone().into());
-    assert!(fn_sstate.parameters.is_empty());
+    assert_eq!(fn_state.inner_name, fn1.name.clone().into());
+    assert_eq!(fn_state.inner_type, fn1.result_type.clone().into());
+    assert!(fn_state.parameters.is_empty());
 
     // Function body context
-    assert_eq!(t.state.context.len(), 1);
-    let ctx = t.state.context[0].borrow();
-    assert!(ctx.children.is_empty());
-    assert!(ctx.parent.is_none());
+    assert_eq!(t.state.context.len(), 2);
+    let ctx1 = t.state.context[0].borrow();
+    assert_eq!(ctx1.children.len(), 2);
+    assert!(ctx1.parent.is_none());
+    let ctx2 = t.state.context[1].borrow();
+    assert!(ctx2.children.is_empty());
+    assert!(ctx2.parent.is_none());
 
-    // Semantic stack context for the block
-    let st_ctx = ctx.context.clone().get();
-    assert_eq!(st_ctx.len(), 1);
+    // Semantic stack context for the block fn1
+    let st_ctx1 = ctx1.context.clone().get();
+    assert_eq!(st_ctx1.len(), 4);
     assert_eq!(
-        st_ctx[0],
-        SemanticStackContext::ExpressionFunctionReturnWithLabel {
+        st_ctx1[3],
+        SemanticStackContext::ExpressionFunctionReturn {
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Bool),
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
@@ -93,9 +154,22 @@ fn main_run() {
         }
     );
 
-    // Global semantic stack context for
+    // Semantic stack context for the block fn2
+    let st_ctx2 = ctx2.context.clone().get();
+    assert_eq!(st_ctx2.len(), 1);
+    assert_eq!(
+        st_ctx2[0],
+        SemanticStackContext::ExpressionFunctionReturn {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::U16),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U16(23)),
+            }
+        }
+    );
+
+    // Global semantic stack context
     let st_global_context = t.state.global.context.get();
-    assert_eq!(st_global_context.len(), 3);
+    assert_eq!(st_global_context.len(), 4);
     assert_eq!(
         st_global_context[0],
         SemanticStackContext::Types {
@@ -189,7 +263,7 @@ fn expression_as_return() {
     assert_eq!(st_ctx.len(), 1);
     assert_eq!(
         st_ctx[0],
-        SemanticStackContext::ExpressionFunctionReturnWithLabel {
+        SemanticStackContext::ExpressionFunctionReturn {
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Bool),
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
@@ -197,7 +271,7 @@ fn expression_as_return() {
         }
     );
 
-    // Global semantic stack context for
+    // Global semantic stack context
     let st_global_context = t.state.global.context.get();
     assert_eq!(st_global_context.len(), 1);
     assert_eq!(
@@ -306,7 +380,7 @@ fn if_return_from_function() {
         }
     );
 
-    // Global semantic stack context for
+    // Global semantic stack context
     let st_global_context = t.state.global.context.get();
     assert_eq!(st_global_context.len(), 1);
     assert_eq!(

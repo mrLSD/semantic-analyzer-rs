@@ -93,7 +93,7 @@ impl SemanticStack {
 
     /// Push Context to the stack as expression function return data
     pub fn expression_function_return(&mut self, expr_result: ExpressionResult) {
-        self.push(SemanticStackContext::ExpressionFunctionReturnWithLabel { expr_result });
+        self.push(SemanticStackContext::ExpressionFunctionReturn { expr_result });
     }
 
     /// Push Context to the stack as `expression function return with label` data

@@ -34,7 +34,6 @@ pub struct BlockState {
     pub labels: HashSet<LabelName>,
     /// Last register for unique register representation
     pub last_register_number: u64,
-
     /// Manual return from other states
     pub manual_return: bool,
     /// Parent state

@@ -835,7 +835,7 @@ impl State {
                 self.if_condition_loop_body(body, &if_body_state, label_loop_start, label_loop_end);
             }
         }
-        // Codegen for jump to if-end statement -return to program flow
+        // Codegen for jump to if-end statement - return to program flow
         if_body_state
             .borrow_mut()
             .context
