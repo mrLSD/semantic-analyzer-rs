@@ -775,7 +775,7 @@ impl State {
         label_loop: Option<(&LabelName, &LabelName)>,
     ) {
         // It can't contain `else` and `if-else` on the same time
-        if data.else_if_statement.is_some() && data.else_if_statement.is_some() {
+        if data.else_statement.is_some() && data.else_if_statement.is_some() {
             let stm = data.else_if_statement.clone().unwrap();
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::IfElseDuplicated,
@@ -808,7 +808,7 @@ impl State {
             },
             |label| label,
         );
-        let is_else = data.else_if_statement.is_some() || data.else_if_statement.is_some();
+        let is_else = data.else_statement.is_some() || data.else_if_statement.is_some();
 
         // Analyse if-conditions
         self.if_condition_calculation(

@@ -1,10 +1,15 @@
+use crate::utils::SemanticTest;
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{CodeLocation, GetLocation, Ident};
+use semantic_analyzer::types::block_state::BlockState;
 use semantic_analyzer::types::condition::{
     Condition, ExpressionCondition, ExpressionLogicCondition, IfBodyStatement, IfBodyStatements,
     IfCondition, IfLoopBodyStatement, IfStatement, LogicCondition,
 };
+use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::expression::Expression;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 mod utils;
 
@@ -274,4 +279,30 @@ fn if_logic_transform() {
     );
     assert!(if_statement3_into.else_if_statement.is_none());
     assert!(if_statement3_into.else_if_statement.is_none());
+}
+
+#[test]
+fn check_if_and_else_if_statement() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let if_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+        operation: None,
+    };
+
+    let if_else_stmt = ast::IfStatement {
+        condition: ast::IfCondition::Single(if_expr.clone()),
+        body: ast::IfBodyStatements::If(vec![]),
+        else_statement: None,
+        else_if_statement: None,
+    };
+    let if_stmt = ast::IfStatement {
+        condition: ast::IfCondition::Single(if_expr),
+        body: ast::IfBodyStatements::If(vec![]),
+        else_statement: Some(ast::IfBodyStatements::If(vec![])),
+        else_if_statement: Some(Box::new(if_else_stmt)),
+    };
+    t.state.if_condition(&if_stmt, &block_state, None, None);
+    t.check_errors_len(1);
+    t.check_error(StateErrorKind::IfElseDuplicated);
 }

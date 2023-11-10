@@ -5,7 +5,7 @@ use semantic_analyzer::types::{
     expression::{ExpressionResult, ExpressionResultValue},
     semantic::SemanticStackContext,
     types::{PrimitiveTypes, Type},
-    PrimitiveValue,
+    Function, PrimitiveValue, Value,
 };
 
 mod utils;
@@ -46,7 +46,7 @@ fn main_run() {
     let body_binding = ast::BodyStatement::Binding(ast::Binding {
         name: ast::ValueName::new(Ident::new("x")),
         value: Box::new(ast::Expression {
-            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::F32(0.1)),
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
             operation: None,
         }),
     });
@@ -145,6 +145,50 @@ fn main_run() {
     let st_ctx1 = ctx1.context.clone().get();
     assert_eq!(st_ctx1.len(), 4);
     assert_eq!(
+        st_ctx1[0],
+        SemanticStackContext::LetBinding {
+            let_decl: Value {
+                inner_name: "x.0".into(),
+                inner_type: Type::Primitive(PrimitiveTypes::Bool),
+                mutable: true,
+                alloca: false,
+                malloc: false
+            },
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(false)),
+            },
+        }
+    );
+    assert_eq!(
+        st_ctx1[1],
+        SemanticStackContext::Binding {
+            val: Value {
+                inner_name: "x.0".into(),
+                inner_type: Type::Primitive(PrimitiveTypes::Bool),
+                mutable: true,
+                alloca: false,
+                malloc: false
+            },
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
+            },
+        }
+    );
+    assert_eq!(
+        st_ctx1[2],
+        SemanticStackContext::Call {
+            call: Function {
+                inner_name: String::from("fn2").into(),
+                inner_type: Type::Primitive(PrimitiveTypes::U16),
+                parameters: vec![],
+            },
+            params: vec![],
+        }
+    );
+
+    assert_eq!(
         st_ctx1[3],
         SemanticStackContext::ExpressionFunctionReturn {
             expr_result: ExpressionResult {
@@ -186,6 +230,12 @@ fn main_run() {
         st_global_context[2],
         SemanticStackContext::FunctionDeclaration {
             fn_decl: fn1.into()
+        }
+    );
+    assert_eq!(
+        st_global_context[3],
+        SemanticStackContext::FunctionDeclaration {
+            fn_decl: fn2.into()
         }
     );
 }
