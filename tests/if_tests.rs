@@ -7,7 +7,10 @@ use semantic_analyzer::types::condition::{
     IfCondition, IfLoopBodyStatement, IfStatement, LogicCondition,
 };
 use semantic_analyzer::types::error::StateErrorKind;
-use semantic_analyzer::types::expression::Expression;
+use semantic_analyzer::types::expression::{Expression, ExpressionResult, ExpressionResultValue};
+use semantic_analyzer::types::semantic::SemanticStackContext;
+use semantic_analyzer::types::types::{PrimitiveTypes, Type};
+use semantic_analyzer::types::{LabelName, PrimitiveValue};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -305,4 +308,82 @@ fn check_if_and_else_if_statement() {
     t.state.if_condition(&if_stmt, &block_state, None, None);
     t.check_errors_len(1);
     t.check_error(StateErrorKind::IfElseDuplicated);
+}
+
+#[test]
+fn if_condition_calculation_simple() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+
+    // Simple without operations
+    let condition1 = ast::IfCondition::Single(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::I8(3)),
+        operation: None,
+    });
+    let label_if_begin: LabelName = String::from("if_begin").into();
+    let label_if_else: LabelName = String::from("if_else").into();
+    let label_if_end: LabelName = String::from("if_end").into();
+    t.state.if_condition_calculation(
+        &condition1,
+        &block_state,
+        &label_if_begin,
+        &label_if_else,
+        &label_if_end,
+        false,
+    );
+
+    // Simple with else without operations
+    let condition2 = ast::IfCondition::Single(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::I8(3)),
+        operation: None,
+    });
+    t.state.if_condition_calculation(
+        &condition2,
+        &block_state,
+        &label_if_begin,
+        &label_if_else,
+        &label_if_end,
+        true,
+    );
+
+    // Simple with wrong expression without operations
+    let condition3 = ast::IfCondition::Single(ast::Expression {
+        expression_value: ast::ExpressionValue::ValueName(ast::ValueName::new(Ident::new("x"))),
+        operation: None,
+    });
+    t.state.if_condition_calculation(
+        &condition3,
+        &block_state,
+        &label_if_begin,
+        &label_if_else,
+        &label_if_end,
+        true,
+    );
+
+    let ctx = block_state.borrow().context.clone().get();
+    assert_eq!(ctx.len(), 2);
+    assert_eq!(
+        ctx[0],
+        SemanticStackContext::IfConditionExpression {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::I8,),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3,),),
+            },
+            label_if_begin: label_if_begin.clone().into(),
+            label_if_end: label_if_end.into(),
+        }
+    );
+    assert_eq!(
+        ctx[1],
+        SemanticStackContext::IfConditionExpression {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::I8,),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3,),),
+            },
+            label_if_begin: label_if_begin.into(),
+            label_if_end: label_if_else.into(),
+        }
+    );
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::ValueNotFound));
 }
