@@ -52,8 +52,12 @@ fn func_call_not_declared_func() {
     };
     let res = t.state.function_call(&fn_call, &block_state);
     assert!(res.is_none());
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::FunctionNotFound));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::FunctionNotFound),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -84,8 +88,12 @@ fn func_call_wrong_type() {
     };
     let res = t.state.function_call(&fn_call, &block_state).unwrap();
     assert_eq!(res, Type::Primitive(PrimitiveTypes::I16));
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::FunctionParameterTypeWrong));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::FunctionParameterTypeWrong),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]

@@ -346,8 +346,12 @@ fn types_declaration() {
     );
 
     t.state.types(&type_decl2.clone());
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::TypeAlreadyExist));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::TypeAlreadyExist),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
     let state = t.state.global.context.clone().get();
     assert_eq!(state.len(), 2);
 }

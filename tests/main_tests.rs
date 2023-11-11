@@ -349,8 +349,10 @@ fn double_return() {
     let fn_stm = ast::MainStatement::Function(fn1);
     let main_stm: ast::Main = vec![fn_stm];
     t.state.run(&main_stm);
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ReturnAlreadyCalled));
+    println!("{:#?}", t.state.errors);
+    assert!(t.check_errors_len(2), "Errors: {:?}", t.state.errors.len());
+    assert!(t.check_error_index(0, StateErrorKind::ForbiddenCodeAfterReturnDeprecated));
+    assert!(t.check_error_index(1, StateErrorKind::ReturnAlreadyCalled));
 }
 
 #[test]
@@ -369,8 +371,12 @@ fn wrong_return_type() {
     let fn_stm = ast::MainStatement::Function(fn1);
     let main_stm: ast::Main = vec![fn_stm];
     t.state.run(&main_stm);
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::WrongReturnType));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::WrongReturnType),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]

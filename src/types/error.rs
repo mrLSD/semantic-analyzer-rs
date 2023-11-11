@@ -27,6 +27,9 @@ pub enum StateErrorKind {
     WrongReturnType,
     ConditionExpressionWrongType,
     ConditionExpressionNotSupported,
+    ForbiddenCodeAfterReturnDeprecated,
+    ForbiddenCodeAfterContinueDeprecated,
+    ForbiddenCodeAfterBreakDeprecated,
 }
 
 /// State error location. Useful to determine location of error

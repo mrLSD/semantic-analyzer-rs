@@ -10,7 +10,7 @@
 //! - `Context` - stack for `Block state` of each functions body state.
 //! - `Errors` - semantic analyzes errors.z
 
-use crate::ast::{self, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
+use crate::ast::{self, CodeLocation, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
 use crate::types::block_state::BlockState;
 use crate::types::expression::{
     Expression, ExpressionResult, ExpressionResultValue, ExpressionStructValue,
@@ -290,6 +290,13 @@ impl State {
         let mut return_is_called = false;
         // Fetch function elements and gather errors
         for body in &data.body {
+            if return_is_called {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ForbiddenCodeAfterReturnDeprecated,
+                    format!("{body:?}"),
+                    CodeLocation::new(1, 1),
+                ));
+            }
             match body {
                 ast::BodyStatement::LetBinding(bind) => {
                     self.let_binding(bind, &body_state);
@@ -599,14 +606,24 @@ impl State {
     /// Analyze body for ant if condition:
     /// - if, else, if-else
     /// NOTE: label_end - is always already exists
+    /// ## Return
+    /// Return body statement "return" status
     pub fn if_condition_body(
         &mut self,
         body: &[ast::IfBodyStatement<'_>],
         if_body_state: &Rc<RefCell<BlockState>>,
         label_end: &LabelName,
         label_loop: Option<(&LabelName, &LabelName)>,
-    ) {
+    ) -> bool {
+        let mut return_is_called = false;
         for body in body.iter() {
+            if return_is_called {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ForbiddenCodeAfterReturnDeprecated,
+                    format!("{body:?}"),
+                    CodeLocation::new(1, 1),
+                ));
+            }
             match body {
                 ast::IfBodyStatement::LetBinding(bind) => {
                     self.let_binding(bind, if_body_state);
@@ -636,15 +653,19 @@ impl State {
                         // return
                         if_body_state.borrow_mut().context.jump_function_return(res);
                         if_body_state.borrow_mut().set_return();
+                        return_is_called = true;
                     };
                 }
             }
         }
+        return_is_called
     }
 
     /// # If-condition loop body
     /// Analyze body for ant if condition:
     /// - if, else, if-else
+    /// ## Return
+    /// Return body statement "return" status
     pub fn if_condition_loop_body(
         &mut self,
         body: &[ast::IfLoopBodyStatement<'_>],
@@ -652,8 +673,33 @@ impl State {
         label_if_end: &LabelName,
         label_loop_start: &LabelName,
         label_loop_end: &LabelName,
-    ) {
+    ) -> bool {
+        let mut return_is_called = false;
+        let mut break_is_called = false;
+        let mut continue_is_called = false;
         for body in body.iter() {
+            if return_is_called {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ForbiddenCodeAfterReturnDeprecated,
+                    format!("{body:?}"),
+                    CodeLocation::new(1, 1),
+                ));
+            }
+            if break_is_called {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ForbiddenCodeAfterBreakDeprecated,
+                    format!("{body:?}"),
+                    CodeLocation::new(1, 1),
+                ));
+            }
+            if continue_is_called {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ForbiddenCodeAfterContinueDeprecated,
+                    format!("{body:?}"),
+                    CodeLocation::new(1, 1),
+                ));
+            }
+
             match body {
                 ast::IfLoopBodyStatement::LetBinding(bind) => {
                     self.let_binding(bind, if_body_state);
@@ -683,9 +729,11 @@ impl State {
                         // return
                         if_body_state.borrow_mut().context.jump_function_return(res);
                         if_body_state.borrow_mut().set_return();
+                        return_is_called = true;
                     }
                 }
                 ast::IfLoopBodyStatement::Continue => {
+                    continue_is_called = true;
                     // Skip next loop  step and jump to the start
                     // of loop
                     if_body_state
@@ -694,6 +742,7 @@ impl State {
                         .jump_to(label_loop_start.clone());
                 }
                 ast::IfLoopBodyStatement::Break => {
+                    break_is_called = true;
                     // Break loop and jump to the end of loop
                     if_body_state
                         .borrow_mut()
@@ -702,6 +751,7 @@ impl State {
                 }
             }
         }
+        return_is_called
     }
 
     /// # If conditions calculations
@@ -833,11 +883,12 @@ impl State {
         //== If condition main body
         // Set if-begin label
         if_body_state.borrow_mut().context.set_label(label_if_begin);
-        // Analyze if-conditions body kind
-        match &data.body {
+        // Analyze if-conditions body kind.
+        // Return flag for current body state, excluding children return claims
+        let return_is_called = match &data.body {
             ast::IfBodyStatements::If(body) => {
                 // Analyze if-statement body
-                self.if_condition_body(body, &if_body_state, &label_if_end, label_loop);
+                self.if_condition_body(body, &if_body_state, &label_if_end, label_loop)
             }
             ast::IfBodyStatements::Loop(body) => {
                 // It's special case for the Loop, when `label_loop` should always be set.
@@ -851,12 +902,12 @@ impl State {
                     &label_if_end,
                     label_loop_start,
                     label_loop_end,
-                );
+                )
             }
-        }
+        };
         // Codegen for jump to if-end statement - return to program flow.
         // If return is set do not add jump-to-end label.
-        if !if_body_state.borrow().manual_return {
+        if !return_is_called {
             if_body_state
                 .borrow_mut()
                 .context
@@ -878,15 +929,10 @@ impl State {
                     .borrow_mut()
                     .set_child(if_else_body_state.clone());
 
-                match else_body {
+                let return_is_called = match else_body {
                     ast::IfBodyStatements::If(body) => {
                         // Analyze if-statement body
-                        self.if_condition_body(
-                            body,
-                            &if_else_body_state,
-                            &label_if_end,
-                            label_loop,
-                        );
+                        self.if_condition_body(body, &if_else_body_state, &label_if_end, label_loop)
                     }
                     ast::IfBodyStatements::Loop(body) => {
                         let (label_loop_start, label_loop_end) =
@@ -898,13 +944,13 @@ impl State {
                             &label_if_end,
                             label_loop_start,
                             label_loop_end,
-                        );
+                        )
                     }
-                }
+                };
 
                 // Codegen for jump to if-end statement -return to program flow
                 // If return is set do not add jump-to-end label.
-                if !if_body_state.borrow().manual_return {
+                if !return_is_called {
                     if_body_state
                         .borrow_mut()
                         .context
@@ -966,7 +1012,32 @@ impl State {
             .context
             .set_label(label_loop_begin.clone());
 
+        let mut return_is_called = false;
+        let mut break_is_called = false;
+        let mut continue_is_called = false;
         for body in data.iter() {
+            if return_is_called {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ForbiddenCodeAfterReturnDeprecated,
+                    format!("{body:?}"),
+                    CodeLocation::new(1, 1),
+                ));
+            }
+            if break_is_called {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ForbiddenCodeAfterBreakDeprecated,
+                    format!("{body:?}"),
+                    CodeLocation::new(1, 1),
+                ));
+            }
+            if continue_is_called {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ForbiddenCodeAfterContinueDeprecated,
+                    format!("{body:?}"),
+                    CodeLocation::new(1, 1),
+                ));
+            }
+
             match body {
                 ast::LoopBodyStatement::LetBinding(bind) => {
                     self.let_binding(bind, &loop_body_state);
@@ -997,6 +1068,7 @@ impl State {
                             .context
                             .jump_function_return(res);
                         loop_body_state.borrow_mut().set_return();
+                        return_is_called = true;
                     }
                 }
                 ast::LoopBodyStatement::Break => {
@@ -1005,6 +1077,7 @@ impl State {
                         .borrow_mut()
                         .context
                         .jump_to(label_loop_end.clone());
+                    break_is_called = true;
                 }
                 ast::LoopBodyStatement::Continue => {
                     // Skip next loop  step and jump to the start
@@ -1013,21 +1086,25 @@ impl State {
                         .borrow_mut()
                         .context
                         .jump_to(label_loop_begin.clone());
+                    continue_is_called = true;
                 }
             }
         }
 
-        // Because it's loop jump to loop begin
-        loop_body_state
-            .borrow_mut()
-            .context
-            .jump_to(label_loop_begin.clone());
+        // If return is called do not set loop-specific instructions
+        if !return_is_called {
+            // Because it's loop jump to loop begin
+            loop_body_state
+                .borrow_mut()
+                .context
+                .jump_to(label_loop_begin.clone());
 
-        // Loop ending
-        loop_body_state
-            .borrow_mut()
-            .context
-            .set_label(label_loop_end);
+            // Loop ending
+            loop_body_state
+                .borrow_mut()
+                .context
+                .set_label(label_loop_end);
+        }
     }
 
     #[allow(clippy::doc_markdown)]

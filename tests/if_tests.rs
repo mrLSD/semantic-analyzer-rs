@@ -306,8 +306,12 @@ fn check_if_and_else_if_statement_duplicate() {
         else_if_statement: Some(Box::new(if_else_stmt)),
     };
     t.state.if_condition(&if_stmt, &block_state, None, None);
-    t.check_errors_len(1);
-    t.check_error(StateErrorKind::IfElseDuplicated);
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::IfElseDuplicated),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -384,8 +388,12 @@ fn if_condition_calculation_simple() {
             label_if_end: label_if_else,
         }
     );
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ValueNotFound));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ValueNotFound),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -549,8 +557,12 @@ fn if_condition_when_left_expr_return_error() {
         &label_if_end,
         false,
     );
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::FunctionNotFound));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::FunctionNotFound),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -587,8 +599,12 @@ fn if_condition_left_expr_and_right_expr_different_type() {
         &label_if_end,
         false,
     );
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ConditionExpressionWrongType));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ConditionExpressionWrongType),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -646,8 +662,12 @@ fn if_condition_primitive_type_only_check() {
         &label_if_end,
         false,
     );
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ConditionExpressionNotSupported));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ConditionExpressionNotSupported),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -1142,8 +1162,6 @@ fn if_loop_body_statements() {
         expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
         operation: None,
     });
-    let if_body_break = ast::IfLoopBodyStatement::Break;
-    let if_body_continue = ast::IfLoopBodyStatement::Continue;
 
     let label_loop_begin: LabelName = String::from("loop_begin").into();
     let label_loop_end: LabelName = String::from("loop_end").into();
@@ -1156,8 +1174,6 @@ fn if_loop_body_statements() {
             if_body_fn_call,
             if_body_if,
             if_body_loop,
-            if_body_break,
-            if_body_continue,
             if_body_return,
         ]),
         else_statement: None,
@@ -1182,7 +1198,7 @@ fn if_loop_body_statements() {
     assert_eq!(ctx.borrow().children.len(), 2);
 
     let stm_ctx = ctx.borrow().context.clone().get();
-    assert_eq!(stm_ctx.len(), 9);
+    assert_eq!(stm_ctx.len(), 7);
     assert_eq!(
         stm_ctx[0],
         SemanticStackContext::IfConditionExpression {
@@ -1245,18 +1261,6 @@ fn if_loop_body_statements() {
     );
     assert_eq!(
         stm_ctx[5],
-        SemanticStackContext::JumpTo {
-            label: String::from("loop_end").into()
-        }
-    );
-    assert_eq!(
-        stm_ctx[6],
-        SemanticStackContext::JumpTo {
-            label: String::from("loop_begin").into()
-        }
-    );
-    assert_eq!(
-        stm_ctx[7],
         SemanticStackContext::JumpFunctionReturn {
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Bool),
@@ -1265,7 +1269,7 @@ fn if_loop_body_statements() {
         }
     );
     assert_eq!(
-        stm_ctx[8],
+        stm_ctx[6],
         SemanticStackContext::SetLabel {
             label: String::from("if_end").into()
         }
@@ -1352,5 +1356,297 @@ fn if_loop_body_statements() {
         SemanticStackContext::SetLabel {
             label: String::from("loop_end").into()
         }
+    );
+}
+
+#[test]
+fn if_loop_body_instructions_after_return() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let if_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(1)),
+        operation: None,
+    };
+
+    let if_body_let_binding = ast::IfLoopBodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("x")),
+        mutable: true,
+        value_type: None,
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(
+                false,
+            )),
+            operation: None,
+        }),
+    });
+    let if_body_return = ast::IfLoopBodyStatement::Return(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+        operation: None,
+    });
+    let label_loop_begin: LabelName = String::from("loop_begin").into();
+    let label_loop_end: LabelName = String::from("loop_end").into();
+
+    let if_stmt = ast::IfStatement {
+        condition: ast::IfCondition::Single(if_expr),
+        body: ast::IfBodyStatements::Loop(vec![if_body_return, if_body_let_binding]),
+        else_statement: None,
+        else_if_statement: None,
+    };
+
+    t.state.if_condition(
+        &if_stmt,
+        &block_state,
+        None,
+        Some((&label_loop_begin, &label_loop_end)),
+    );
+
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
+}
+
+#[test]
+fn else_if_loop_body_instructions_after_return() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let if_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(1)),
+        operation: None,
+    };
+
+    let if_body_let_binding = ast::IfLoopBodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("x")),
+        mutable: true,
+        value_type: None,
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(
+                false,
+            )),
+            operation: None,
+        }),
+    });
+    let if_body_return = ast::IfLoopBodyStatement::Return(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+        operation: None,
+    });
+    let label_loop_begin: LabelName = String::from("loop_begin").into();
+    let label_loop_end: LabelName = String::from("loop_end").into();
+
+    let if_stmt = ast::IfStatement {
+        condition: ast::IfCondition::Single(if_expr),
+        body: ast::IfBodyStatements::Loop(vec![if_body_return.clone()]),
+        else_statement: Some(ast::IfBodyStatements::Loop(vec![
+            if_body_return.clone(),
+            if_body_let_binding,
+        ])),
+        else_if_statement: None,
+    };
+
+    t.state.if_condition(
+        &if_stmt,
+        &block_state,
+        None,
+        Some((&label_loop_begin, &label_loop_end)),
+    );
+
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
+}
+
+#[test]
+fn if_body_instructions_after_return() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let if_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(1)),
+        operation: None,
+    };
+
+    let if_body_let_binding = ast::IfBodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("x")),
+        mutable: true,
+        value_type: None,
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(
+                false,
+            )),
+            operation: None,
+        }),
+    });
+    let if_body_return = ast::IfBodyStatement::Return(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+        operation: None,
+    });
+    let label_loop_begin: LabelName = String::from("loop_begin").into();
+    let label_loop_end: LabelName = String::from("loop_end").into();
+
+    let if_stmt = ast::IfStatement {
+        condition: ast::IfCondition::Single(if_expr),
+        body: ast::IfBodyStatements::If(vec![if_body_return, if_body_let_binding]),
+        else_statement: None,
+        else_if_statement: None,
+    };
+
+    t.state.if_condition(
+        &if_stmt,
+        &block_state,
+        None,
+        Some((&label_loop_begin, &label_loop_end)),
+    );
+
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
+}
+
+#[test]
+fn if_else_body_instructions_after_return() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let if_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(1)),
+        operation: None,
+    };
+
+    let if_body_let_binding = ast::IfBodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("x")),
+        mutable: true,
+        value_type: None,
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(
+                false,
+            )),
+            operation: None,
+        }),
+    });
+    let if_body_return = ast::IfBodyStatement::Return(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+        operation: None,
+    });
+    let label_loop_begin: LabelName = String::from("loop_begin").into();
+    let label_loop_end: LabelName = String::from("loop_end").into();
+
+    let if_stmt = ast::IfStatement {
+        condition: ast::IfCondition::Single(if_expr),
+        body: ast::IfBodyStatements::If(vec![if_body_return.clone()]),
+        else_statement: Some(ast::IfBodyStatements::If(vec![
+            if_body_return,
+            if_body_let_binding,
+        ])),
+        else_if_statement: None,
+    };
+
+    t.state.if_condition(
+        &if_stmt,
+        &block_state,
+        None,
+        Some((&label_loop_begin, &label_loop_end)),
+    );
+
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
+}
+
+#[test]
+fn if_loop_body_instructions_after_break() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let if_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(1)),
+        operation: None,
+    };
+    let if_body_let_binding = ast::IfLoopBodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("x")),
+        mutable: true,
+        value_type: None,
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(
+                false,
+            )),
+            operation: None,
+        }),
+    });
+    let if_body_break = ast::IfLoopBodyStatement::Break;
+
+    let label_loop_begin: LabelName = String::from("loop_begin").into();
+    let label_loop_end: LabelName = String::from("loop_end").into();
+
+    let if_stmt = ast::IfStatement {
+        condition: ast::IfCondition::Single(if_expr),
+        body: ast::IfBodyStatements::Loop(vec![if_body_break, if_body_let_binding]),
+        else_statement: None,
+        else_if_statement: None,
+    };
+
+    t.state.if_condition(
+        &if_stmt,
+        &block_state,
+        None,
+        Some((&label_loop_begin, &label_loop_end)),
+    );
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ForbiddenCodeAfterBreakDeprecated),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
+}
+
+#[test]
+fn if_loop_body_instructions_after_continue() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let if_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(1)),
+        operation: None,
+    };
+    let if_body_let_binding = ast::IfLoopBodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("x")),
+        mutable: true,
+        value_type: None,
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(
+                false,
+            )),
+            operation: None,
+        }),
+    });
+    let if_body_continue = ast::IfLoopBodyStatement::Continue;
+
+    let label_loop_begin: LabelName = String::from("loop_begin").into();
+    let label_loop_end: LabelName = String::from("loop_end").into();
+
+    let if_stmt = ast::IfStatement {
+        condition: ast::IfCondition::Single(if_expr),
+        body: ast::IfBodyStatements::Loop(vec![if_body_continue, if_body_let_binding]),
+        else_statement: None,
+        else_if_statement: None,
+    };
+
+    t.state.if_condition(
+        &if_stmt,
+        &block_state,
+        None,
+        Some((&label_loop_begin, &label_loop_end)),
+    );
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ForbiddenCodeAfterContinueDeprecated),
+        "Errors: {:?}",
+        t.state.errors[0]
     );
 }

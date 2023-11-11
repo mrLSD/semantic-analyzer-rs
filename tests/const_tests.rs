@@ -120,8 +120,12 @@ fn const_declaration() {
     );
 
     t.state.constant(&const_statement);
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ConstantAlreadyExist));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ConstantAlreadyExist),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
     let state = t.state.global.context.clone().get();
     assert_eq!(state.len(), 1);
 }
@@ -153,8 +157,12 @@ fn const_declaration_with_operations() {
     };
     assert_eq!(const_statement.location(), CodeLocation::new(1, 0));
     t.state.constant(&const_statement);
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ConstantNotFound));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ConstantNotFound),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
     assert!(!t
         .state
         .global
