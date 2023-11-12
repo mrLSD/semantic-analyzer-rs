@@ -369,8 +369,8 @@ fn if_condition_calculation_simple() {
                 expr_type: Type::Primitive(PrimitiveTypes::I8,),
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3,),),
             },
-            label_if_begin: label_if_begin.clone().into(),
-            label_if_end: label_if_end.into(),
+            label_if_begin: label_if_begin.clone(),
+            label_if_end,
         }
     );
     assert_eq!(
@@ -380,10 +380,97 @@ fn if_condition_calculation_simple() {
                 expr_type: Type::Primitive(PrimitiveTypes::I8,),
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3,),),
             },
-            label_if_begin: label_if_begin.into(),
-            label_if_end: label_if_else.into(),
+            label_if_begin,
+            label_if_end: label_if_else,
         }
     );
     assert!(t.check_errors_len(1));
     assert!(t.check_error(StateErrorKind::ValueNotFound));
+}
+
+#[test]
+fn if_condition_calculation_logic() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+
+    let left_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::I8(3)),
+        operation: None,
+    };
+    let right_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::I8(6)),
+        operation: None,
+    };
+    let label_if_begin: LabelName = String::from("if_begin").into();
+    let label_if_else: LabelName = String::from("if_else").into();
+    let label_if_end: LabelName = String::from("if_end").into();
+
+    // Logic: left == right
+    let condition1 = ast::IfCondition::Logic(ast::ExpressionLogicCondition {
+        left: ast::ExpressionCondition {
+            left: left_expr.clone(),
+            condition: ast::Condition::Eq,
+            right: right_expr.clone(),
+        },
+        right: None,
+    });
+    t.state.if_condition_calculation(
+        &condition1,
+        &block_state,
+        &label_if_begin,
+        &label_if_else,
+        &label_if_end,
+        false,
+    );
+
+    // Logic else: left == rightz
+    let condition2 = ast::IfCondition::Logic(ast::ExpressionLogicCondition {
+        left: ast::ExpressionCondition {
+            left: left_expr.clone(),
+            condition: ast::Condition::Eq,
+            right: right_expr.clone(),
+        },
+        right: None,
+    });
+    t.state.if_condition_calculation(
+        &condition2,
+        &block_state,
+        &label_if_begin,
+        &label_if_else,
+        &label_if_end,
+        true,
+    );
+
+    // Logic condition: left == right
+    let condition3 = ast::IfCondition::Logic(ast::ExpressionLogicCondition {
+        left: ast::ExpressionCondition {
+            left: left_expr.clone(),
+            condition: ast::Condition::Eq,
+            right: right_expr.clone(),
+        },
+        right: Some((
+            ast::LogicCondition::Or,
+            Box::new(ast::ExpressionLogicCondition {
+                left: ast::ExpressionCondition {
+                    left: left_expr.clone(),
+                    condition: ast::Condition::Eq,
+                    right: right_expr.clone(),
+                },
+                right: None,
+            }),
+        )),
+    });
+    t.state.if_condition_calculation(
+        &condition3,
+        &block_state,
+        &label_if_begin,
+        &label_if_else,
+        &label_if_end,
+        false,
+    );
+
+    let ctx = block_state.borrow().context.clone().get();
+    // println!("{ctx:#?}");
+    assert_eq!(ctx.len(), 8);
+    assert!(t.is_empty_error());
 }
