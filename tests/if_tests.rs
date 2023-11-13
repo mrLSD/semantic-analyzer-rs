@@ -1,3 +1,22 @@
+/// if_condition:
+/// - ast::IfBodyStatement::LetBinding
+/// - ast::IfBodyStatement::Binding
+/// - ast::IfBodyStatement::FunctionCall
+/// - ast::IfBodyStatement::If
+/// - ast::IfBodyStatement::Loop
+/// - ast::IfBodyStatement::Return
+/// - if-body: ast:IfBodyStatements::Loop
+///   - ast::IfLoopBodyStatement::LetBinding
+///   - ast::IfLoopBodyStatement::Binding
+///   - ast::IfLoopBodyStatement::FunctionCall
+///   - ast::IfLoopBodyStatement::If
+///   - ast::IfLoopBodyStatement::Loop
+///   - ast::IfLoopBodyStatement::Return
+///     - expr_result.some()
+///   - ast::IfLoopBodyStatement::Continue
+///   - ast::IfLoopBodyStatement::Break
+/// - else-body: ast:IfBodyStatements::Loop
+/// - add: else_if_statement
 use crate::utils::SemanticTest;
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{CodeLocation, GetLocation, Ident};
@@ -285,7 +304,7 @@ fn if_logic_transform() {
 }
 
 #[test]
-fn check_if_and_else_if_statement() {
+fn check_if_and_else_if_statement_duplicate() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
     let if_expr = ast::Expression {
@@ -473,4 +492,142 @@ fn if_condition_calculation_logic() {
     // println!("{ctx:#?}");
     assert_eq!(ctx.len(), 8);
     assert!(t.is_empty_error());
+}
+
+#[test]
+fn if_condition_when_left_expr_return_error() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+
+    // Left expression return error - function not found
+    let left_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::FunctionCall(ast::FunctionCall {
+            name: ast::FunctionName::new(Ident::new("fn1")),
+            parameters: vec![],
+        }),
+        operation: None,
+    };
+    let right_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::I8(6)),
+        operation: None,
+    };
+    let label_if_begin: LabelName = String::from("if_begin").into();
+    let label_if_else: LabelName = String::from("if_else").into();
+    let label_if_end: LabelName = String::from("if_end").into();
+
+    let condition1 = ast::IfCondition::Logic(ast::ExpressionLogicCondition {
+        left: ast::ExpressionCondition {
+            left: left_expr.clone(),
+            condition: ast::Condition::Eq,
+            right: right_expr.clone(),
+        },
+        right: None,
+    });
+    t.state.if_condition_calculation(
+        &condition1,
+        &block_state,
+        &label_if_begin,
+        &label_if_else,
+        &label_if_end,
+        false,
+    );
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::FunctionNotFound));
+}
+
+#[test]
+fn if_condition_left_expr_and_right_expr_different_type() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+
+    // Left expression return error - function not found
+    let left_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::I16(10)),
+        operation: None,
+    };
+    let right_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::I8(6)),
+        operation: None,
+    };
+    let label_if_begin: LabelName = String::from("if_begin").into();
+    let label_if_else: LabelName = String::from("if_else").into();
+    let label_if_end: LabelName = String::from("if_end").into();
+
+    let condition1 = ast::IfCondition::Logic(ast::ExpressionLogicCondition {
+        left: ast::ExpressionCondition {
+            left: left_expr.clone(),
+            condition: ast::Condition::Eq,
+            right: right_expr.clone(),
+        },
+        right: None,
+    });
+    t.state.if_condition_calculation(
+        &condition1,
+        &block_state,
+        &label_if_begin,
+        &label_if_else,
+        &label_if_end,
+        false,
+    );
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::ConditionExpressionWrongType));
+}
+
+#[test]
+fn if_condition_primitive_type_only_check() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+
+    let type_decl = ast::StructTypes {
+        name: Ident::new("type1"),
+        attributes: vec![],
+    };
+    t.state.types(&type_decl.clone());
+
+    let fn_name = ast::FunctionName::new(Ident::new("fn1"));
+    let fn_statement = ast::FunctionStatement {
+        name: fn_name.clone(),
+        parameters: vec![],
+        result_type: ast::Type::Struct(type_decl),
+        body: vec![],
+    };
+    t.state.function_declaration(&fn_statement);
+
+    // Left expression return error - function not found
+    let left_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::FunctionCall(ast::FunctionCall {
+            name: fn_name.clone(),
+            parameters: vec![],
+        }),
+        operation: None,
+    };
+    let right_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::FunctionCall(ast::FunctionCall {
+            name: fn_name,
+            parameters: vec![],
+        }),
+        operation: None,
+    };
+    let label_if_begin: LabelName = String::from("if_begin").into();
+    let label_if_else: LabelName = String::from("if_else").into();
+    let label_if_end: LabelName = String::from("if_end").into();
+
+    let condition1 = ast::IfCondition::Logic(ast::ExpressionLogicCondition {
+        left: ast::ExpressionCondition {
+            left: left_expr.clone(),
+            condition: ast::Condition::Eq,
+            right: right_expr.clone(),
+        },
+        right: None,
+    });
+    t.state.if_condition_calculation(
+        &condition1,
+        &block_state,
+        &label_if_begin,
+        &label_if_else,
+        &label_if_end,
+        false,
+    );
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::ConditionExpressionNotSupported));
 }
