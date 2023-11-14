@@ -238,7 +238,7 @@ impl State {
         self.global.context.constant(const_val);
     }
 
-    /// Function declaration analyze. Add it to Global State/
+    /// Function declaration analyze. Add it to Global State/M
     pub fn function_declaration(&mut self, data: &ast::FunctionStatement<'_>) {
         if self.global.functions.contains_key(&data.name().into()) {
             self.add_error(error::StateErrorResult::new(
@@ -774,6 +774,7 @@ impl State {
         label_end: Option<LabelName>,
         label_loop: Option<(&LabelName, &LabelName)>,
     ) {
+        println!("  ->{label_loop:#?}");
         // It can't contain `else` and `if-else` on the same time
         if data.else_statement.is_some() && data.else_if_statement.is_some() {
             let stm = data.else_if_statement.clone().unwrap();
@@ -827,12 +828,21 @@ impl State {
         match &data.body {
             ast::IfBodyStatements::If(body) => {
                 // Analyze if-statement body
-                self.if_condition_body(body, &if_body_state);
+                self.if_condition_body(body, &if_body_state, label_if_end, label_loop);
             }
             ast::IfBodyStatements::Loop(body) => {
-                let (label_loop_start, label_loop_end) = label_loop.expect("label should be set");
+                // It's special case for the Loop, when `label_loop` should always be set.
+                // If it doesn't set, it's unexpected behavior and program algorithm error
+                let (label_loop_start, label_loop_end) =
+                    label_loop.expect("loop label should be set");
                 // Analyze if-loop-statement body
-                self.if_condition_loop_body(body, &if_body_state, label_loop_start, label_loop_end);
+                self.if_condition_loop_body(
+                    body,
+                    &if_body_state,
+                    label_if_end,
+                    label_loop_start,
+                    label_loop_end,
+                );
             }
         }
         // Codegen for jump to if-end statement - return to program flow

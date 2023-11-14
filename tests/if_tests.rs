@@ -442,7 +442,7 @@ fn if_condition_calculation_logic() {
         false,
     );
 
-    // Logic else: left == rightz
+    // Logic else: left == right
     let condition2 = ast::IfCondition::Logic(ast::ExpressionLogicCondition {
         left: ast::ExpressionCondition {
             left: left_expr.clone(),
@@ -489,7 +489,44 @@ fn if_condition_calculation_logic() {
     );
 
     let ctx = block_state.borrow().context.clone().get();
-    // println!("{ctx:#?}");
+    assert_eq!(
+        ctx[0],
+        SemanticStackContext::ConditionExpression {
+            left_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::I8),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3))
+            },
+            right_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::I8),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(6))
+            },
+            condition: Condition::Eq
+        }
+    );
+    assert_eq!(
+        ctx[1],
+        SemanticStackContext::IfConditionLogic {
+            label_if_begin: label_if_begin.clone(),
+            label_if_end
+        }
+    );
+    assert_eq!(ctx[2], ctx[0]);
+    assert_eq!(
+        ctx[3],
+        SemanticStackContext::IfConditionLogic {
+            label_if_begin,
+            label_if_end: label_if_else
+        }
+    );
+    assert_eq!(ctx[4], ctx[0]);
+    assert_eq!(ctx[5], ctx[0]);
+    assert_eq!(
+        ctx[6],
+        SemanticStackContext::LogicCondition {
+            logic_condition: LogicCondition::Or
+        }
+    );
+    assert_eq!(ctx[7], ctx[1]);
     assert_eq!(ctx.len(), 8);
     assert!(t.is_empty_error());
 }
@@ -630,4 +667,143 @@ fn if_condition_primitive_type_only_check() {
     );
     assert!(t.check_errors_len(1));
     assert!(t.check_error(StateErrorKind::ConditionExpressionNotSupported));
+}
+
+#[test]
+fn else_if_statement_duplicate() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let if_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(1)),
+        operation: None,
+    };
+
+    let if_else_stmt = ast::IfStatement {
+        condition: ast::IfCondition::Single(if_expr.clone()),
+        body: ast::IfBodyStatements::If(vec![ast::IfBodyStatement::Return(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(30)),
+            operation: None,
+        })]),
+        else_statement: Some(ast::IfBodyStatements::Loop(vec![
+            ast::IfLoopBodyStatement::Return(ast::Expression {
+                expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(
+                    10,
+                )),
+                operation: None,
+            }),
+        ])),
+        else_if_statement: None,
+    };
+    let if_stmt = ast::IfStatement {
+        condition: ast::IfCondition::Single(if_expr),
+        body: ast::IfBodyStatements::If(vec![ast::IfBodyStatement::Return(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(30)),
+            operation: None,
+        })]),
+        else_statement: None,
+        else_if_statement: Some(Box::new(if_else_stmt)),
+    };
+    let label_loop_begin: LabelName = String::from("loop_begin").into();
+    let label_loop_end: LabelName = String::from("loop_end").into();
+    t.state.if_condition(
+        &if_stmt,
+        &block_state,
+        None,
+        Some((&label_loop_begin, &label_loop_end)),
+    );
+    assert!(t.is_empty_error());
+}
+
+#[test]
+fn if_body_statements() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let if_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(1)),
+        operation: None,
+    };
+
+    let fn2 = ast::FunctionStatement {
+        name: ast::FunctionName::new(Ident::new("fn2")),
+        parameters: vec![],
+        result_type: ast::Type::Primitive(ast::PrimitiveTypes::U16),
+        body: vec![ast::BodyStatement::Expression(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(23)),
+            operation: None,
+        })],
+    };
+    t.state.function_declaration(&fn2);
+
+    let if_body_let_binding = ast::IfBodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("x")),
+        mutable: true,
+        value_type: None,
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(
+                false,
+            )),
+            operation: None,
+        }),
+    });
+    let if_body_binding = ast::IfBodyStatement::Binding(ast::Binding {
+        name: ast::ValueName::new(Ident::new("x")),
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+            operation: None,
+        }),
+    });
+    let if_body_fn_call = ast::IfBodyStatement::FunctionCall(ast::FunctionCall {
+        name: ast::FunctionName::new(Ident::new("fn2")),
+        parameters: vec![],
+    });
+    let if_body_if = ast::IfBodyStatement::If(ast::IfStatement {
+        condition: ast::IfCondition::Single(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+            operation: None,
+        }),
+        body: ast::IfBodyStatements::Loop(vec![ast::IfLoopBodyStatement::FunctionCall(
+            ast::FunctionCall {
+                name: ast::FunctionName::new(Ident::new("fn2")),
+                parameters: vec![],
+            },
+        )]),
+        else_statement: None,
+        else_if_statement: None,
+    });
+    let if_body_loop = ast::IfBodyStatement::Loop(vec![ast::LoopBodyStatement::FunctionCall(
+        ast::FunctionCall {
+            name: ast::FunctionName::new(Ident::new("fn2")),
+            parameters: vec![],
+        },
+    )]);
+    let if_body_return = ast::IfBodyStatement::Return(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+        operation: None,
+    });
+
+    let label_loop_begin: LabelName = String::from("loop_begin").into();
+    let label_loop_end: LabelName = String::from("loop_end").into();
+
+    let if_stmt = ast::IfStatement {
+        condition: ast::IfCondition::Single(if_expr),
+        body: ast::IfBodyStatements::If(vec![
+            if_body_let_binding,
+            if_body_binding,
+            if_body_fn_call,
+            if_body_if,
+            if_body_loop,
+            if_body_return,
+        ]),
+        else_statement: None,
+        else_if_statement: None,
+    };
+
+    t.state.if_condition(
+        &if_stmt,
+        &block_state,
+        None,
+        Some((&label_loop_begin, &label_loop_end)),
+    );
+    // println!("{:#?}", t.state);
+    assert!(t.is_empty_error());
 }
