@@ -1,10 +1,4 @@
 /// if_condition:
-/// - ast::IfBodyStatement::LetBinding
-/// - ast::IfBodyStatement::Binding
-/// - ast::IfBodyStatement::FunctionCall
-/// - ast::IfBodyStatement::If
-/// - ast::IfBodyStatement::Loop
-/// - ast::IfBodyStatement::Return
 /// - if-body: ast:IfBodyStatements::Loop
 ///   - ast::IfLoopBodyStatement::LetBinding
 ///   - ast::IfLoopBodyStatement::Binding
@@ -15,8 +9,6 @@
 ///     - expr_result.some()
 ///   - ast::IfLoopBodyStatement::Continue
 ///   - ast::IfLoopBodyStatement::Break
-/// - else-body: ast:IfBodyStatements::Loop
-/// - add: else_if_statement
 use crate::utils::SemanticTest;
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{CodeLocation, GetLocation, Ident};
@@ -792,6 +784,104 @@ fn if_body_statements() {
             if_body_fn_call,
             if_body_if,
             if_body_loop,
+            if_body_return,
+        ]),
+        else_statement: None,
+        else_if_statement: None,
+    };
+
+    t.state.if_condition(
+        &if_stmt,
+        &block_state,
+        None,
+        Some((&label_loop_begin, &label_loop_end)),
+    );
+    // println!("{:#?}", t.state);
+    assert!(t.is_empty_error());
+}
+
+#[test]
+fn if_loop_body_statements() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+    let if_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(1)),
+        operation: None,
+    };
+
+    let fn2 = ast::FunctionStatement {
+        name: ast::FunctionName::new(Ident::new("fn2")),
+        parameters: vec![],
+        result_type: ast::Type::Primitive(ast::PrimitiveTypes::U16),
+        body: vec![ast::BodyStatement::Expression(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(23)),
+            operation: None,
+        })],
+    };
+    t.state.function_declaration(&fn2);
+
+    let if_body_let_binding = ast::IfLoopBodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("x")),
+        mutable: true,
+        value_type: None,
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(
+                false,
+            )),
+            operation: None,
+        }),
+    });
+    let if_body_binding = ast::IfLoopBodyStatement::Binding(ast::Binding {
+        name: ast::ValueName::new(Ident::new("x")),
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+            operation: None,
+        }),
+    });
+    let if_body_fn_call = ast::IfLoopBodyStatement::FunctionCall(ast::FunctionCall {
+        name: ast::FunctionName::new(Ident::new("fn2")),
+        parameters: vec![],
+    });
+    let if_body_if = ast::IfLoopBodyStatement::If(ast::IfStatement {
+        condition: ast::IfCondition::Single(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+            operation: None,
+        }),
+        body: ast::IfBodyStatements::Loop(vec![ast::IfLoopBodyStatement::FunctionCall(
+            ast::FunctionCall {
+                name: ast::FunctionName::new(Ident::new("fn2")),
+                parameters: vec![],
+            },
+        )]),
+        else_statement: None,
+        else_if_statement: None,
+    });
+    let if_body_loop = ast::IfLoopBodyStatement::Loop(vec![ast::LoopBodyStatement::FunctionCall(
+        ast::FunctionCall {
+            name: ast::FunctionName::new(Ident::new("fn2")),
+            parameters: vec![],
+        },
+    )]);
+    let if_body_return = ast::IfLoopBodyStatement::Return(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+        operation: None,
+    });
+    let if_body_break = ast::IfLoopBodyStatement::Break;
+    let if_body_continue = ast::IfLoopBodyStatement::Continue;
+
+    let label_loop_begin: LabelName = String::from("loop_begin").into();
+    let label_loop_end: LabelName = String::from("loop_end").into();
+
+    let if_stmt = ast::IfStatement {
+        condition: ast::IfCondition::Single(if_expr),
+        body: ast::IfBodyStatements::Loop(vec![
+            if_body_let_binding,
+            if_body_binding,
+            if_body_fn_call,
+            if_body_if,
+            if_body_loop,
+            if_body_break,
+            if_body_continue,
             if_body_return,
         ]),
         else_statement: None,

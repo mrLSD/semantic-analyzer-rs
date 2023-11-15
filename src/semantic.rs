@@ -599,10 +599,13 @@ impl State {
     /// # If-condition body
     /// Analyze body for ant if condition:
     /// - if, else, if-else
+    /// NOTE: label_end - is always already exists
     pub fn if_condition_body(
         &mut self,
         body: &[ast::IfBodyStatement<'_>],
         if_body_state: &Rc<RefCell<BlockState>>,
+        label_end: &LabelName,
+        label_loop: Option<(&LabelName, &LabelName)>,
     ) {
         for body in body.iter() {
             match body {
@@ -616,7 +619,12 @@ impl State {
                     self.function_call(fn_call, if_body_state);
                 }
                 ast::IfBodyStatement::If(if_condition) => {
-                    self.if_condition(if_condition, if_body_state, None, None);
+                    self.if_condition(
+                        if_condition,
+                        if_body_state,
+                        Some(label_end.clone()),
+                        label_loop,
+                    );
                 }
                 ast::IfBodyStatement::Loop(loop_statement) => {
                     self.loop_statement(loop_statement, if_body_state);
@@ -642,6 +650,7 @@ impl State {
         &mut self,
         body: &[ast::IfLoopBodyStatement<'_>],
         if_body_state: &Rc<RefCell<BlockState>>,
+        label_if_end: &LabelName,
         label_loop_start: &LabelName,
         label_loop_end: &LabelName,
     ) {
@@ -660,7 +669,7 @@ impl State {
                     self.if_condition(
                         if_condition,
                         if_body_state,
-                        None,
+                        Some(label_if_end.clone()),
                         Some((label_loop_start, label_loop_end)),
                     );
                 }
@@ -828,7 +837,7 @@ impl State {
         match &data.body {
             ast::IfBodyStatements::If(body) => {
                 // Analyze if-statement body
-                self.if_condition_body(body, &if_body_state, label_if_end, label_loop);
+                self.if_condition_body(body, &if_body_state, &label_if_end, label_loop);
             }
             ast::IfBodyStatements::Loop(body) => {
                 // It's special case for the Loop, when `label_loop` should always be set.
@@ -839,7 +848,7 @@ impl State {
                 self.if_condition_loop_body(
                     body,
                     &if_body_state,
-                    label_if_end,
+                    &label_if_end,
                     label_loop_start,
                     label_loop_end,
                 );
@@ -867,7 +876,12 @@ impl State {
                 match else_body {
                     ast::IfBodyStatements::If(body) => {
                         // Analyze if-statement body
-                        self.if_condition_body(body, &if_else_body_state);
+                        self.if_condition_body(
+                            body,
+                            &if_else_body_state,
+                            &label_if_end,
+                            label_loop,
+                        );
                     }
                     ast::IfBodyStatements::Loop(body) => {
                         let (label_loop_start, label_loop_end) =
@@ -876,6 +890,7 @@ impl State {
                         self.if_condition_loop_body(
                             body,
                             &if_else_body_state,
+                            &label_if_end,
                             label_loop_start,
                             label_loop_end,
                         );
