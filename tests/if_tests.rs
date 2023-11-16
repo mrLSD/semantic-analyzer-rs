@@ -1,14 +1,3 @@
-/// if_condition:
-/// - if-body: ast:IfBodyStatements::Loop
-///   - ast::IfLoopBodyStatement::LetBinding
-///   - ast::IfLoopBodyStatement::Binding
-///   - ast::IfLoopBodyStatement::FunctionCall
-///   - ast::IfLoopBodyStatement::If
-///   - ast::IfLoopBodyStatement::Loop
-///   - ast::IfLoopBodyStatement::Return
-///     - expr_result.some()
-///   - ast::IfLoopBodyStatement::Continue
-///   - ast::IfLoopBodyStatement::Break
 use crate::utils::SemanticTest;
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{CodeLocation, GetLocation, Ident};
