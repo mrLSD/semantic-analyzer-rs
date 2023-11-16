@@ -474,7 +474,6 @@ impl State {
             ));
             return;
         }
-        println!("###");
         function_state
             .borrow_mut()
             .context
@@ -783,7 +782,6 @@ impl State {
         label_end: Option<LabelName>,
         label_loop: Option<(&LabelName, &LabelName)>,
     ) {
-        println!("  ->{label_loop:#?}");
         // It can't contain `else` and `if-else` on the same time
         if data.else_statement.is_some() && data.else_if_statement.is_some() {
             let stm = data.else_if_statement.clone().unwrap();

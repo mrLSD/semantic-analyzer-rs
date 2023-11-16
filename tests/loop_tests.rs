@@ -3,6 +3,10 @@ use semantic_analyzer::ast;
 use semantic_analyzer::ast::Ident;
 use semantic_analyzer::types::block_state::BlockState;
 use semantic_analyzer::types::condition::LoopBodyStatement;
+use semantic_analyzer::types::expression::{ExpressionResult, ExpressionResultValue};
+use semantic_analyzer::types::semantic::SemanticStackContext;
+use semantic_analyzer::types::types::{PrimitiveTypes, Type};
+use semantic_analyzer::types::{Function, PrimitiveValue, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -54,7 +58,7 @@ fn loop_transform() {
         ast::LoopBodyStatement::Break,
         ast::LoopBodyStatement::Continue,
     ];
-    // For grcove
+    // For grcov®®
     format!("{loop_stmts:#?}");
     for loop_stmt in loop_stmts {
         let loop_stmt_into: LoopBodyStatement = loop_stmt.into();
@@ -153,6 +157,183 @@ fn loop_statements() {
         loop_body_return,
     ];
     t.state.loop_statement(&loop_stmt, &block_state);
-    // println!("{:#?}", t.state);
+
+    assert!(block_state.borrow().parent.is_none());
+    assert_eq!(block_state.borrow().context.clone().get().len(), 0);
+    assert!(block_state.borrow().parent.is_none());
+    assert_eq!(block_state.borrow().children.len(), 1);
+
+    let ctx = block_state.borrow().children[0].clone();
+    assert!(ctx.borrow().parent.is_some());
+    assert_eq!(ctx.borrow().children.len(), 2);
+
+    let ctx1 = ctx.borrow().context.clone().get();
+    assert_eq!(ctx1.len(), 9);
+    assert_eq!(
+        ctx1[0],
+        SemanticStackContext::JumpTo {
+            label: String::from("loop_begin").into()
+        }
+    );
+    assert_eq!(
+        ctx1[1],
+        SemanticStackContext::SetLabel {
+            label: String::from("loop_begin").into()
+        }
+    );
+    assert_eq!(
+        ctx1[2],
+        SemanticStackContext::LetBinding {
+            let_decl: Value {
+                inner_name: "x.0".into(),
+                inner_type: Type::Primitive(PrimitiveTypes::Bool),
+                mutable: true,
+                alloca: false,
+                malloc: false
+            },
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(false)),
+            },
+        }
+    );
+    assert_eq!(
+        ctx1[3],
+        SemanticStackContext::Binding {
+            val: Value {
+                inner_name: "x.0".into(),
+                inner_type: Type::Primitive(PrimitiveTypes::Bool),
+                mutable: true,
+                alloca: false,
+                malloc: false
+            },
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
+            },
+        }
+    );
+    assert_eq!(
+        ctx1[4],
+        SemanticStackContext::Call {
+            call: Function {
+                inner_name: String::from("fn2").into(),
+                inner_type: Type::Primitive(PrimitiveTypes::U16),
+                parameters: vec![],
+            },
+            params: vec![],
+        }
+    );
+    assert_eq!(
+        ctx1[5],
+        SemanticStackContext::JumpTo {
+            label: String::from("loop_end").into()
+        }
+    );
+    assert_eq!(
+        ctx1[6],
+        SemanticStackContext::JumpTo {
+            label: String::from("loop_begin").into()
+        }
+    );
+    assert_eq!(
+        ctx1[7],
+        SemanticStackContext::JumpFunctionReturn {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
+            }
+        }
+    );
+    assert_eq!(
+        ctx1[8],
+        SemanticStackContext::SetLabel {
+            label: String::from("loop_end").into()
+        }
+    );
+
+    let ch_ctx1 = ctx.borrow().children[0].clone();
+    assert!(ch_ctx1.borrow().parent.is_some());
+    assert!(ch_ctx1.borrow().children.is_empty());
+
+    let ctx2 = ch_ctx1.borrow().context.clone().get();
+    assert_eq!(ctx2.len(), 5);
+    assert_eq!(
+        ctx2[0],
+        SemanticStackContext::IfConditionExpression {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
+            },
+            label_if_begin: String::from("if_begin").into(),
+            label_if_end: String::from("if_end").into()
+        }
+    );
+    assert_eq!(
+        ctx2[1],
+        SemanticStackContext::SetLabel {
+            label: String::from("if_begin").into()
+        }
+    );
+    assert_eq!(
+        ctx2[2],
+        SemanticStackContext::Call {
+            call: Function {
+                inner_name: String::from("fn2").into(),
+                inner_type: Type::Primitive(PrimitiveTypes::U16),
+                parameters: vec![],
+            },
+            params: vec![],
+        }
+    );
+    assert_eq!(
+        ctx2[3],
+        SemanticStackContext::JumpTo {
+            label: String::from("if_end").into()
+        }
+    );
+    assert_eq!(
+        ctx2[4],
+        SemanticStackContext::SetLabel {
+            label: String::from("if_end").into()
+        }
+    );
+
+    let ch_ctx2 = ctx.borrow().children[1].clone();
+    assert!(ch_ctx2.borrow().parent.is_some());
+    assert!(ch_ctx2.borrow().children.is_empty());
+
+    let ctx3 = ch_ctx2.borrow().context.clone().get();
+    assert_eq!(ctx3.len(), 4);
+    assert_eq!(
+        ctx3[0],
+        SemanticStackContext::JumpTo {
+            label: String::from("loop_begin.0").into()
+        }
+    );
+    assert_eq!(
+        ctx3[1],
+        SemanticStackContext::SetLabel {
+            label: String::from("loop_begin.0").into()
+        }
+    );
+    assert_eq!(
+        ctx3[2],
+        SemanticStackContext::Call {
+            call: Function {
+                inner_name: String::from("fn2").into(),
+                inner_type: Type::Primitive(PrimitiveTypes::U16),
+                parameters: vec![],
+            },
+            params: vec![],
+        }
+    );
+    assert_eq!(
+        ctx3[3],
+        SemanticStackContext::SetLabel {
+            label: String::from("loop_end.0").into()
+        }
+    );
+
     assert!(t.is_empty_error());
 }
