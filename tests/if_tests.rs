@@ -651,16 +651,20 @@ fn if_condition_primitive_type_only_check() {
 }
 
 #[test]
-fn else_if_statement_duplicate() {
+fn else_if_statement() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
     let if_expr = ast::Expression {
         expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(1)),
         operation: None,
     };
+    let if_else_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(2)),
+        operation: None,
+    };
 
     let if_else_stmt = ast::IfStatement {
-        condition: ast::IfCondition::Single(if_expr.clone()),
+        condition: ast::IfCondition::Single(if_else_expr),
         body: ast::IfBodyStatements::If(vec![ast::IfBodyStatement::Return(ast::Expression {
             expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(30)),
             operation: None,
@@ -678,7 +682,7 @@ fn else_if_statement_duplicate() {
     let if_stmt = ast::IfStatement {
         condition: ast::IfCondition::Single(if_expr),
         body: ast::IfBodyStatements::If(vec![ast::IfBodyStatement::Return(ast::Expression {
-            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(30)),
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(12)),
             operation: None,
         })]),
         else_statement: None,
@@ -693,6 +697,128 @@ fn else_if_statement_duplicate() {
         Some((&label_loop_begin, &label_loop_end)),
     );
     assert!(t.is_empty_error());
+
+    assert!(block_state.borrow().context.clone().get().is_empty());
+    assert!(block_state.borrow().parent.is_none());
+    assert_eq!(block_state.borrow().children.len(), 3);
+
+    let ch_ctx1 = block_state.borrow().children[0].clone();
+    assert!(ch_ctx1.borrow().parent.is_some());
+    assert!(ch_ctx1.borrow().children.is_empty());
+
+    let ch_ctx2 = block_state.borrow().children[1].clone();
+    assert!(ch_ctx2.borrow().parent.is_some());
+    assert!(ch_ctx2.borrow().children.is_empty());
+
+    let ch_ctx3 = block_state.borrow().children[2].clone();
+    assert!(ch_ctx3.borrow().parent.is_some());
+    assert!(ch_ctx3.borrow().children.is_empty());
+
+    let ctx1 = ch_ctx1.borrow().context.clone().get();
+    assert_eq!(ctx1.len(), 6);
+    assert_eq!(
+        ctx1[0],
+        SemanticStackContext::IfConditionExpression {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::U64),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(1)),
+            },
+            label_if_begin: String::from("if_begin").into(),
+            label_if_end: String::from("if_else").into()
+        }
+    );
+    assert_eq!(
+        ctx1[1],
+        SemanticStackContext::SetLabel {
+            label: String::from("if_begin").into()
+        }
+    );
+    assert_eq!(
+        ctx1[2],
+        SemanticStackContext::JumpFunctionReturn {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::U64),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(12)),
+            }
+        }
+    );
+    assert_eq!(
+        ctx1[3],
+        SemanticStackContext::JumpTo {
+            label: String::from("if_end").into()
+        }
+    );
+    assert_eq!(
+        ctx1[4],
+        SemanticStackContext::SetLabel {
+            label: String::from("if_else").into()
+        }
+    );
+    assert_eq!(
+        ctx1[5],
+        SemanticStackContext::SetLabel {
+            label: String::from("if_end").into()
+        }
+    );
+
+    let ctx2 = ch_ctx2.borrow().context.clone().get();
+    assert_eq!(ctx2.len(), 6);
+    assert_eq!(
+        ctx2[0],
+        SemanticStackContext::IfConditionExpression {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::U64),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(2)),
+            },
+            label_if_begin: String::from("if_begin.0").into(),
+            label_if_end: String::from("if_else.0").into()
+        }
+    );
+    assert_eq!(
+        ctx2[1],
+        SemanticStackContext::SetLabel {
+            label: String::from("if_begin.0").into()
+        }
+    );
+    assert_eq!(
+        ctx2[2],
+        SemanticStackContext::JumpFunctionReturn {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::U64),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(30)),
+            }
+        }
+    );
+    assert_eq!(
+        ctx2[3],
+        SemanticStackContext::JumpTo {
+            label: String::from("if_end").into()
+        }
+    );
+    assert_eq!(
+        ctx2[4],
+        SemanticStackContext::SetLabel {
+            label: String::from("if_else.0").into()
+        }
+    );
+    assert_eq!(
+        ctx2[5],
+        SemanticStackContext::JumpTo {
+            label: String::from("if_end").into()
+        }
+    );
+
+    let ctx3 = ch_ctx3.borrow().context.clone().get();
+    assert_eq!(ctx3.len(), 1);
+    assert_eq!(
+        ctx3[0],
+        SemanticStackContext::JumpFunctionReturn {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::U64),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(10)),
+            }
+        }
+    );
 }
 
 #[test]
