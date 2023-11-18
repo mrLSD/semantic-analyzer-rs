@@ -193,6 +193,7 @@ fn main_run() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 1
         }
     );
 
@@ -247,6 +248,7 @@ fn main_run() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 2
         }
     );
     assert_eq!(
@@ -285,6 +287,7 @@ fn main_run() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 3
         }
     );
     assert_eq!(
@@ -349,7 +352,6 @@ fn double_return() {
     let fn_stm = ast::MainStatement::Function(fn1);
     let main_stm: ast::Main = vec![fn_stm];
     t.state.run(&main_stm);
-    println!("{:#?}", t.state.errors);
     assert!(t.check_errors_len(2), "Errors: {:?}", t.state.errors.len());
     assert!(t.check_error_index(0, StateErrorKind::ForbiddenCodeAfterReturnDeprecated));
     assert!(t.check_error_index(1, StateErrorKind::ReturnAlreadyCalled));

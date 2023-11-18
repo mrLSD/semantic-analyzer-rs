@@ -533,18 +533,26 @@ impl State {
             params.push(expr_result);
         }
 
+        // Result of function call is stored to register
+        body_state.borrow_mut().inc_register();
+        let last_register_number = body_state.borrow().last_register_number;
         // Store always result to register even for void result
-        body_state.borrow_mut().context.call(func_data, params);
+        body_state
+            .borrow_mut()
+            .context
+            .call(func_data, params, last_register_number);
         Some(fn_type)
     }
 
     /// # condition-expression
-    /// Analyse condition operations.    
+    /// Analyse condition operations.
+    /// ## Return
+    /// Return result register of `condition-expression` calculation.
     pub fn condition_expression(
         &mut self,
         data: &ast::ExpressionLogicCondition<'_>,
         function_body_state: &Rc<RefCell<BlockState>>,
-    ) {
+    ) -> u64 {
         // Analyse left expression of left condition
         let left_expr = &data.left.left;
         let left_res = self.expression(left_expr, function_body_state);
@@ -553,12 +561,15 @@ impl State {
         let right_expr = &data.left.right;
         let right_res = self.expression(right_expr, function_body_state);
 
-        let (Some(left_res), Some(right_res)) = (left_res, right_res) else {
-            return;
+        // If some of the `left` or `right` expression is empty just return with error in the state
+        let (Some(left_res), Some(right_res)) = (left_res.clone(), right_res.clone()) else {
+            self.add_error(error::StateErrorResult::new(
+                error::StateErrorKind::ConditionIsEmpty,
+                format!("left={left_res:?}, right={right_res:?}"),
+                data.left.left.location(),
+            ));
+            return function_body_state.borrow().last_register_number;
         };
-        // Unwrap result only after analysing
-        // let left_res = left_res?;
-        // let right_res = right_res?;
 
         // Currently strict type comparison
         if left_res.expr_type != right_res.expr_type {
@@ -567,7 +578,7 @@ impl State {
                 left_res.expr_type.to_string(),
                 data.left.left.location(),
             ));
-            return;
+            return function_body_state.borrow().last_register_number;
         }
         match left_res.expr_type {
             Type::Primitive(_) => (),
@@ -577,29 +588,46 @@ impl State {
                     left_res.expr_type.to_string(),
                     data.left.left.location(),
                 ));
-                return;
+                return function_body_state.borrow().last_register_number;
             }
         }
 
+        // Increment register
+        function_body_state.borrow_mut().inc_register();
+
+        let register_number = function_body_state.borrow_mut().last_register_number;
         // Codegen for left condition and set result to register
         function_body_state
             .borrow_mut()
             .context
-            .condition_expression(left_res, right_res, data.left.condition.clone().into());
+            .condition_expression(
+                left_res,
+                right_res,
+                data.left.condition.clone().into(),
+                register_number,
+            );
 
         // Analyze right condition
         if let Some(right) = &data.right {
+            let left_register_result = function_body_state.borrow_mut().last_register_number;
             // Analyse recursively right part of condition
-            self.condition_expression(&right.1, function_body_state);
+            let right_register_result = self.condition_expression(&right.1, function_body_state);
 
+            // Increment register
+            function_body_state.borrow_mut().inc_register();
+
+            let register_number = function_body_state.borrow_mut().last_register_number;
             // Stategen for logical condition for: left [LOGIC-OP] right
             // The result generated from registers, and stored to
             // new register
-            function_body_state
-                .borrow_mut()
-                .context
-                .logic_condition(right.0.clone().into());
+            function_body_state.borrow_mut().context.logic_condition(
+                right.0.clone().into(),
+                left_register_result,
+                right_register_result,
+                register_number,
+            );
         }
+        function_body_state.borrow_mut().last_register_number
     }
 
     /// # If-condition body
@@ -793,18 +821,20 @@ impl State {
             // If condition contains logic condition expression
             ast::IfCondition::Logic(expr_logic) => {
                 // Analyse if-condition logic
-                self.condition_expression(expr_logic, if_body_state);
+                let result_register = self.condition_expression(expr_logic, if_body_state);
                 // State for if-condition-logic with if-body start
                 if is_else {
-                    if_body_state
-                        .borrow_mut()
-                        .context
-                        .if_condition_logic(label_if_begin.clone(), label_if_else.clone());
+                    if_body_state.borrow_mut().context.if_condition_logic(
+                        label_if_begin.clone(),
+                        label_if_else.clone(),
+                        result_register,
+                    );
                 } else {
-                    if_body_state
-                        .borrow_mut()
-                        .context
-                        .if_condition_logic(label_if_begin.clone(), label_if_end.clone());
+                    if_body_state.borrow_mut().context.if_condition_logic(
+                        label_if_begin.clone(),
+                        label_if_end.clone(),
+                        result_register,
+                    );
                 }
             }
         }
@@ -1169,18 +1199,21 @@ impl State {
             ast::ExpressionValue::ValueName(value) => {
                 // Get value from block state
                 let value_from_state = body_state.borrow_mut().get_value_name(&value.name().into());
+                // Register contains result
+                body_state.borrow_mut().inc_register();
+                let last_register_number = body_state.borrow().last_register_number;
                 // First check value in body state
                 let ty = if let Some(val) = value_from_state {
                     body_state
                         .borrow_mut()
                         .context
-                        .expression_value(val.clone());
+                        .expression_value(val.clone(), last_register_number);
                     val.inner_type
                 } else if let Some(const_val) = self.global.constants.get(&value.name().into()) {
                     body_state
                         .borrow_mut()
                         .context
-                        .expression_const(const_val.clone());
+                        .expression_const(const_val.clone(), last_register_number);
                     const_val.constant_type.clone()
                 } else {
                     // If value doesn't exist in State or as Constant
@@ -1192,7 +1225,6 @@ impl State {
                     return None;
                 };
                 // Return result as register
-                body_state.borrow_mut().inc_register();
                 ExpressionResult {
                     expr_type: ty,
                     expr_value: ExpressionResultValue::Register(
@@ -1274,10 +1306,14 @@ impl State {
                     })?
                     .clone();
 
-                body_state
-                    .borrow_mut()
-                    .context
-                    .expression_struct_value(val.clone(), attributes.clone().attr_index);
+                // Register contains result
+                body_state.borrow_mut().inc_register();
+                let last_register_number = body_state.borrow().last_register_number;
+                body_state.borrow_mut().context.expression_struct_value(
+                    val.clone(),
+                    attributes.clone().attr_index,
+                    last_register_number,
+                );
 
                 body_state.borrow_mut().inc_register();
                 ExpressionResult {
@@ -1303,14 +1339,17 @@ impl State {
                 // Do not fetch other expression flow if type is wrong
                 return None;
             }
+            // Expression operation is set to register
+            body_state.borrow_mut().inc_register();
+            let last_register_number = body_state.borrow().last_register_number;
             // Call expression operation for: OP(left_value, right_value)
             body_state.borrow_mut().context.expression_operation(
                 op.clone().into(),
                 left_value.clone(),
                 right_value.clone(),
+                last_register_number,
             );
             // Expression result value  for Operations is always should be "register"
-            body_state.borrow_mut().inc_register();
             ExpressionResult {
                 expr_type: right_value.expr_type,
                 expr_value: ExpressionResultValue::Register(

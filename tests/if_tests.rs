@@ -489,33 +489,88 @@ fn if_condition_calculation_logic() {
                 expr_type: Type::Primitive(PrimitiveTypes::I8),
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(6))
             },
-            condition: Condition::Eq
+            condition: Condition::Eq,
+            register_number: 1,
         }
     );
     assert_eq!(
         ctx[1],
         SemanticStackContext::IfConditionLogic {
             label_if_begin: label_if_begin.clone(),
-            label_if_end
+            label_if_end: label_if_end.clone(),
+            result_register: 1
         }
     );
-    assert_eq!(ctx[2], ctx[0]);
+    assert_eq!(
+        ctx[2],
+        SemanticStackContext::ConditionExpression {
+            left_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::I8),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3))
+            },
+            right_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::I8),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(6))
+            },
+            condition: Condition::Eq,
+            register_number: 2,
+        }
+    );
     assert_eq!(
         ctx[3],
         SemanticStackContext::IfConditionLogic {
-            label_if_begin,
-            label_if_end: label_if_else
+            label_if_begin: label_if_begin.clone(),
+            label_if_end: label_if_else,
+            result_register: 2
         }
     );
-    assert_eq!(ctx[4], ctx[0]);
-    assert_eq!(ctx[5], ctx[0]);
+    assert_eq!(
+        ctx[4],
+        SemanticStackContext::ConditionExpression {
+            left_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::I8),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3))
+            },
+            right_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::I8),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(6))
+            },
+            condition: Condition::Eq,
+            register_number: 3,
+        }
+    );
+    assert_eq!(
+        ctx[5],
+        SemanticStackContext::ConditionExpression {
+            left_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::I8),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3))
+            },
+            right_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::I8),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(6))
+            },
+            condition: Condition::Eq,
+            register_number: 4,
+        }
+    );
     assert_eq!(
         ctx[6],
         SemanticStackContext::LogicCondition {
-            logic_condition: LogicCondition::Or
+            logic_condition: LogicCondition::Or,
+            left_register_result: 3,
+            right_register_result: 4,
+            register_number: 5
         }
     );
-    assert_eq!(ctx[7], ctx[1]);
+    assert_eq!(
+        ctx[7],
+        SemanticStackContext::IfConditionLogic {
+            label_if_begin,
+            label_if_end,
+            result_register: 5
+        }
+    );
     assert_eq!(ctx.len(), 8);
     assert!(t.is_empty_error());
 }
@@ -557,11 +612,16 @@ fn if_condition_when_left_expr_return_error() {
         &label_if_end,
         false,
     );
-    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(t.check_errors_len(2), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::FunctionNotFound),
+        t.check_error_index(0, StateErrorKind::FunctionNotFound),
         "Errors: {:?}",
         t.state.errors[0]
+    );
+    assert!(
+        t.check_error_index(1, StateErrorKind::ConditionIsEmpty),
+        "Errors: {:?}",
+        t.state.errors[1]
     );
 }
 
@@ -983,6 +1043,7 @@ fn if_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 1
         }
     );
     assert_eq!(
@@ -1033,6 +1094,7 @@ fn if_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 2
         }
     );
     assert_eq!(
@@ -1070,6 +1132,7 @@ fn if_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 3
         }
     );
     assert_eq!(
@@ -1257,6 +1320,7 @@ fn if_loop_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 1
         }
     );
     assert_eq!(
@@ -1307,6 +1371,7 @@ fn if_loop_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 2
         }
     );
     assert_eq!(
@@ -1343,6 +1408,7 @@ fn if_loop_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 3
         }
     );
     assert_eq!(
