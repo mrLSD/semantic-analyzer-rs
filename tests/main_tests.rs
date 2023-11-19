@@ -263,7 +263,7 @@ fn main_run() {
     );
 
     let st_ch_ctx2 = ch_ctx2.borrow().context.clone().get();
-    assert_eq!(st_ch_ctx2.len(), 4);
+    assert_eq!(st_ch_ctx2.len(), 5);
     assert_eq!(
         st_ch_ctx2[0],
         SemanticStackContext::JumpTo {
@@ -289,6 +289,12 @@ fn main_run() {
     );
     assert_eq!(
         st_ch_ctx2[3],
+        SemanticStackContext::JumpTo {
+            label: String::from("loop_begin").into()
+        }
+    );
+    assert_eq!(
+        st_ch_ctx2[4],
         SemanticStackContext::SetLabel {
             label: String::from("loop_end").into()
         }

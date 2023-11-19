@@ -1013,6 +1013,12 @@ impl State {
             }
         }
 
+        // Because it's loop jump to loop begin
+        loop_body_state
+            .borrow_mut()
+            .context
+            .jump_to(label_loop_begin.clone());
+
         // Loop ending
         loop_body_state
             .borrow_mut()
