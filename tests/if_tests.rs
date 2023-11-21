@@ -715,7 +715,7 @@ fn else_if_statement() {
     assert!(ch_ctx3.borrow().children.is_empty());
 
     let ctx1 = ch_ctx1.borrow().context.clone().get();
-    assert_eq!(ctx1.len(), 6);
+    assert_eq!(ctx1.len(), 5);
     assert_eq!(
         ctx1[0],
         SemanticStackContext::IfConditionExpression {
@@ -744,25 +744,19 @@ fn else_if_statement() {
     );
     assert_eq!(
         ctx1[3],
-        SemanticStackContext::JumpTo {
-            label: String::from("if_end").into()
-        }
-    );
-    assert_eq!(
-        ctx1[4],
         SemanticStackContext::SetLabel {
             label: String::from("if_else").into()
         }
     );
     assert_eq!(
-        ctx1[5],
+        ctx1[4],
         SemanticStackContext::SetLabel {
             label: String::from("if_end").into()
         }
     );
 
     let ctx2 = ch_ctx2.borrow().context.clone().get();
-    assert_eq!(ctx2.len(), 6);
+    assert_eq!(ctx2.len(), 4);
     assert_eq!(
         ctx2[0],
         SemanticStackContext::IfConditionExpression {
@@ -791,20 +785,8 @@ fn else_if_statement() {
     );
     assert_eq!(
         ctx2[3],
-        SemanticStackContext::JumpTo {
-            label: String::from("if_end").into()
-        }
-    );
-    assert_eq!(
-        ctx2[4],
         SemanticStackContext::SetLabel {
             label: String::from("if_else.0").into()
-        }
-    );
-    assert_eq!(
-        ctx2[5],
-        SemanticStackContext::JumpTo {
-            label: String::from("if_end").into()
         }
     );
 
@@ -922,7 +904,7 @@ fn if_body_statements() {
     assert_eq!(ctx.borrow().children.len(), 2);
 
     let stm_ctx = ctx.borrow().context.clone().get();
-    assert_eq!(stm_ctx.len(), 8);
+    assert_eq!(stm_ctx.len(), 7);
     assert_eq!(
         stm_ctx[0],
         SemanticStackContext::IfConditionExpression {
@@ -994,12 +976,6 @@ fn if_body_statements() {
     );
     assert_eq!(
         stm_ctx[6],
-        SemanticStackContext::JumpTo {
-            label: String::from("if_end").into()
-        }
-    );
-    assert_eq!(
-        stm_ctx[7],
         SemanticStackContext::SetLabel {
             label: String::from("if_end").into()
         }
@@ -1206,7 +1182,7 @@ fn if_loop_body_statements() {
     assert_eq!(ctx.borrow().children.len(), 2);
 
     let stm_ctx = ctx.borrow().context.clone().get();
-    assert_eq!(stm_ctx.len(), 10);
+    assert_eq!(stm_ctx.len(), 9);
     assert_eq!(
         stm_ctx[0],
         SemanticStackContext::IfConditionExpression {
@@ -1290,12 +1266,6 @@ fn if_loop_body_statements() {
     );
     assert_eq!(
         stm_ctx[8],
-        SemanticStackContext::JumpTo {
-            label: String::from("if_end").into()
-        }
-    );
-    assert_eq!(
-        stm_ctx[9],
         SemanticStackContext::SetLabel {
             label: String::from("if_end").into()
         }
