@@ -45,8 +45,12 @@ fn binding_wrong_expression() {
         value: Box::new(expr),
     };
     t.state.binding(&binding, &block_state);
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ValueNotFound));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ValueNotFound),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -62,8 +66,12 @@ fn binding_value_not_exist() {
         value: Box::new(expr),
     };
     t.state.binding(&binding, &block_state);
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ValueNotFound));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ValueNotFound),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -113,8 +121,12 @@ fn binding_value_not_mutable() {
         value: Box::new(expr),
     };
     t.state.binding(&binding, &block_state);
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ValueIsNotMutable));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ValueIsNotMutable),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]

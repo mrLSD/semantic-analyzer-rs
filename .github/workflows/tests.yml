@@ -61,7 +61,7 @@ jobs:
       - name: Run grcov
         run: |
           mkdir ./target/debug/coverage/
-          grcov . -s . -b ./target/debug/ -o ./target/debug/coverage/  --ignore-not-existing --excl-line="grcov-excl-line|#\\[derive\\(|//!|///" --ignore="*.cargo/*" --ignore="src/lib.rs"
+          grcov . -s . -b ./target/debug/ -o ./target/debug/coverage/  --ignore-not-existing --excl-line="grcov-excl-line|#\\[derive\\(|//!|///" --ignore="*.cargo/*" --ignore="src/lib.rs" --ignore="tests/*"
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
         env:

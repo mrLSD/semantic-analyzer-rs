@@ -54,8 +54,12 @@ fn let_binding_wrong_expression() {
         value: Box::new(expr),
     };
     t.state.let_binding(&let_binding, &block_state);
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ValueNotFound));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ValueNotFound),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -73,8 +77,12 @@ fn let_binding_wrong_type() {
         value: Box::new(expr),
     };
     t.state.let_binding(&let_binding, &block_state);
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::WrongLetType));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::WrongLetType),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]

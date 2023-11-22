@@ -366,10 +366,14 @@ fn expression_value_name_not_found() {
     };
     let res = t.state.expression(&expr, &block_state);
     assert!(res.is_none());
-    assert!(t.check_error(StateErrorKind::ValueNotFound));
+    assert!(
+        t.check_error(StateErrorKind::ValueNotFound),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
     let state = block_state.borrow().context.clone().get();
     assert!(state.is_empty());
-    assert!(t.check_errors_len(1));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
 }
 
 #[test]
@@ -529,8 +533,12 @@ fn expression_struct_value_not_found() {
     };
     let res = t.state.expression(&expr, &block_state);
     assert!(res.is_none());
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ValueNotFound));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ValueNotFound),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -558,8 +566,12 @@ fn expression_struct_value_wrong_struct_type() {
         .insert("x".into(), val.clone());
     let res = t.state.expression(&expr, &block_state);
     assert!(res.is_none());
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ValueNotStruct));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ValueNotStruct),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -595,8 +607,12 @@ fn expression_struct_value_type_not_found() {
         .insert("x".into(), val.clone());
     let res = t.state.expression(&expr, &block_state);
     assert!(res.is_none());
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::TypeNotFound));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::TypeNotFound),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -643,8 +659,12 @@ fn expression_struct_value_wrong_expression_type() {
     assert!(t.is_empty_error());
     let res = t.state.expression(&expr, &block_state);
     assert!(res.is_none());
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::WrongExpressionType));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::WrongExpressionType),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -691,8 +711,12 @@ fn expression_struct_value_wrong_struct_attribute() {
     assert!(t.is_empty_error());
     let res = t.state.expression(&expr, &block_state);
     assert!(res.is_none());
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::ValueNotStructField));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ValueNotStructField),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -777,8 +801,12 @@ fn expression_func_call() {
     };
     let res = t.state.expression(&expr, &block_state);
     assert!(res.is_none());
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::FunctionNotFound));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::FunctionNotFound),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
     t.clean_errors();
 
     // Declare function
@@ -892,8 +920,12 @@ fn expression_operation_wrong_type() {
         operation: Some((ast::ExpressionOperations::Plus, Box::new(next_expr))),
     };
     let res = t.state.expression(&expr, &block_state);
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::WrongExpressionType));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::WrongExpressionType),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
     assert!(res.is_none());
     let state = block_state.borrow().context.clone().get();
     assert!(state.is_empty());

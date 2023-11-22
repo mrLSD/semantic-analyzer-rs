@@ -35,8 +35,12 @@ fn function_declaration_without_body() {
     );
 
     t.state.function_declaration(&fn_statement);
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::FunctionAlreadyExist));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::FunctionAlreadyExist),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }
 
 #[test]
@@ -59,8 +63,12 @@ fn function_declaration_wrong_type() {
         body: vec![],
     };
     t.state.function_declaration(&fn_statement);
-    assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::TypeNotFound));
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::TypeNotFound),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 
     assert!(!t
         .state
@@ -79,7 +87,7 @@ fn function_declaration_wrong_type() {
         ..fn_statement
     };
     t.state.function_declaration(&fn_statement2);
-    assert!(t.check_errors_len(2));
+    assert!(t.check_errors_len(2), "Errors: {:?}", t.state.errors.len());
     assert!(t.check_error_index(1, StateErrorKind::TypeNotFound));
     t.clean_errors();
 
