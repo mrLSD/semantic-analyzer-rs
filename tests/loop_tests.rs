@@ -3,6 +3,7 @@ use semantic_analyzer::ast;
 use semantic_analyzer::ast::Ident;
 use semantic_analyzer::types::block_state::BlockState;
 use semantic_analyzer::types::condition::LoopBodyStatement;
+use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::expression::{ExpressionResult, ExpressionResultValue};
 use semantic_analyzer::types::semantic::SemanticStackContext;
 use semantic_analyzer::types::types::{PrimitiveTypes, Type};
@@ -143,8 +144,6 @@ fn loop_statements() {
         expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
         operation: None,
     });
-    let loop_body_break = ast::LoopBodyStatement::Break;
-    let loop_body_continue = ast::LoopBodyStatement::Continue;
 
     let loop_stmt = [
         loop_body_let_binding,
@@ -152,8 +151,6 @@ fn loop_statements() {
         loop_body_fn_call,
         loop_body_if,
         loop_body_loop,
-        loop_body_break,
-        loop_body_continue,
         loop_body_return,
     ];
     t.state.loop_statement(&loop_stmt, &block_state);
@@ -168,7 +165,7 @@ fn loop_statements() {
     assert_eq!(ctx.borrow().children.len(), 2);
 
     let stm_ctx = ctx.borrow().context.clone().get();
-    assert_eq!(stm_ctx.len(), 10);
+    assert_eq!(stm_ctx.len(), 8);
     assert_eq!(
         stm_ctx[0],
         SemanticStackContext::JumpTo {
@@ -226,8 +223,11 @@ fn loop_statements() {
     );
     assert_eq!(
         stm_ctx[5],
-        SemanticStackContext::JumpTo {
-            label: String::from("loop_end").into()
+        SemanticStackContext::JumpFunctionReturn {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
+            }
         }
     );
     assert_eq!(
@@ -238,21 +238,6 @@ fn loop_statements() {
     );
     assert_eq!(
         stm_ctx[7],
-        SemanticStackContext::JumpFunctionReturn {
-            expr_result: ExpressionResult {
-                expr_type: Type::Primitive(PrimitiveTypes::Bool),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
-            }
-        }
-    );
-    assert_eq!(
-        stm_ctx[8],
-        SemanticStackContext::JumpTo {
-            label: String::from("loop_begin").into()
-        }
-    );
-    assert_eq!(
-        stm_ctx[9],
         SemanticStackContext::SetLabel {
             label: String::from("loop_end").into()
         }
@@ -348,4 +333,91 @@ fn loop_statements() {
     );
 
     assert!(t.is_empty_error());
+}
+
+#[test]
+fn loop_statements_instructions_after_return() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+
+    let loop_body_let_binding = ast::LoopBodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("x")),
+        mutable: true,
+        value_type: None,
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(
+                false,
+            )),
+            operation: None,
+        }),
+    });
+    let loop_body_return = ast::LoopBodyStatement::Return(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+        operation: None,
+    });
+
+    let loop_stmt = [loop_body_return, loop_body_let_binding];
+    t.state.loop_statement(&loop_stmt, &block_state);
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
+}
+
+#[test]
+fn loop_statements_instructions_after_break() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+
+    let loop_body_let_binding = ast::LoopBodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("x")),
+        mutable: true,
+        value_type: None,
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(
+                false,
+            )),
+            operation: None,
+        }),
+    });
+    let loop_body_break = ast::LoopBodyStatement::Break;
+
+    let loop_stmt = [loop_body_break, loop_body_let_binding];
+    t.state.loop_statement(&loop_stmt, &block_state);
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ForbiddenCodeAfterBreakDeprecated),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
+}
+
+#[test]
+fn loop_statements_instructions_after_continue() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+
+    let loop_body_let_binding = ast::LoopBodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("x")),
+        mutable: true,
+        value_type: None,
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(
+                false,
+            )),
+            operation: None,
+        }),
+    });
+    let loop_body_continue = ast::LoopBodyStatement::Continue;
+
+    let loop_stmt = [loop_body_continue, loop_body_let_binding];
+    t.state.loop_statement(&loop_stmt, &block_state);
+    assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
+    assert!(
+        t.check_error(StateErrorKind::ForbiddenCodeAfterContinueDeprecated),
+        "Errors: {:?}",
+        t.state.errors[0]
+    );
 }

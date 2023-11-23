@@ -675,6 +675,8 @@ impl State {
         label_loop_end: &LabelName,
     ) -> bool {
         let mut return_is_called = false;
+        let mut break_is_called = false;
+        let mut continue_is_called = false;
         for body in body.iter() {
             if return_is_called {
                 self.add_error(error::StateErrorResult::new(
@@ -683,6 +685,21 @@ impl State {
                     CodeLocation::new(1, 1),
                 ));
             }
+            if break_is_called {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ForbiddenCodeAfterBreakDeprecated,
+                    format!("{body:?}"),
+                    CodeLocation::new(1, 1),
+                ));
+            }
+            if continue_is_called {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ForbiddenCodeAfterContinueDeprecated,
+                    format!("{body:?}"),
+                    CodeLocation::new(1, 1),
+                ));
+            }
+
             match body {
                 ast::IfLoopBodyStatement::LetBinding(bind) => {
                     self.let_binding(bind, if_body_state);
@@ -716,6 +733,7 @@ impl State {
                     }
                 }
                 ast::IfLoopBodyStatement::Continue => {
+                    continue_is_called = true;
                     // Skip next loop  step and jump to the start
                     // of loop
                     if_body_state
@@ -724,6 +742,7 @@ impl State {
                         .jump_to(label_loop_start.clone());
                 }
                 ast::IfLoopBodyStatement::Break => {
+                    break_is_called = true;
                     // Break loop and jump to the end of loop
                     if_body_state
                         .borrow_mut()
@@ -993,7 +1012,32 @@ impl State {
             .context
             .set_label(label_loop_begin.clone());
 
+        let mut return_is_called = false;
+        let mut break_is_called = false;
+        let mut continue_is_called = false;
         for body in data.iter() {
+            if return_is_called {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ForbiddenCodeAfterReturnDeprecated,
+                    format!("{body:?}"),
+                    CodeLocation::new(1, 1),
+                ));
+            }
+            if break_is_called {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ForbiddenCodeAfterBreakDeprecated,
+                    format!("{body:?}"),
+                    CodeLocation::new(1, 1),
+                ));
+            }
+            if continue_is_called {
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::ForbiddenCodeAfterContinueDeprecated,
+                    format!("{body:?}"),
+                    CodeLocation::new(1, 1),
+                ));
+            }
+
             match body {
                 ast::LoopBodyStatement::LetBinding(bind) => {
                     self.let_binding(bind, &loop_body_state);
@@ -1024,6 +1068,7 @@ impl State {
                             .context
                             .jump_function_return(res);
                         loop_body_state.borrow_mut().set_return();
+                        return_is_called = true;
                     }
                 }
                 ast::LoopBodyStatement::Break => {
@@ -1032,6 +1077,7 @@ impl State {
                         .borrow_mut()
                         .context
                         .jump_to(label_loop_end.clone());
+                    break_is_called = true;
                 }
                 ast::LoopBodyStatement::Continue => {
                     // Skip next loop  step and jump to the start
@@ -1040,6 +1086,7 @@ impl State {
                         .borrow_mut()
                         .context
                         .jump_to(label_loop_begin.clone());
+                    continue_is_called = true;
                 }
             }
         }
