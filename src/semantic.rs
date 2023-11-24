@@ -15,7 +15,7 @@ use crate::types::block_state::BlockState;
 use crate::types::expression::{
     Expression, ExpressionResult, ExpressionResultValue, ExpressionStructValue,
 };
-use crate::types::semantic::SemanticStack;
+use crate::types::semantic::{GlobalSemanticContext, SemanticContext, SemanticStack};
 use crate::types::types::{Type, TypeName};
 use crate::types::{
     error, Binding, Constant, ConstantName, Function, FunctionCall, FunctionName,
@@ -349,13 +349,9 @@ impl State {
                             // previous returns and invoke return instruction itself.
                             body_state
                                 .borrow_mut()
-                                .context
                                 .expression_function_return_with_label(res);
                         } else {
-                            body_state
-                                .borrow_mut()
-                                .context
-                                .expression_function_return(res);
+                            body_state.borrow_mut().expression_function_return(res);
                         }
                     }
                 }
@@ -441,10 +437,7 @@ impl State {
             .borrow_mut()
             .set_inner_value_name(&inner_name);
 
-        function_state
-            .borrow_mut()
-            .context
-            .let_binding(value, expr_result);
+        function_state.borrow_mut().let_binding(value, expr_result);
     }
 
     /// # Binding statement
@@ -481,10 +474,7 @@ impl State {
             ));
             return;
         }
-        function_state
-            .borrow_mut()
-            .context
-            .binding(value, expr_result);
+        function_state.borrow_mut().binding(value, expr_result);
     }
 
     /// # Function-call
@@ -539,7 +529,6 @@ impl State {
         // Store always result to register even for void result
         body_state
             .borrow_mut()
-            .context
             .call(func_data, params, last_register_number);
         Some(fn_type)
     }
@@ -597,15 +586,12 @@ impl State {
 
         let register_number = function_body_state.borrow_mut().last_register_number;
         // Codegen for left condition and set result to register
-        function_body_state
-            .borrow_mut()
-            .context
-            .condition_expression(
-                left_res,
-                right_res,
-                data.left.condition.clone().into(),
-                register_number,
-            );
+        function_body_state.borrow_mut().condition_expression(
+            left_res,
+            right_res,
+            data.left.condition.clone().into(),
+            register_number,
+        );
 
         // Analyze right condition
         if let Some(right) = &data.right {
@@ -620,7 +606,7 @@ impl State {
             // Stategen for logical condition for: left [LOGIC-OP] right
             // The result generated from registers, and stored to
             // new register
-            function_body_state.borrow_mut().context.logic_condition(
+            function_body_state.borrow_mut().logic_condition(
                 right.0.clone().into(),
                 left_register_result,
                 right_register_result,
@@ -679,7 +665,7 @@ impl State {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
-                        if_body_state.borrow_mut().context.jump_function_return(res);
+                        if_body_state.borrow_mut().jump_function_return(res);
                         if_body_state.borrow_mut().set_return();
                         return_is_called = true;
                     };
@@ -755,7 +741,7 @@ impl State {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
-                        if_body_state.borrow_mut().context.jump_function_return(res);
+                        if_body_state.borrow_mut().jump_function_return(res);
                         if_body_state.borrow_mut().set_return();
                         return_is_called = true;
                     }
@@ -764,18 +750,12 @@ impl State {
                     continue_is_called = true;
                     // Skip next loop  step and jump to the start
                     // of loop
-                    if_body_state
-                        .borrow_mut()
-                        .context
-                        .jump_to(label_loop_start.clone());
+                    if_body_state.borrow_mut().jump_to(label_loop_start.clone());
                 }
                 ast::IfLoopBodyStatement::Break => {
                     break_is_called = true;
                     // Break loop and jump to the end of loop
-                    if_body_state
-                        .borrow_mut()
-                        .context
-                        .jump_to(label_loop_end.clone());
+                    if_body_state.borrow_mut().jump_to(label_loop_end.clone());
                 }
             }
         }
@@ -805,13 +785,13 @@ impl State {
 
                 // State for if-condition from expression and if-body start
                 if is_else {
-                    if_body_state.borrow_mut().context.if_condition_expression(
+                    if_body_state.borrow_mut().if_condition_expression(
                         expr_result,
                         label_if_begin.clone(),
                         label_if_else.clone(),
                     );
                 } else {
-                    if_body_state.borrow_mut().context.if_condition_expression(
+                    if_body_state.borrow_mut().if_condition_expression(
                         expr_result,
                         label_if_begin.clone(),
                         label_if_end.clone(),
@@ -824,13 +804,13 @@ impl State {
                 let result_register = self.condition_expression(expr_logic, if_body_state);
                 // State for if-condition-logic with if-body start
                 if is_else {
-                    if_body_state.borrow_mut().context.if_condition_logic(
+                    if_body_state.borrow_mut().if_condition_logic(
                         label_if_begin.clone(),
                         label_if_else.clone(),
                         result_register,
                     );
                 } else {
-                    if_body_state.borrow_mut().context.if_condition_logic(
+                    if_body_state.borrow_mut().if_condition_logic(
                         label_if_begin.clone(),
                         label_if_end.clone(),
                         result_register,
@@ -912,7 +892,7 @@ impl State {
 
         //== If condition main body
         // Set if-begin label
-        if_body_state.borrow_mut().context.set_label(label_if_begin);
+        if_body_state.borrow_mut().set_label(label_if_begin);
         // Analyze if-conditions body kind.
         // Return flag for current body state, excluding children return claims
         let return_is_called = match &data.body {
@@ -938,16 +918,13 @@ impl State {
         // Codegen for jump to if-end statement - return to program flow.
         // If return is set do not add jump-to-end label.
         if !return_is_called {
-            if_body_state
-                .borrow_mut()
-                .context
-                .jump_to(label_if_end.clone());
+            if_body_state.borrow_mut().jump_to(label_if_end.clone());
         }
 
         // Check else statements: else, else-if
         if is_else {
             // Set if-else label
-            if_body_state.borrow_mut().context.set_label(label_if_else);
+            if_body_state.borrow_mut().set_label(label_if_else);
 
             // Analyse if-else body: data.else_statement
             if let Some(else_body) = &data.else_statement {
@@ -981,10 +958,7 @@ impl State {
                 // Codegen for jump to if-end statement -return to program flow
                 // If return is set do not add jump-to-end label.
                 if !return_is_called {
-                    if_body_state
-                        .borrow_mut()
-                        .context
-                        .jump_to(label_if_end.clone());
+                    if_body_state.borrow_mut().jump_to(label_if_end.clone());
                 }
             } else if let Some(else_if_statement) = &data.else_if_statement {
                 // Analyse  else-if statement
@@ -1000,7 +974,7 @@ impl State {
 
         // End label for all if statement, should be set only once
         if !is_set_label_if_end {
-            if_body_state.borrow_mut().context.set_label(label_if_end);
+            if_body_state.borrow_mut().set_label(label_if_end);
         }
     }
 
@@ -1035,11 +1009,9 @@ impl State {
 
         loop_body_state
             .borrow_mut()
-            .context
             .jump_to(label_loop_begin.clone());
         loop_body_state
             .borrow_mut()
-            .context
             .set_label(label_loop_begin.clone());
 
         let mut return_is_called = false;
@@ -1093,20 +1065,14 @@ impl State {
                         // Jump to return label in codegen and set return
                         // status to indicate function, that it's manual
                         // return
-                        loop_body_state
-                            .borrow_mut()
-                            .context
-                            .jump_function_return(res);
+                        loop_body_state.borrow_mut().jump_function_return(res);
                         loop_body_state.borrow_mut().set_return();
                         return_is_called = true;
                     }
                 }
                 ast::LoopBodyStatement::Break => {
                     // Break loop and jump to the end of loop
-                    loop_body_state
-                        .borrow_mut()
-                        .context
-                        .jump_to(label_loop_end.clone());
+                    loop_body_state.borrow_mut().jump_to(label_loop_end.clone());
                     break_is_called = true;
                 }
                 ast::LoopBodyStatement::Continue => {
@@ -1114,7 +1080,6 @@ impl State {
                     // of loop
                     loop_body_state
                         .borrow_mut()
-                        .context
                         .jump_to(label_loop_begin.clone());
                     continue_is_called = true;
                 }
@@ -1126,14 +1091,10 @@ impl State {
             // Because it's loop jump to loop begin
             loop_body_state
                 .borrow_mut()
-                .context
                 .jump_to(label_loop_begin.clone());
 
             // Loop ending
-            loop_body_state
-                .borrow_mut()
-                .context
-                .set_label(label_loop_end);
+            loop_body_state.borrow_mut().set_label(label_loop_end);
         }
     }
 
@@ -1206,13 +1167,11 @@ impl State {
                 let ty = if let Some(val) = value_from_state {
                     body_state
                         .borrow_mut()
-                        .context
                         .expression_value(val.clone(), last_register_number);
                     val.inner_type
                 } else if let Some(const_val) = self.global.constants.get(&value.name().into()) {
                     body_state
                         .borrow_mut()
-                        .context
                         .expression_const(const_val.clone(), last_register_number);
                     const_val.constant_type.clone()
                 } else {
@@ -1309,7 +1268,7 @@ impl State {
                 // Register contains result
                 body_state.borrow_mut().inc_register();
                 let last_register_number = body_state.borrow().last_register_number;
-                body_state.borrow_mut().context.expression_struct_value(
+                body_state.borrow_mut().expression_struct_value(
                     val.clone(),
                     attributes.clone().attr_index,
                     last_register_number,
@@ -1343,7 +1302,7 @@ impl State {
             body_state.borrow_mut().inc_register();
             let last_register_number = body_state.borrow().last_register_number;
             // Call expression operation for: OP(left_value, right_value)
-            body_state.borrow_mut().context.expression_operation(
+            body_state.borrow_mut().expression_operation(
                 op.clone().into(),
                 left_value.clone(),
                 right_value.clone(),

@@ -149,66 +149,8 @@ fn main_run() {
     assert!(ch_ctx2.borrow().parent.is_some());
     assert!(ch_ctx2.borrow().children.is_empty());
 
-    // Semantic stack context for the block fn1
-    let st_ctx1 = ctx1.context.clone().get();
-    assert_eq!(st_ctx1.len(), 4);
-    assert_eq!(
-        st_ctx1[0],
-        SemanticStackContext::LetBinding {
-            let_decl: Value {
-                inner_name: "x.0".into(),
-                inner_type: Type::Primitive(PrimitiveTypes::Bool),
-                mutable: true,
-                alloca: false,
-                malloc: false
-            },
-            expr_result: ExpressionResult {
-                expr_type: Type::Primitive(PrimitiveTypes::Bool),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(false)),
-            },
-        }
-    );
-    assert_eq!(
-        st_ctx1[1],
-        SemanticStackContext::Binding {
-            val: Value {
-                inner_name: "x.0".into(),
-                inner_type: Type::Primitive(PrimitiveTypes::Bool),
-                mutable: true,
-                alloca: false,
-                malloc: false
-            },
-            expr_result: ExpressionResult {
-                expr_type: Type::Primitive(PrimitiveTypes::Bool),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
-            },
-        }
-    );
-    assert_eq!(
-        st_ctx1[2],
-        SemanticStackContext::Call {
-            call: Function {
-                inner_name: String::from("fn2").into(),
-                inner_type: Type::Primitive(PrimitiveTypes::U16),
-                parameters: vec![],
-            },
-            params: vec![],
-            register_number: 1
-        }
-    );
-
-    assert_eq!(
-        st_ctx1[3],
-        SemanticStackContext::ExpressionFunctionReturn {
-            expr_result: ExpressionResult {
-                expr_type: Type::Primitive(PrimitiveTypes::Bool),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
-            }
-        }
-    );
-
     // Semantic stack context for the block fn2
-    let st_ctx2 = ctx2.context.clone().get();
+    let st_ctx2 = ctx2.get_context().clone().get();
     assert_eq!(st_ctx2.len(), 1);
     assert_eq!(
         st_ctx2[0],
@@ -220,7 +162,7 @@ fn main_run() {
         }
     );
 
-    let st_ch_ctx1 = ch_ctx1.borrow().context.clone().get();
+    let st_ch_ctx1 = ch_ctx1.borrow().get_context().clone().get();
     assert_eq!(st_ch_ctx1.len(), 5);
     assert_eq!(
         st_ch_ctx1[0],
@@ -264,7 +206,7 @@ fn main_run() {
         }
     );
 
-    let st_ch_ctx2 = ch_ctx2.borrow().context.clone().get();
+    let st_ch_ctx2 = ch_ctx2.borrow().get_context().clone().get();
     assert_eq!(st_ch_ctx2.len(), 5);
     assert_eq!(
         st_ch_ctx2[0],
@@ -328,6 +270,73 @@ fn main_run() {
         st_global_context[3],
         SemanticStackContext::FunctionDeclaration {
             fn_decl: fn2.into()
+        }
+    );
+
+    // Semantic stack context for the block fn1
+    let st_ctx1 = ctx1.get_context().clone().get();
+    assert_eq!(st_ctx1.len(), 14);
+    assert_eq!(
+        st_ctx1[0],
+        SemanticStackContext::LetBinding {
+            let_decl: Value {
+                inner_name: "x.0".into(),
+                inner_type: Type::Primitive(PrimitiveTypes::Bool),
+                mutable: true,
+                alloca: false,
+                malloc: false
+            },
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(false)),
+            },
+        }
+    );
+    assert_eq!(
+        st_ctx1[1],
+        SemanticStackContext::Binding {
+            val: Value {
+                inner_name: "x.0".into(),
+                inner_type: Type::Primitive(PrimitiveTypes::Bool),
+                mutable: true,
+                alloca: false,
+                malloc: false
+            },
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
+            },
+        }
+    );
+    assert_eq!(
+        st_ctx1[2],
+        SemanticStackContext::Call {
+            call: Function {
+                inner_name: String::from("fn2").into(),
+                inner_type: Type::Primitive(PrimitiveTypes::U16),
+                parameters: vec![],
+            },
+            params: vec![],
+            register_number: 1
+        }
+    );
+    assert_eq!(st_ctx1[3], st_ch_ctx1[0]);
+    assert_eq!(st_ctx1[4], st_ch_ctx1[1]);
+    assert_eq!(st_ctx1[5], st_ch_ctx1[2]);
+    assert_eq!(st_ctx1[6], st_ch_ctx1[3]);
+    assert_eq!(st_ctx1[7], st_ch_ctx1[4]);
+    assert_eq!(st_ctx1[8], st_ch_ctx2[0]);
+    assert_eq!(st_ctx1[9], st_ch_ctx2[1]);
+    assert_eq!(st_ctx1[10], st_ch_ctx2[2]);
+    assert_eq!(st_ctx1[11], st_ch_ctx2[3]);
+    assert_eq!(st_ctx1[12], st_ch_ctx2[4]);
+    assert_eq!(
+        st_ctx1[13],
+        SemanticStackContext::ExpressionFunctionReturn {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
+            }
         }
     );
 }
@@ -406,7 +415,7 @@ fn expression_as_return() {
     assert!(ctx.parent.is_none());
 
     // Semantic stack context for the block
-    let st_ctx = ctx.context.clone().get();
+    let st_ctx = ctx.get_context().clone().get();
     assert_eq!(st_ctx.len(), 1);
     assert_eq!(
         st_ctx[0],
@@ -473,7 +482,7 @@ fn if_return_from_function() {
     assert!(children_ctx.parent.is_some());
 
     // Children semantic stack context for the block
-    let st_children_ctx = children_ctx.context.clone().get();
+    let st_children_ctx = children_ctx.get_context().clone().get();
     assert_eq!(st_children_ctx.len(), 4);
     assert_eq!(
         st_children_ctx[0],
@@ -509,10 +518,14 @@ fn if_return_from_function() {
     );
 
     // Semantic stack context for the block
-    let st_ctx = ctx.context.clone().get();
-    assert_eq!(st_ctx.len(), 1);
+    let st_ctx = ctx.get_context().get();
+    assert_eq!(st_ctx.len(), 5);
+    assert_eq!(st_ctx[0], st_children_ctx[0]);
+    assert_eq!(st_ctx[1], st_children_ctx[1]);
+    assert_eq!(st_ctx[2], st_children_ctx[2]);
+    assert_eq!(st_ctx[3], st_children_ctx[3]);
     assert_eq!(
-        st_ctx[0],
+        st_ctx[4],
         SemanticStackContext::ExpressionFunctionReturnWithLabel {
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::I8),

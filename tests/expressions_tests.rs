@@ -389,7 +389,7 @@ fn expression_value_name_not_found() {
         "Errors: {:?}",
         t.state.errors[0]
     );
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert!(state.is_empty());
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
 }
@@ -418,7 +418,7 @@ fn expression_value_name_exists() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_value, ExpressionResultValue::Register(1));
     assert_eq!(res.expr_type, ty);
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
         state[0],
@@ -454,7 +454,7 @@ fn expression_const_exists() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_value, ExpressionResultValue::Register(1));
     assert_eq!(res.expr_type, ty);
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
         state[0],
@@ -480,7 +480,7 @@ fn expression_primitive_value() {
         ExpressionResultValue::PrimitiveValue(PrimitiveValue::I32(10))
     );
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::I32));
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert!(state.is_empty());
     assert!(t.is_empty_error());
 }
@@ -794,7 +794,7 @@ fn expression_struct_value() {
     assert!(t.is_empty_error());
     assert_eq!(res.expr_value, ExpressionResultValue::Register(2));
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::Bool));
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
         state[0],
@@ -853,7 +853,7 @@ fn expression_func_call() {
             expr_type: Type::Primitive(PrimitiveTypes::Ptr)
         }
     );
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
         state[0],
@@ -890,7 +890,7 @@ fn expression_sub_expression() {
             expr_type: Type::Primitive(PrimitiveTypes::U32)
         }
     );
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert!(state.is_empty());
 }
 
@@ -915,7 +915,7 @@ fn expression_operation() {
             expr_value: ExpressionResultValue::Register(1)
         }
     );
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
         state[0],
@@ -954,7 +954,7 @@ fn expression_operation_wrong_type() {
         t.state.errors[0]
     );
     assert!(res.is_none());
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert!(state.is_empty());
 }
 
@@ -999,7 +999,7 @@ fn expression_multiple_operation1() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
     assert_eq!(res.expr_value, ExpressionResultValue::Register(5));
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 5);
     assert_eq!(state[0], set_result_type(Plus, false, 1, false, 2, 1));
     assert_eq!(state[1], set_result_type(Multiply, true, 1, false, 3, 2));
@@ -1059,7 +1059,7 @@ fn expression_multiple_operation2() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
     assert_eq!(res.expr_value, ExpressionResultValue::Register(5));
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 5);
     assert_eq!(state[0], set_result_type(Plus, false, 100, false, 2, 1));
     assert_eq!(state[1], set_result_type(Minus, false, 3, false, 4, 2));
@@ -1092,7 +1092,7 @@ fn expression_multiple_operation_simple1() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
     assert_eq!(res.expr_value, ExpressionResultValue::Register(2));
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 2);
     assert_eq!(state[0], set_result_type(Multiply, false, 5, false, 6, 1));
     assert_eq!(state[1], set_result_type(Minus, false, 100, true, 1, 2));
@@ -1119,7 +1119,7 @@ fn expression_multiple_operation_simple2() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
     assert_eq!(res.expr_value, ExpressionResultValue::Register(2));
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 2);
     assert_eq!(state[0], set_result_type(Multiply, false, 20, false, 5, 1));
     assert_eq!(state[1], set_result_type(Minus, true, 1, false, 40, 2));
@@ -1150,7 +1150,7 @@ fn expression_multiple_operation_simple3() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
     assert_eq!(res.expr_value, ExpressionResultValue::Register(3));
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 3);
     assert_eq!(state[0], set_result_type(Multiply, false, 20, false, 4, 1));
     assert_eq!(state[1], set_result_type(Minus, true, 1, false, 40, 2));
@@ -1186,7 +1186,7 @@ fn expression_multiple_operation_simple4() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
     assert_eq!(res.expr_value, ExpressionResultValue::Register(3));
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 3);
     assert_eq!(state[0], set_result_type(Multiply, false, 5, false, 6, 1));
     assert_eq!(state[1], set_result_type(Minus, false, 100, true, 1, 2));
