@@ -59,7 +59,7 @@ fn loop_transform() {
         ast::LoopBodyStatement::Break,
         ast::LoopBodyStatement::Continue,
     ];
-    // For grcov®®
+    // For grcov
     format!("{loop_stmts:#?}");
     for loop_stmt in loop_stmts {
         let loop_stmt_into: LoopBodyStatement = loop_stmt.into();
@@ -140,10 +140,6 @@ fn loop_statements() {
             parameters: vec![],
         },
     )]);
-    let loop_body_return = ast::LoopBodyStatement::Return(ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
-        operation: None,
-    });
 
     let loop_stmt = [
         loop_body_let_binding,
@@ -151,7 +147,6 @@ fn loop_statements() {
         loop_body_fn_call,
         loop_body_if,
         loop_body_loop,
-        loop_body_return,
     ];
     t.state.loop_statement(&loop_stmt, &block_state);
 
@@ -165,7 +160,7 @@ fn loop_statements() {
     assert_eq!(ctx.borrow().children.len(), 2);
 
     let stm_ctx = ctx.borrow().context.clone().get();
-    assert_eq!(stm_ctx.len(), 8);
+    assert_eq!(stm_ctx.len(), 7);
     assert_eq!(
         stm_ctx[0],
         SemanticStackContext::JumpTo {
@@ -223,21 +218,12 @@ fn loop_statements() {
     );
     assert_eq!(
         stm_ctx[5],
-        SemanticStackContext::JumpFunctionReturn {
-            expr_result: ExpressionResult {
-                expr_type: Type::Primitive(PrimitiveTypes::Bool),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
-            }
-        }
-    );
-    assert_eq!(
-        stm_ctx[6],
         SemanticStackContext::JumpTo {
             label: String::from("loop_begin").into()
         }
     );
     assert_eq!(
-        stm_ctx[7],
+        stm_ctx[6],
         SemanticStackContext::SetLabel {
             label: String::from("loop_end").into()
         }
@@ -420,4 +406,80 @@ fn loop_statements_instructions_after_continue() {
         "Errors: {:?}",
         t.state.errors[0]
     );
+}
+
+#[test]
+fn loop_statements_with_return_invocation() {
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut t = SemanticTest::new();
+
+    let loop_body_let_binding = ast::LoopBodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("x")),
+        mutable: true,
+        value_type: None,
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(
+                false,
+            )),
+            operation: None,
+        }),
+    });
+    let loop_body_return = ast::LoopBodyStatement::Return(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+        operation: None,
+    });
+
+    let loop_stmt = [loop_body_let_binding, loop_body_return];
+    t.state.loop_statement(&loop_stmt, &block_state);
+
+    assert!(block_state.borrow().parent.is_none());
+    assert_eq!(block_state.borrow().context.clone().get().len(), 0);
+    assert!(block_state.borrow().parent.is_none());
+    assert_eq!(block_state.borrow().children.len(), 1);
+
+    let ctx = block_state.borrow().children[0].clone();
+    assert!(ctx.borrow().parent.is_some());
+    assert!(ctx.borrow().children.is_empty());
+
+    let stm_ctx = ctx.borrow().context.clone().get();
+    assert_eq!(stm_ctx.len(), 4);
+    assert_eq!(
+        stm_ctx[0],
+        SemanticStackContext::JumpTo {
+            label: String::from("loop_begin").into()
+        }
+    );
+    assert_eq!(
+        stm_ctx[1],
+        SemanticStackContext::SetLabel {
+            label: String::from("loop_begin").into()
+        }
+    );
+    assert_eq!(
+        stm_ctx[2],
+        SemanticStackContext::LetBinding {
+            let_decl: Value {
+                inner_name: "x.0".into(),
+                inner_type: Type::Primitive(PrimitiveTypes::Bool),
+                mutable: true,
+                alloca: false,
+                malloc: false
+            },
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(false)),
+            },
+        }
+    );
+    assert_eq!(
+        stm_ctx[3],
+        SemanticStackContext::JumpFunctionReturn {
+            expr_result: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::Bool),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
+            }
+        }
+    );
+
+    assert!(t.is_empty_error());
 }

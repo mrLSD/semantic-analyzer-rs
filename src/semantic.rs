@@ -1091,17 +1091,20 @@ impl State {
             }
         }
 
-        // Because it's loop jump to loop begin
-        loop_body_state
-            .borrow_mut()
-            .context
-            .jump_to(label_loop_begin.clone());
+        // If return is called do not set loop-specific instructions
+        if !return_is_called {
+            // Because it's loop jump to loop begin
+            loop_body_state
+                .borrow_mut()
+                .context
+                .jump_to(label_loop_begin.clone());
 
-        // Loop ending
-        loop_body_state
-            .borrow_mut()
-            .context
-            .set_label(label_loop_end);
+            // Loop ending
+            loop_body_state
+                .borrow_mut()
+                .context
+                .set_label(label_loop_end);
+        }
     }
 
     #[allow(clippy::doc_markdown)]
