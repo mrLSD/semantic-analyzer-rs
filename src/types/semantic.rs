@@ -30,18 +30,28 @@ impl SemanticStack {
     }
 
     /// Push Context to the stack as expression value data
-    pub fn expression_value(&mut self, expression: Value) {
-        self.push(SemanticStackContext::ExpressionValue { expression });
+    pub fn expression_value(&mut self, expression: Value, register_number: u64) {
+        self.push(SemanticStackContext::ExpressionValue {
+            expression,
+            register_number,
+        });
     }
 
     /// Push Context to the stack as expression const data
-    pub fn expression_const(&mut self, expression: Constant) {
-        self.push(SemanticStackContext::ExpressionConst { expression });
+    pub fn expression_const(&mut self, expression: Constant, register_number: u64) {
+        self.push(SemanticStackContext::ExpressionConst {
+            expression,
+            register_number,
+        });
     }
 
     /// Push Context to the stack as expression struct value data
-    pub fn expression_struct_value(&mut self, expression: Value, index: u32) {
-        self.push(SemanticStackContext::ExpressionStructValue { expression, index });
+    pub fn expression_struct_value(&mut self, expression: Value, index: u32, register_number: u64) {
+        self.push(SemanticStackContext::ExpressionStructValue {
+            expression,
+            index,
+            register_number,
+        });
     }
 
     /// Push Context to the stack as expression operation data
@@ -50,17 +60,23 @@ impl SemanticStack {
         operation: ExpressionOperations,
         left_value: ExpressionResult,
         right_value: ExpressionResult,
+        register_number: u64,
     ) {
         self.push(SemanticStackContext::ExpressionOperation {
             operation,
             left_value,
             right_value,
+            register_number,
         });
     }
 
     /// Push Context to the stack as function call data
-    pub fn call(&mut self, call: Function, params: Vec<ExpressionResult>) {
-        self.push(SemanticStackContext::Call { call, params });
+    pub fn call(&mut self, call: Function, params: Vec<ExpressionResult>, register_number: u64) {
+        self.push(SemanticStackContext::Call {
+            call,
+            params,
+            register_number,
+        });
     }
 
     /// Push Context to the stack as let-binding data
@@ -164,22 +180,27 @@ impl SemanticStack {
 pub enum SemanticStackContext {
     ExpressionValue {
         expression: Value,
+        register_number: u64,
     },
     ExpressionConst {
         expression: Constant,
+        register_number: u64,
     },
     ExpressionStructValue {
         expression: Value,
         index: u32,
+        register_number: u64,
     },
     ExpressionOperation {
         operation: ExpressionOperations,
         left_value: ExpressionResult,
         right_value: ExpressionResult,
+        register_number: u64,
     },
     Call {
         call: Function,
         params: Vec<ExpressionResult>,
+        register_number: u64,
     },
     LetBinding {
         let_decl: Value,

@@ -214,6 +214,7 @@ fn loop_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 1,
         }
     );
     assert_eq!(
@@ -261,6 +262,7 @@ fn loop_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 2
         }
     );
     assert_eq!(
@@ -303,6 +305,7 @@ fn loop_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 3
         }
     );
     assert_eq!(

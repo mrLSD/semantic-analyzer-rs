@@ -983,6 +983,7 @@ fn if_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 1
         }
     );
     assert_eq!(
@@ -1033,6 +1034,7 @@ fn if_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 2
         }
     );
     assert_eq!(
@@ -1070,6 +1072,7 @@ fn if_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 3
         }
     );
     assert_eq!(
@@ -1257,6 +1260,7 @@ fn if_loop_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 1
         }
     );
     assert_eq!(
@@ -1307,6 +1311,7 @@ fn if_loop_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 2
         }
     );
     assert_eq!(
@@ -1343,6 +1348,7 @@ fn if_loop_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
+            register_number: 3
         }
     );
     assert_eq!(

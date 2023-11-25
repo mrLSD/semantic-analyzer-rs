@@ -533,8 +533,14 @@ impl State {
             params.push(expr_result);
         }
 
+        // Result of function call is stored to register
+        body_state.borrow_mut().inc_register();
+        let last_register_number = body_state.borrow().last_register_number;
         // Store always result to register even for void result
-        body_state.borrow_mut().context.call(func_data, params);
+        body_state
+            .borrow_mut()
+            .context
+            .call(func_data, params, last_register_number);
         Some(fn_type)
     }
 
@@ -1169,18 +1175,21 @@ impl State {
             ast::ExpressionValue::ValueName(value) => {
                 // Get value from block state
                 let value_from_state = body_state.borrow_mut().get_value_name(&value.name().into());
+                // Register contains result
+                body_state.borrow_mut().inc_register();
+                let last_register_number = body_state.borrow().last_register_number;
                 // First check value in body state
                 let ty = if let Some(val) = value_from_state {
                     body_state
                         .borrow_mut()
                         .context
-                        .expression_value(val.clone());
+                        .expression_value(val.clone(), last_register_number);
                     val.inner_type
                 } else if let Some(const_val) = self.global.constants.get(&value.name().into()) {
                     body_state
                         .borrow_mut()
                         .context
-                        .expression_const(const_val.clone());
+                        .expression_const(const_val.clone(), last_register_number);
                     const_val.constant_type.clone()
                 } else {
                     // If value doesn't exist in State or as Constant
@@ -1192,7 +1201,6 @@ impl State {
                     return None;
                 };
                 // Return result as register
-                body_state.borrow_mut().inc_register();
                 ExpressionResult {
                     expr_type: ty,
                     expr_value: ExpressionResultValue::Register(
@@ -1274,10 +1282,14 @@ impl State {
                     })?
                     .clone();
 
-                body_state
-                    .borrow_mut()
-                    .context
-                    .expression_struct_value(val.clone(), attributes.clone().attr_index);
+                // Register contains result
+                body_state.borrow_mut().inc_register();
+                let last_register_number = body_state.borrow().last_register_number;
+                body_state.borrow_mut().context.expression_struct_value(
+                    val.clone(),
+                    attributes.clone().attr_index,
+                    last_register_number,
+                );
 
                 body_state.borrow_mut().inc_register();
                 ExpressionResult {
@@ -1303,14 +1315,17 @@ impl State {
                 // Do not fetch other expression flow if type is wrong
                 return None;
             }
+            // Expression operation is set to register
+            body_state.borrow_mut().inc_register();
+            let last_register_number = body_state.borrow().last_register_number;
             // Call expression operation for: OP(left_value, right_value)
             body_state.borrow_mut().context.expression_operation(
                 op.clone().into(),
                 left_value.clone(),
                 right_value.clone(),
+                last_register_number,
             );
             // Expression result value  for Operations is always should be "register"
-            body_state.borrow_mut().inc_register();
             ExpressionResult {
                 expr_type: right_value.expr_type,
                 expr_value: ExpressionResultValue::Register(
