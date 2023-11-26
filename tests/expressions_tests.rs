@@ -357,6 +357,22 @@ fn expression_ast_transform_primitive_struct_value() {
 }
 
 #[test]
+fn expression_ast_transform_expression() {
+    let val = ast::PrimitiveValue::Ptr;
+    let sub_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        operation: None,
+    };
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::Expression(Box::new(sub_expr)),
+        operation: None,
+    }
+    .into();
+    format!("{expr:#?}");
+    assert_eq!(expr.to_string(), "ptr");
+}
+
+#[test]
 fn expression_value_name_not_found() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();

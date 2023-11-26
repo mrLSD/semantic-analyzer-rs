@@ -35,7 +35,7 @@ impl SemanticTest {
 
     #[allow(dead_code)]
     pub fn check_error(&self, err_kind: StateErrorKind) -> bool {
-        self.state.errors.get(0).unwrap().kind == err_kind
+        self.state.errors.first().unwrap().kind == err_kind
     }
 
     #[allow(dead_code)]
