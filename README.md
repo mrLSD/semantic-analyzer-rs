@@ -53,14 +53,14 @@ Supported condition expressions and condition expression correctness check.
 - **Building the Symbol Table**: For analyzing used the symbol table as data structure used by the semantic analyzer to keep track of 
 symbols (variables, functions, constants) in the source code. Each entry in the symbol table contains the symbol's name, type, and scope related for block state, and other relevant information.
 
-### Semantic State Tree
+### 🌳 Semantic State Tree
 
 The result of executing and passing stages of the semantic analyzer is: **Semantic State Tree**.
 
 This can be used for Intermediate Code Generation, for further passes
 semantic tree optimizations, linting, backend codegen (like LLVM) to target machine.
 
-#### Structure of Semantic State Tree 
+#### 🌲 Structure of Semantic State Tree 
 
 - **blocks state** and related block state child branches. It's a basic
 entity for scopes: variables, blocks (function, if, loop). 
@@ -87,7 +87,7 @@ However, parent elements cannot access child elements, which effectively limits 
 
 All of that source data, that can be used for Intermediate Representation for next optimizations and compilers codegen.
 
-### Subset of programming languages
+### 🧺 Subset of programming languages
 
 The input parameter for the analyzer is a predefined
 AST (abstract syntax tree). As a library for building AST and the only dependency
@@ -103,5 +103,13 @@ that meets the initial requirements of the semantic analyzer. As a library for l
 analysis and source code parsing, it is recommended to use: [nom is a parser combinators library](https://github.com/rust-bakery/nom).
 
 AST displays the **Turing complete** programming language and contains all the necessary elements for this.
+
+## 🛋️ Examples
+
+- 🔎 There is the example implementation separate project [Toy Codegen](https://github.com/mrLSD/toy-codegen).
+The project uses the `SemanticStack` results and converts them into **Code Generation** logic. Which clearly shows the 
+possibilities of using the results of the `semantic-analyzer-rs` `SemanticStackContext` results. LLVM is used as a 
+backend, [inkwell](https://github.com/TheDan64/inkwell) as a library for LLVM codegen, and compiled into an executable 
+program. The source of data is the AST structure itself.
 
 ## MIT [LICENSE](LICENSE)

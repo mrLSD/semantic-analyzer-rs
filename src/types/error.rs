@@ -26,6 +26,7 @@ pub enum StateErrorKind {
     TypeNotFound,
     WrongReturnType,
     ConditionExpressionWrongType,
+    ConditionIsEmpty,
     ConditionExpressionNotSupported,
     ForbiddenCodeAfterReturnDeprecated,
     ForbiddenCodeAfterContinueDeprecated,

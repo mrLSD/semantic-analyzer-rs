@@ -545,12 +545,14 @@ impl State {
     }
 
     /// # condition-expression
-    /// Analyse condition operations.    
+    /// Analyse condition operations.
+    /// ## Return
+    /// Return result register of `condition-expression` calculation.
     pub fn condition_expression(
         &mut self,
         data: &ast::ExpressionLogicCondition<'_>,
         function_body_state: &Rc<RefCell<BlockState>>,
-    ) {
+    ) -> u64 {
         // Analyse left expression of left condition
         let left_expr = &data.left.left;
         let left_res = self.expression(left_expr, function_body_state);
@@ -559,12 +561,15 @@ impl State {
         let right_expr = &data.left.right;
         let right_res = self.expression(right_expr, function_body_state);
 
+        // If some of the `left` or `right` expression is empty just return with error in the state
         let (Some(left_res), Some(right_res)) = (left_res, right_res) else {
-            return;
+            self.add_error(error::StateErrorResult::new(
+                error::StateErrorKind::ConditionIsEmpty,
+                format!("left={left_res:?}, right={right_res:?}"),
+                data.left.left.location(),
+            ));
+            return function_body_state.borrow().last_register_number;
         };
-        // Unwrap result only after analysing
-        // let left_res = left_res?;
-        // let right_res = right_res?;
 
         // Currently strict type comparison
         if left_res.expr_type != right_res.expr_type {
@@ -573,7 +578,7 @@ impl State {
                 left_res.expr_type.to_string(),
                 data.left.left.location(),
             ));
-            return;
+            return function_body_state.borrow().last_register_number;
         }
         match left_res.expr_type {
             Type::Primitive(_) => (),
@@ -583,29 +588,44 @@ impl State {
                     left_res.expr_type.to_string(),
                     data.left.left.location(),
                 ));
-                return;
+                return function_body_state.borrow().last_register_number;
             }
         }
+
+        // Increment register
+        function_body_state.borrow_mut().inc_register();
 
         // Codegen for left condition and set result to register
         function_body_state
             .borrow_mut()
             .context
-            .condition_expression(left_res, right_res, data.left.condition.clone().into());
+            .condition_expression(
+                left_res,
+                right_res,
+                data.left.condition.clone().into(),
+                function_body_state.borrow_mut().last_register_number,
+            );
 
         // Analyze right condition
         if let Some(right) = &data.right {
+            let left_register_result = function_body_state.borrow_mut().last_register_number;
             // Analyse recursively right part of condition
-            self.condition_expression(&right.1, function_body_state);
+            let right_register_result = self.condition_expression(&right.1, function_body_state);
+
+            // Increment register
+            function_body_state.borrow_mut().inc_register();
 
             // Stategen for logical condition for: left [LOGIC-OP] right
             // The result generated from registers, and stored to
             // new register
-            function_body_state
-                .borrow_mut()
-                .context
-                .logic_condition(right.0.clone().into());
+            function_body_state.borrow_mut().context.logic_condition(
+                right.0.clone().into(),
+                left_register_result,
+                right_register_result,
+                function_body_state.borrow_mut().last_register_number,
+            );
         }
+        function_body_state.borrow_mut().last_register_number
     }
 
     /// # If-condition body
@@ -799,18 +819,20 @@ impl State {
             // If condition contains logic condition expression
             ast::IfCondition::Logic(expr_logic) => {
                 // Analyse if-condition logic
-                self.condition_expression(expr_logic, if_body_state);
+                let result_register = self.condition_expression(expr_logic, if_body_state);
                 // State for if-condition-logic with if-body start
                 if is_else {
-                    if_body_state
-                        .borrow_mut()
-                        .context
-                        .if_condition_logic(label_if_begin.clone(), label_if_else.clone());
+                    if_body_state.borrow_mut().context.if_condition_logic(
+                        label_if_begin.clone(),
+                        label_if_else.clone(),
+                        result_register,
+                    );
                 } else {
-                    if_body_state
-                        .borrow_mut()
-                        .context
-                        .if_condition_logic(label_if_begin.clone(), label_if_end.clone());
+                    if_body_state.borrow_mut().context.if_condition_logic(
+                        label_if_begin.clone(),
+                        label_if_end.clone(),
+                        result_register,
+                    );
                 }
             }
         }
