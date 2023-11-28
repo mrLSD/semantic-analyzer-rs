@@ -11,46 +11,46 @@
 Semantic analyzer is an open source semantic analyzer for programming languages 
 that makes it easy to build your own efficient compilers.
 
-## What is the library for and what tasks does it solve
+## 🌀 What is the library for and what tasks does it solve
 
 Creating a compilers for a programming language is process that involves several key 
 stages. Most commonly it is:
 
-- **Lexical Analysis (Lexer)**: This stage involves breaking down the input stream 
+▶️ **Lexical Analysis (Lexer)**: This stage involves breaking down the input stream 
 of characters into a series of tokens. Tokens are the atomic elements of the programming language, such as identifiers, keywords, operators, etc.
 
-- **Syntax Analysis (Parsing)**: At this stage, the tokens obtained in the previous 
+▶️ **Syntax Analysis (Parsing)**: At this stage, the tokens obtained in the previous 
 stage are grouped according to the grammar rules of the programming language. The result 
 of this process is an **Abstract Syntax Tree (AST)**, which represents a hierarchical structure of the code.
 
-- **Semantic Analysis**: This stage involves checking the semantic correctness of the code. This can include 
+⏩ **Semantic Analysis**: This stage involves checking the semantic correctness of the code. This can include 
 type checking, scope verification of variables, etc.
 
-- **Intermediate Code Optimization**: At this stage, the compiler tries to improve the intermediate representation of the code to make it more efficient. 
+▶️ **Intermediate Code Optimization**: At this stage, the compiler tries to improve the intermediate representation of the code to make it more efficient. 
 This can include dead code elimination, expression simplification, etc.
 
-- **Code Generation**: This is the final stage where the compiler transforms the optimized intermediate representation (IR) into 
+▶️ **Code Generation**: This is the final stage where the compiler transforms the optimized intermediate representation (IR) into 
 machine code specific to the target architecture.
 
 This library represent **Semantic Analysis** stage.
 
-### Features
+### 🌻 Features
 
-- **Name Binding and Scope Checking**: The analyzer verifies that all variables, constants, functions are declared before they're used, 
+✅ **Name Binding and Scope Checking**: The analyzer verifies that all variables, constants, functions are declared before they're used, 
 and that they're used within their scope. It also checks for name collisions, where variables, constants, functions, types in the same scope have the same name.
 
-- **Checking Function Calls**: The analyzer verifies that functions are called with the number of parameters and that the type of 
+✅ **Checking Function Calls**: The analyzer verifies that functions are called with the number of parameters and that the type of 
 arguments matches the type expected by the function.
 
-- **Scope Rules**: Checks that variables, functions, constants, types are used within their scope, and available in the visibility scope.
+✅ **Scope Rules**: Checks that variables, functions, constants, types are used within their scope, and available in the visibility scope.
 
-- **Type Checking**: The analyzer checks that operations are performed on compatible types for expressions, functions, constant, bindings.
+✅ **Type Checking**: The analyzer checks that operations are performed on compatible types for expressions, functions, constant, bindings.
 For operations in expressions. It is the process of verifying that the types of expressions are consistent with their usage in the context.
 
-- **Flow Control Checking**: The analyzer checks that the control flow statements (if-else, loop, return, break, continue) are used correctly. 
+✅ **Flow Control Checking**: The analyzer checks that the control flow statements (if-else, loop, return, break, continue) are used correctly. 
 Supported condition expressions and condition expression correctness check.
 
-- **Building the Symbol Table**: For analyzing used the symbol table as data structure used by the semantic analyzer to keep track of 
+✅ **Building the Symbol Table**: For analyzing used the symbol table as data structure used by the semantic analyzer to keep track of 
 symbols (variables, functions, constants) in the source code. Each entry in the symbol table contains the symbol's name, type, and scope related for block state, and other relevant information.
 
 ### 🌳 Semantic State Tree
@@ -106,7 +106,7 @@ AST displays the **Turing complete** programming language and contains all the n
 
 ## 🛋️ Examples
 
-- 🔎 There is the example implementation separate project [Toy Codegen](https://github.com/mrLSD/toy-codegen).
+- 🔎 There is the example implementation separate project [💾 Toy Codegen](https://github.com/mrLSD/toy-codegen).
 The project uses the `SemanticStack` results and converts them into **Code Generation** logic. Which clearly shows the 
 possibilities of using the results of the `semantic-analyzer-rs` `SemanticStackContext` results. LLVM is used as a 
 backend, [inkwell](https://github.com/TheDan64/inkwell) as a library for LLVM codegen, and compiled into an executable 

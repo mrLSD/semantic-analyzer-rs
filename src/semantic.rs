@@ -562,7 +562,7 @@ impl State {
         let right_res = self.expression(right_expr, function_body_state);
 
         // If some of the `left` or `right` expression is empty just return with error in the state
-        let (Some(left_res), Some(right_res)) = (left_res, right_res) else {
+        let (Some(left_res), Some(right_res)) = (left_res.clone(), right_res.clone()) else {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::ConditionIsEmpty,
                 format!("left={left_res:?}, right={right_res:?}"),
@@ -595,6 +595,7 @@ impl State {
         // Increment register
         function_body_state.borrow_mut().inc_register();
 
+        let register_number = function_body_state.borrow_mut().last_register_number;
         // Codegen for left condition and set result to register
         function_body_state
             .borrow_mut()
@@ -603,7 +604,7 @@ impl State {
                 left_res,
                 right_res,
                 data.left.condition.clone().into(),
-                function_body_state.borrow_mut().last_register_number,
+                register_number,
             );
 
         // Analyze right condition
@@ -615,6 +616,7 @@ impl State {
             // Increment register
             function_body_state.borrow_mut().inc_register();
 
+            let register_number = function_body_state.borrow_mut().last_register_number;
             // Stategen for logical condition for: left [LOGIC-OP] right
             // The result generated from registers, and stored to
             // new register
@@ -622,7 +624,7 @@ impl State {
                 right.0.clone().into(),
                 left_register_result,
                 right_register_result,
-                function_body_state.borrow_mut().last_register_number,
+                register_number,
             );
         }
         function_body_state.borrow_mut().last_register_number
