@@ -1,7 +1,6 @@
 //! # Semantic types
 //! Semantic analyzer result state types.
-//! It contains `SemanticStack` as Semantic results
-//! Context data.
+//! It contains `SemanticStack` as Semantic results Context data.
 
 use super::condition::{Condition, LogicCondition};
 use super::expression::{ExpressionOperations, ExpressionResult};
@@ -91,8 +90,13 @@ impl SemanticStack {
         });
     }
 
-    /// Push Context to the stack as function call data
+    /// Push Context to the stack as function call data.
+    /// Function call instruction with parameters and result data.
+    ///
     /// ## Parameters
+    /// - `call` - function declaration data
+    /// - `params` - function parameters
+    ///  - `register_number` - register to store result of function call
     pub fn call(&mut self, call: Function, params: Vec<ExpressionResult>, register_number: u64) {
         self.push(SemanticStackContext::Call {
             call,
@@ -101,8 +105,13 @@ impl SemanticStack {
         });
     }
 
-    /// Push Context to the stack as let-binding data
+    /// Push Context to the stack as let-binding data.
+    /// Let binding instruction that "bind" expression result to
+    /// the new value.
+    ///
     /// ## Parameters
+    /// - `let_decl` - value declaration
+    /// -  `expr_result` - expression result that will be bind to the value
     pub fn let_binding(&mut self, let_decl: Value, expr_result: ExpressionResult) {
         self.push(SemanticStackContext::LetBinding {
             let_decl,
@@ -110,56 +119,95 @@ impl SemanticStack {
         });
     }
 
-    /// Push Context to the stack as binding data
+    /// Push Context to the stack as binding data.
+    /// Binding instruction that "bind" expression result to
+    /// the old. previously init value.
+    ///
     /// ## Parameters
+    /// - `val` - value declaration
+    /// -  `expr_result` - expression result that will be bind to the value
     pub fn binding(&mut self, val: Value, expr_result: ExpressionResult) {
         self.push(SemanticStackContext::Binding { val, expr_result });
     }
 
-    /// Push Context to the stack as function declaration data
+    /// Push Context to the stack as function declaration data.
+    /// Function declaration instruction.
+    ///
     /// ## Parameters
+    /// - `fn_decl` - function declaration parameters
     pub fn function_declaration(&mut self, fn_decl: FunctionStatement) {
         self.push(SemanticStackContext::FunctionDeclaration { fn_decl });
     }
 
-    /// Push Context to the stack as constant data
+    /// Push Context to the stack as constant data.
+    /// Constant declaration instruction.
+    ///
     /// ## Parameters
+    /// - `const_decl` - constant declaration parameters
     pub fn constant(&mut self, const_decl: Constant) {
         self.push(SemanticStackContext::Constant { const_decl });
     }
 
-    /// Push Context to the stack as types data
+    /// Push Context to the stack as types data.
+    /// Types declaration instruction.
+    ///
     /// ## Parameters
+    /// - `type_decl` - type declaration parameters
     pub fn types(&mut self, type_decl: StructTypes) {
         self.push(SemanticStackContext::Types { type_decl });
     }
 
-    /// Push Context to the stack as expression function return data
+    /// Push Context to the stack as expression function return data.
+    /// Return instruction, should be used in the end of functions.
+    /// Alwats should be only once.
+    ///
     /// ## Parameters
+    /// - `expr_result` - result data for the return
     pub fn expression_function_return(&mut self, expr_result: ExpressionResult) {
         self.push(SemanticStackContext::ExpressionFunctionReturn { expr_result });
     }
 
-    /// Push Context to the stack as `expression function return with label` data
+    /// Push Context to the stack as `expression function return with label` data.
+    /// Return instruction with additional logic. Most useful case when
+    /// `return` previously was call from `if-body` or `loop-body.`.
+    /// As additional behavior this `expression_function_return_with_label` should
+    /// set `return` label. It will allow `jump-to-return` case. Also
+    /// before `return` label Codegen, for normal instruction flow, must
+    /// jump to `return` label anyway.
+    ///
     /// ## Parameters
+    /// - `expr_result` - result data for the return
     pub fn expression_function_return_with_label(&mut self, expr_result: ExpressionResult) {
         self.push(SemanticStackContext::ExpressionFunctionReturnWithLabel { expr_result });
     }
 
-    /// Push Context to the stack as `set label` data
+    /// Push Context to the stack as `set label` data.
+    /// Set label. Useful for any kind of jump operations and conditional flow.
+    ///
     /// ## Parameters
+    /// - `label` - label name
     pub fn set_label(&mut self, label: LabelName) {
         self.push(SemanticStackContext::SetLabel { label });
     }
 
-    /// Push Context to the stack as `jump to` data
+    /// Push Context to the stack as `jump to` data.
+    /// Unconditional direct jump to label.
+    ///
     /// ## Parameters
+    /// - `label` - label for the jump
     pub fn jump_to(&mut self, label: LabelName) {
         self.push(SemanticStackContext::JumpTo { label });
     }
 
-    /// Push Context to the stack as `if condition expression` data
+    /// Push Context to the stack as `if condition expression` data.
+    /// `if-condition expression` represent if-condition, when if expression
+    /// is "true" jump to `label_if_begin` else `label_if_end`.
+    ///
     /// ## Parameters
+    /// - `expr_result` - expression result of `if-condition` for
+    /// conditional instruction
+    /// - `label_if_begin` - label for jump if expression is "true"
+    /// - `label_if_end` - label for jump if expression is "false"
     pub fn if_condition_expression(
         &mut self,
         expr_result: ExpressionResult,
@@ -173,8 +221,14 @@ impl SemanticStack {
         });
     }
 
-    /// Push Context to the stack as `condition expression` data
+    /// Push Context to the stack as `condition expression` data.
+    /// Condition expression between left and right condition calculation.
+    ///
     /// ## Parameters
+    /// - `left_result` - left expression result
+    /// - `right_result` - right expression result
+    /// - `condition` - condition operation
+    /// - `register_number` - register to store result of expression operation
     pub fn condition_expression(
         &mut self,
         left_result: ExpressionResult,
@@ -190,14 +244,20 @@ impl SemanticStack {
         });
     }
 
-    /// Push Context to the stack as `jump function return` data
+    /// Push Context to the stack as `jump function return` data.
+    /// Jump to function return with expression result data. Label for jumping
+    /// to return position (always end of function) should be always the same
+    /// and should be managed by Codegen.
+    ///
     /// ## Parameters
+    /// - `expr_result` - expression result for return condition
     pub fn jump_function_return(&mut self, expr_result: ExpressionResult) {
         self.push(SemanticStackContext::JumpFunctionReturn { expr_result });
     }
 
     /// Push Context to the stack as `logic condition` data.
-    /// Operate with registers:
+    /// Operate with registers: left and right for specific logic condition.
+    /// Result of calculation stored to `register_number`.
     ///
     /// ## Parameters
     /// - left_register_result - result of left condition
@@ -247,7 +307,8 @@ impl SemanticStack {
 }
 
 /// # Semantic stack Context
-/// Context data of Semantic results
+/// Context data of Semantic results. Contains type declarations
+/// for specific instructions.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SemanticStackContext {
     ExpressionValue {
