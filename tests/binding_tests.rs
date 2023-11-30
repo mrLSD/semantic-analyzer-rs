@@ -99,7 +99,7 @@ fn binding_value_not_mutable() {
         malloc: false,
     };
 
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
         state[0],
@@ -154,7 +154,7 @@ fn binding_value_found() {
         malloc: false,
     };
 
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
         state[0],
@@ -181,7 +181,7 @@ fn binding_value_found() {
     };
     t.state.binding(&binding, &block_state);
     assert!(t.is_empty_error());
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 2);
     assert_eq!(
         state[0],

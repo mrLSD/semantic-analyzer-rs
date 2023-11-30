@@ -101,7 +101,7 @@ fn let_binding_value_not_found() {
     };
     t.state.let_binding(&let_binding, &block_state);
     assert!(t.is_empty_error());
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 1);
     let inner_name: InnerValueName = "x.0".into();
     let val = Value {
@@ -156,7 +156,7 @@ fn let_binding_value_found() {
     };
     t.state.let_binding(&let_binding, &block_state);
     assert!(t.is_empty_error());
-    let state = block_state.borrow().context.clone().get();
+    let state = block_state.borrow().get_context().clone().get();
     assert_eq!(state.len(), 1);
 
     let val2 = Value {

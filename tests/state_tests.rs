@@ -51,7 +51,7 @@ fn block_state_fields() {
     assert!(!bst.manual_return);
     assert!(bst.parent.is_none());
     assert!(bst.children.is_empty());
-    assert_eq!(bst.context, SemanticStack::new());
+    assert_eq!(bst.get_context(), SemanticStack::new());
     bst.set_child(Rc::new(RefCell::new(BlockState::new(None))));
     assert_eq!(bst.children.len(), 1);
 

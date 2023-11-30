@@ -150,7 +150,7 @@ fn main_run() {
     assert!(ch_ctx2.borrow().children.is_empty());
 
     // Semantic stack context for the block fn1
-    let st_ctx1 = ctx1.context.clone().get();
+    let st_ctx1 = ctx1.get_context().clone().get();
     assert_eq!(st_ctx1.len(), 4);
     assert_eq!(
         st_ctx1[0],
@@ -208,7 +208,7 @@ fn main_run() {
     );
 
     // Semantic stack context for the block fn2
-    let st_ctx2 = ctx2.context.clone().get();
+    let st_ctx2 = ctx2.get_context().clone().get();
     assert_eq!(st_ctx2.len(), 1);
     assert_eq!(
         st_ctx2[0],
@@ -220,7 +220,7 @@ fn main_run() {
         }
     );
 
-    let st_ch_ctx1 = ch_ctx1.borrow().context.clone().get();
+    let st_ch_ctx1 = ch_ctx1.borrow().get_context().clone().get();
     assert_eq!(st_ch_ctx1.len(), 5);
     assert_eq!(
         st_ch_ctx1[0],
@@ -264,7 +264,7 @@ fn main_run() {
         }
     );
 
-    let st_ch_ctx2 = ch_ctx2.borrow().context.clone().get();
+    let st_ch_ctx2 = ch_ctx2.borrow().get_context().clone().get();
     assert_eq!(st_ch_ctx2.len(), 5);
     assert_eq!(
         st_ch_ctx2[0],
@@ -406,7 +406,7 @@ fn expression_as_return() {
     assert!(ctx.parent.is_none());
 
     // Semantic stack context for the block
-    let st_ctx = ctx.context.clone().get();
+    let st_ctx = ctx.get_context().clone().get();
     assert_eq!(st_ctx.len(), 1);
     assert_eq!(
         st_ctx[0],
@@ -473,7 +473,7 @@ fn if_return_from_function() {
     assert!(children_ctx.parent.is_some());
 
     // Children semantic stack context for the block
-    let st_children_ctx = children_ctx.context.clone().get();
+    let st_children_ctx = children_ctx.get_context().clone().get();
     assert_eq!(st_children_ctx.len(), 4);
     assert_eq!(
         st_children_ctx[0],
@@ -509,7 +509,7 @@ fn if_return_from_function() {
     );
 
     // Semantic stack context for the block
-    let st_ctx = ctx.context.clone().get();
+    let st_ctx = ctx.get_context().clone().get();
     assert_eq!(st_ctx.len(), 1);
     assert_eq!(
         st_ctx[0],

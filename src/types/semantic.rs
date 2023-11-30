@@ -7,6 +7,12 @@ use super::expression::{ExpressionOperations, ExpressionResult};
 use super::types::StructTypes;
 use super::{Constant, Function, FunctionStatement, LabelName, Value};
 
+pub trait GlobalSemanticContext {
+    fn function_declaration(&mut self, fn_decl: FunctionStatement);
+    fn constant(&mut self, const_decl: Constant);
+    fn types(&mut self, type_decl: StructTypes);
+}
+
 /// Semantic Context trait contain instructions set functions
 /// for the Stack context.
 pub trait SemanticContext {
@@ -23,9 +29,6 @@ pub trait SemanticContext {
     fn call(&mut self, call: Function, params: Vec<ExpressionResult>, register_number: u64);
     fn let_binding(&mut self, let_decl: Value, expr_result: ExpressionResult);
     fn binding(&mut self, val: Value, expr_result: ExpressionResult);
-    fn function_declaration(&mut self, fn_decl: FunctionStatement);
-    fn constant(&mut self, const_decl: Constant);
-    fn types(&mut self, type_decl: StructTypes);
     fn expression_function_return(&mut self, expr_result: ExpressionResult);
     fn expression_function_return_with_label(&mut self, expr_result: ExpressionResult);
     fn set_label(&mut self, label: LabelName);
@@ -78,6 +81,35 @@ impl SemanticStack {
     /// Get all context stack data as array data
     pub fn get(self) -> Vec<SemanticStackContext> {
         self.0
+    }
+}
+
+impl GlobalSemanticContext for SemanticStack {
+    /// Push Context to the stack as function declaration data.
+    /// Function declaration instruction.
+    ///
+    /// ## Parameters
+    /// - `fn_decl` - function declaration parameters
+    fn function_declaration(&mut self, fn_decl: FunctionStatement) {
+        self.push(SemanticStackContext::FunctionDeclaration { fn_decl });
+    }
+
+    /// Push Context to the stack as constant data.
+    /// Constant declaration instruction.
+    ///
+    /// ## Parameters
+    /// - `const_decl` - constant declaration parameters
+    fn constant(&mut self, const_decl: Constant) {
+        self.push(SemanticStackContext::Constant { const_decl });
+    }
+
+    /// Push Context to the stack as types data.
+    /// Types declaration instruction.
+    ///
+    /// ## Parameters
+    /// - `type_decl` - type declaration parameters
+    fn types(&mut self, type_decl: StructTypes) {
+        self.push(SemanticStackContext::Types { type_decl });
     }
 }
 
@@ -182,33 +214,6 @@ impl SemanticContext for SemanticStack {
     /// -  `expr_result` - expression result that will be bind to the value
     fn binding(&mut self, val: Value, expr_result: ExpressionResult) {
         self.push(SemanticStackContext::Binding { val, expr_result });
-    }
-
-    /// Push Context to the stack as function declaration data.
-    /// Function declaration instruction.
-    ///
-    /// ## Parameters
-    /// - `fn_decl` - function declaration parameters
-    fn function_declaration(&mut self, fn_decl: FunctionStatement) {
-        self.push(SemanticStackContext::FunctionDeclaration { fn_decl });
-    }
-
-    /// Push Context to the stack as constant data.
-    /// Constant declaration instruction.
-    ///
-    /// ## Parameters
-    /// - `const_decl` - constant declaration parameters
-    fn constant(&mut self, const_decl: Constant) {
-        self.push(SemanticStackContext::Constant { const_decl });
-    }
-
-    /// Push Context to the stack as types data.
-    /// Types declaration instruction.
-    ///
-    /// ## Parameters
-    /// - `type_decl` - type declaration parameters
-    fn types(&mut self, type_decl: StructTypes) {
-        self.push(SemanticStackContext::Types { type_decl });
     }
 
     /// Push Context to the stack as expression function return data.

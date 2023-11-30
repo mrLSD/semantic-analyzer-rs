@@ -153,7 +153,7 @@ fn loop_statements() {
     t.state.loop_statement(&loop_stmt, &block_state);
 
     assert!(block_state.borrow().parent.is_none());
-    assert_eq!(block_state.borrow().context.clone().get().len(), 0);
+    assert_eq!(block_state.borrow().get_context().clone().get().len(), 0);
     assert!(block_state.borrow().parent.is_none());
     assert_eq!(block_state.borrow().children.len(), 1);
 
@@ -161,7 +161,7 @@ fn loop_statements() {
     assert!(ctx.borrow().parent.is_some());
     assert_eq!(ctx.borrow().children.len(), 2);
 
-    let stm_ctx = ctx.borrow().context.clone().get();
+    let stm_ctx = ctx.borrow().get_context().clone().get();
     assert_eq!(stm_ctx.len(), 7);
     assert_eq!(
         stm_ctx[0],
@@ -236,7 +236,7 @@ fn loop_statements() {
     assert!(ch_ctx1.borrow().parent.is_some());
     assert!(ch_ctx1.borrow().children.is_empty());
 
-    let ctx1 = ch_ctx1.borrow().context.clone().get();
+    let ctx1 = ch_ctx1.borrow().get_context().clone().get();
     assert_eq!(ctx1.len(), 5);
     assert_eq!(
         ctx1[0],
@@ -284,7 +284,7 @@ fn loop_statements() {
     assert!(ch_ctx2.borrow().parent.is_some());
     assert!(ch_ctx2.borrow().children.is_empty());
 
-    let ctx2 = ch_ctx2.borrow().context.clone().get();
+    let ctx2 = ch_ctx2.borrow().get_context().clone().get();
     assert_eq!(ctx2.len(), 5);
     assert_eq!(
         ctx2[0],
@@ -438,7 +438,7 @@ fn loop_statements_with_return_invocation() {
     t.state.loop_statement(&loop_stmt, &block_state);
 
     assert!(block_state.borrow().parent.is_none());
-    assert_eq!(block_state.borrow().context.clone().get().len(), 0);
+    assert_eq!(block_state.borrow().get_context().clone().get().len(), 0);
     assert!(block_state.borrow().parent.is_none());
     assert_eq!(block_state.borrow().children.len(), 1);
 
@@ -446,7 +446,7 @@ fn loop_statements_with_return_invocation() {
     assert!(ctx.borrow().parent.is_some());
     assert!(ctx.borrow().children.is_empty());
 
-    let stm_ctx = ctx.borrow().context.clone().get();
+    let stm_ctx = ctx.borrow().get_context().clone().get();
     assert_eq!(stm_ctx.len(), 4);
     assert_eq!(
         stm_ctx[0],
