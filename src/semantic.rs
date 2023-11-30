@@ -15,7 +15,7 @@ use crate::types::block_state::BlockState;
 use crate::types::expression::{
     Expression, ExpressionResult, ExpressionResultValue, ExpressionStructValue,
 };
-use crate::types::semantic::SemanticStack;
+use crate::types::semantic::{SemanticContext, SemanticStack};
 use crate::types::types::{Type, TypeName};
 use crate::types::{
     error, Binding, Constant, ConstantName, Function, FunctionCall, FunctionName,

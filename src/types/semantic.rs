@@ -7,6 +7,58 @@ use super::expression::{ExpressionOperations, ExpressionResult};
 use super::types::StructTypes;
 use super::{Constant, Function, FunctionStatement, LabelName, Value};
 
+/// Semantic Context trait contain instructions set functions
+/// for the Stack context.
+pub trait SemanticContext {
+    fn expression_value(&mut self, expression: Value, register_number: u64);
+    fn expression_const(&mut self, expression: Constant, register_number: u64);
+    fn expression_struct_value(&mut self, expression: Value, index: u32, register_number: u64);
+    fn expression_operation(
+        &mut self,
+        operation: ExpressionOperations,
+        left_value: ExpressionResult,
+        right_value: ExpressionResult,
+        register_number: u64,
+    );
+    fn call(&mut self, call: Function, params: Vec<ExpressionResult>, register_number: u64);
+    fn let_binding(&mut self, let_decl: Value, expr_result: ExpressionResult);
+    fn binding(&mut self, val: Value, expr_result: ExpressionResult);
+    fn function_declaration(&mut self, fn_decl: FunctionStatement);
+    fn constant(&mut self, const_decl: Constant);
+    fn types(&mut self, type_decl: StructTypes);
+    fn expression_function_return(&mut self, expr_result: ExpressionResult);
+    fn expression_function_return_with_label(&mut self, expr_result: ExpressionResult);
+    fn set_label(&mut self, label: LabelName);
+    fn jump_to(&mut self, label: LabelName);
+    fn if_condition_expression(
+        &mut self,
+        expr_result: ExpressionResult,
+        label_if_begin: LabelName,
+        label_if_end: LabelName,
+    );
+    fn condition_expression(
+        &mut self,
+        left_result: ExpressionResult,
+        right_result: ExpressionResult,
+        condition: Condition,
+        register_number: u64,
+    );
+    fn jump_function_return(&mut self, expr_result: ExpressionResult);
+    fn logic_condition(
+        &mut self,
+        logic_condition: LogicCondition,
+        left_register_result: u64,
+        right_register_result: u64,
+        register_number: u64,
+    );
+    fn if_condition_logic(
+        &mut self,
+        label_if_begin: LabelName,
+        label_if_end: LabelName,
+        result_register: u64,
+    );
+}
+
 /// # Semantic stack
 /// Semantic stack represent stack of Semantic Context results
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -27,13 +79,15 @@ impl SemanticStack {
     pub fn get(self) -> Vec<SemanticStackContext> {
         self.0
     }
+}
 
+impl SemanticContext for SemanticStack {
     /// Push Context to the stack as expression value data.
     ///
     /// ## Parameters
     /// - `expression` - contains expression value
     /// - `register_number` - register to store result data
-    pub fn expression_value(&mut self, expression: Value, register_number: u64) {
+    fn expression_value(&mut self, expression: Value, register_number: u64) {
         self.push(SemanticStackContext::ExpressionValue {
             expression,
             register_number,
@@ -45,7 +99,7 @@ impl SemanticStack {
     /// ## Parameters
     /// - `expression` - contains expression constant
     /// - `register_number` - register to store result data
-    pub fn expression_const(&mut self, expression: Constant, register_number: u64) {
+    fn expression_const(&mut self, expression: Constant, register_number: u64) {
         self.push(SemanticStackContext::ExpressionConst {
             expression,
             register_number,
@@ -58,7 +112,7 @@ impl SemanticStack {
     /// - `expression` - contains expression value for specific `Structure` attribute
     /// - `index` - represent attribute index in the `Structure` type
     /// - `register_number` - register to store result data
-    pub fn expression_struct_value(&mut self, expression: Value, index: u32, register_number: u64) {
+    fn expression_struct_value(&mut self, expression: Value, index: u32, register_number: u64) {
         self.push(SemanticStackContext::ExpressionStructValue {
             expression,
             index,
@@ -75,7 +129,7 @@ impl SemanticStack {
     /// - `left_value` - left expression result
     /// - `right_value` - right expression result
     /// - `register_number` - register to store result of expression operation
-    pub fn expression_operation(
+    fn expression_operation(
         &mut self,
         operation: ExpressionOperations,
         left_value: ExpressionResult,
@@ -97,7 +151,7 @@ impl SemanticStack {
     /// - `call` - function declaration data
     /// - `params` - function parameters
     ///  - `register_number` - register to store result of function call
-    pub fn call(&mut self, call: Function, params: Vec<ExpressionResult>, register_number: u64) {
+    fn call(&mut self, call: Function, params: Vec<ExpressionResult>, register_number: u64) {
         self.push(SemanticStackContext::Call {
             call,
             params,
@@ -112,7 +166,7 @@ impl SemanticStack {
     /// ## Parameters
     /// - `let_decl` - value declaration
     /// -  `expr_result` - expression result that will be bind to the value
-    pub fn let_binding(&mut self, let_decl: Value, expr_result: ExpressionResult) {
+    fn let_binding(&mut self, let_decl: Value, expr_result: ExpressionResult) {
         self.push(SemanticStackContext::LetBinding {
             let_decl,
             expr_result,
@@ -126,7 +180,7 @@ impl SemanticStack {
     /// ## Parameters
     /// - `val` - value declaration
     /// -  `expr_result` - expression result that will be bind to the value
-    pub fn binding(&mut self, val: Value, expr_result: ExpressionResult) {
+    fn binding(&mut self, val: Value, expr_result: ExpressionResult) {
         self.push(SemanticStackContext::Binding { val, expr_result });
     }
 
@@ -135,7 +189,7 @@ impl SemanticStack {
     ///
     /// ## Parameters
     /// - `fn_decl` - function declaration parameters
-    pub fn function_declaration(&mut self, fn_decl: FunctionStatement) {
+    fn function_declaration(&mut self, fn_decl: FunctionStatement) {
         self.push(SemanticStackContext::FunctionDeclaration { fn_decl });
     }
 
@@ -144,7 +198,7 @@ impl SemanticStack {
     ///
     /// ## Parameters
     /// - `const_decl` - constant declaration parameters
-    pub fn constant(&mut self, const_decl: Constant) {
+    fn constant(&mut self, const_decl: Constant) {
         self.push(SemanticStackContext::Constant { const_decl });
     }
 
@@ -153,7 +207,7 @@ impl SemanticStack {
     ///
     /// ## Parameters
     /// - `type_decl` - type declaration parameters
-    pub fn types(&mut self, type_decl: StructTypes) {
+    fn types(&mut self, type_decl: StructTypes) {
         self.push(SemanticStackContext::Types { type_decl });
     }
 
@@ -163,7 +217,7 @@ impl SemanticStack {
     ///
     /// ## Parameters
     /// - `expr_result` - result data for the return
-    pub fn expression_function_return(&mut self, expr_result: ExpressionResult) {
+    fn expression_function_return(&mut self, expr_result: ExpressionResult) {
         self.push(SemanticStackContext::ExpressionFunctionReturn { expr_result });
     }
 
@@ -177,7 +231,7 @@ impl SemanticStack {
     ///
     /// ## Parameters
     /// - `expr_result` - result data for the return
-    pub fn expression_function_return_with_label(&mut self, expr_result: ExpressionResult) {
+    fn expression_function_return_with_label(&mut self, expr_result: ExpressionResult) {
         self.push(SemanticStackContext::ExpressionFunctionReturnWithLabel { expr_result });
     }
 
@@ -186,7 +240,7 @@ impl SemanticStack {
     ///
     /// ## Parameters
     /// - `label` - label name
-    pub fn set_label(&mut self, label: LabelName) {
+    fn set_label(&mut self, label: LabelName) {
         self.push(SemanticStackContext::SetLabel { label });
     }
 
@@ -195,7 +249,7 @@ impl SemanticStack {
     ///
     /// ## Parameters
     /// - `label` - label for the jump
-    pub fn jump_to(&mut self, label: LabelName) {
+    fn jump_to(&mut self, label: LabelName) {
         self.push(SemanticStackContext::JumpTo { label });
     }
 
@@ -208,7 +262,7 @@ impl SemanticStack {
     /// conditional instruction
     /// - `label_if_begin` - label for jump if expression is "true"
     /// - `label_if_end` - label for jump if expression is "false"
-    pub fn if_condition_expression(
+    fn if_condition_expression(
         &mut self,
         expr_result: ExpressionResult,
         label_if_begin: LabelName,
@@ -229,7 +283,7 @@ impl SemanticStack {
     /// - `right_result` - right expression result
     /// - `condition` - condition operation
     /// - `register_number` - register to store result of expression operation
-    pub fn condition_expression(
+    fn condition_expression(
         &mut self,
         left_result: ExpressionResult,
         right_result: ExpressionResult,
@@ -251,7 +305,7 @@ impl SemanticStack {
     ///
     /// ## Parameters
     /// - `expr_result` - expression result for return condition
-    pub fn jump_function_return(&mut self, expr_result: ExpressionResult) {
+    fn jump_function_return(&mut self, expr_result: ExpressionResult) {
         self.push(SemanticStackContext::JumpFunctionReturn { expr_result });
     }
 
@@ -263,7 +317,7 @@ impl SemanticStack {
     /// - left_register_result - result of left condition
     /// - right_register_result - result of right condition
     /// - register_number - register to store instruction result
-    pub fn logic_condition(
+    fn logic_condition(
         &mut self,
         logic_condition: LogicCondition,
         left_register_result: u64,
@@ -292,7 +346,7 @@ impl SemanticStack {
     /// example `if_else`)
     /// - `result_register` - contains register of previous condition logic
     /// calculations.
-    pub fn if_condition_logic(
+    fn if_condition_logic(
         &mut self,
         label_if_begin: LabelName,
         label_if_end: LabelName,
