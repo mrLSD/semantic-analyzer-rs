@@ -31,6 +31,7 @@ pub enum StateErrorKind {
     ForbiddenCodeAfterReturnDeprecated,
     ForbiddenCodeAfterContinueDeprecated,
     ForbiddenCodeAfterBreakDeprecated,
+    FunctionArgumentNameDuplicated,
 }
 
 /// State error location. Useful to determine location of error
@@ -49,6 +50,7 @@ pub struct StateErrorResult {
 }
 
 impl StateErrorResult {
+    #[must_use]
     pub const fn new(kind: StateErrorKind, value: String, location: CodeLocation) -> Self {
         Self {
             kind,
@@ -59,8 +61,8 @@ impl StateErrorResult {
 }
 
 impl StateErrorResult {
-    #[allow(dead_code)]
     /// Get state trace data from error result as string
+    #[must_use]
     pub fn trace_state(&self) -> String {
         format!(
             "[{:?}] for value {:?} at: {:?}:{:?}",

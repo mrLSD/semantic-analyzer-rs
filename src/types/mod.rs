@@ -418,7 +418,7 @@ impl ToString for PrimitiveValue {
             Self::F64(val) => val.clone().to_string(),
             Self::Bool(val) => val.to_string(),
             Self::String(s) => s.clone(),
-            Self::Char(c) => format!("{}", c),
+            Self::Char(c) => format!("{c}"),
             Self::Ptr => "ptr".to_string(),
             Self::None => "None".to_string(),
         }

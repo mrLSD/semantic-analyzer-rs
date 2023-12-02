@@ -56,11 +56,13 @@ pub enum Type {
 
 impl Type {
     /// Get type name
+    #[must_use]
     pub fn name(&self) -> TypeName {
         self.to_string().into()
     }
 
     /// Get structure type if it is
+    #[must_use]
     pub fn get_struct(&self) -> Option<StructTypes> {
         match self {
             Self::Struct(ty) => Some(ty.clone()),
@@ -231,7 +233,7 @@ impl From<ast::StructTypes<'_>> for StructTypes {
                 for (index, val) in value.attributes.iter().enumerate() {
                     let name = (*val.attr_name.fragment()).to_string();
                     let mut v: StructAttributeType = val.clone().into();
-                    v.attr_index = index as u32;
+                    v.attr_index = u32::try_from(index).unwrap_or_default();
                     res.insert(name.into(), v);
                 }
                 res

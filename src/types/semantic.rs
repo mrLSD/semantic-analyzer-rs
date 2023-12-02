@@ -5,7 +5,7 @@
 use super::condition::{Condition, LogicCondition};
 use super::expression::{ExpressionOperations, ExpressionResult};
 use super::types::StructTypes;
-use super::{Constant, Function, FunctionStatement, LabelName, Value};
+use super::{Constant, Function, FunctionParameter, FunctionStatement, LabelName, Value};
 
 pub trait GlobalSemanticContext {
     fn function_declaration(&mut self, fn_decl: FunctionStatement);
@@ -60,6 +60,7 @@ pub trait SemanticContext {
         label_if_end: LabelName,
         result_register: u64,
     );
+    fn function_arg(&mut self, value: Value, func_arg: FunctionParameter);
 }
 
 /// # Semantic stack
@@ -69,6 +70,7 @@ pub struct SemanticStack(Vec<SemanticStackContext>);
 
 impl SemanticStack {
     /// Init Semantic stack
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -79,6 +81,7 @@ impl SemanticStack {
     }
 
     /// Get all context stack data as array data
+    #[must_use]
     pub fn get(self) -> Vec<SemanticStackContext> {
         self.0
     }
@@ -319,9 +322,9 @@ impl SemanticContext for SemanticStack {
     /// Result of calculation stored to `register_number`.
     ///
     /// ## Parameters
-    /// - left_register_result - result of left condition
-    /// - right_register_result - result of right condition
-    /// - register_number - register to store instruction result
+    /// - `left_register_result` - result of left condition
+    /// - `right_register_result` - result of right condition
+    /// - `register_number` - register to store instruction result
     fn logic_condition(
         &mut self,
         logic_condition: LogicCondition,
@@ -362,6 +365,16 @@ impl SemanticContext for SemanticStack {
             label_if_end,
             result_register,
         });
+    }
+
+    /// Push Context to the stack as `function argument` data.
+    /// This instruction should allocate pointer (if argument type is
+    /// not Ptr) and store argument value to the pointer.
+    ///
+    /// ## Parameters
+    /// - `func_arg` - function parameter data
+    fn function_arg(&mut self, value: Value, func_arg: FunctionParameter) {
+        self.push(SemanticStackContext::FunctionArg { value, func_arg });
     }
 }
 
@@ -447,5 +460,9 @@ pub enum SemanticStackContext {
         label_if_begin: LabelName,
         label_if_end: LabelName,
         result_register: u64,
+    },
+    FunctionArg {
+        value: Value,
+        func_arg: FunctionParameter,
     },
 }

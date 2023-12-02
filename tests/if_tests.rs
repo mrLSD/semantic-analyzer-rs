@@ -305,7 +305,7 @@ fn check_if_and_else_if_statement_duplicate() {
         else_statement: Some(ast::IfBodyStatements::If(vec![])),
         else_if_statement: Some(Box::new(if_else_stmt)),
     };
-    t.state.if_condition(&if_stmt, &block_state, None, None);
+    t.state.if_condition(&if_stmt, &block_state, &None, None);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
         t.check_error(StateErrorKind::IfElseDuplicated),
@@ -773,9 +773,10 @@ fn else_if_statement() {
     t.state.if_condition(
         &if_stmt,
         &block_state,
-        None,
+        &None,
         Some((&label_loop_begin, &label_loop_end)),
     );
+    println!("{:#?}", t.state.errors);
     assert!(t.is_empty_error());
 
     let main_ctx = block_state.borrow().get_context().clone().get();
@@ -981,7 +982,7 @@ fn if_body_statements() {
     t.state.if_condition(
         &if_stmt,
         &block_state,
-        None,
+        &None,
         Some((&label_loop_begin, &label_loop_end)),
     );
     assert!(t.is_empty_error());
@@ -1268,7 +1269,7 @@ fn if_loop_body_statements() {
     t.state.if_condition(
         &if_stmt,
         &block_state,
-        None,
+        &None,
         Some((&label_loop_begin, &label_loop_end)),
     );
     assert!(t.is_empty_error());
@@ -1495,7 +1496,7 @@ fn if_loop_body_instructions_after_return() {
     t.state.if_condition(
         &if_stmt,
         &block_state,
-        None,
+        &None,
         Some((&label_loop_begin, &label_loop_end)),
     );
 
@@ -1547,7 +1548,7 @@ fn else_if_loop_body_instructions_after_return() {
     t.state.if_condition(
         &if_stmt,
         &block_state,
-        None,
+        &None,
         Some((&label_loop_begin, &label_loop_end)),
     );
 
@@ -1596,7 +1597,7 @@ fn if_body_instructions_after_return() {
     t.state.if_condition(
         &if_stmt,
         &block_state,
-        None,
+        &None,
         Some((&label_loop_begin, &label_loop_end)),
     );
 
@@ -1648,7 +1649,7 @@ fn if_else_body_instructions_after_return() {
     t.state.if_condition(
         &if_stmt,
         &block_state,
-        None,
+        &None,
         Some((&label_loop_begin, &label_loop_end)),
     );
 
@@ -1694,7 +1695,7 @@ fn if_loop_body_instructions_after_break() {
     t.state.if_condition(
         &if_stmt,
         &block_state,
-        None,
+        &None,
         Some((&label_loop_begin, &label_loop_end)),
     );
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
@@ -1739,7 +1740,7 @@ fn if_loop_body_instructions_after_continue() {
     t.state.if_condition(
         &if_stmt,
         &block_state,
-        None,
+        &None,
         Some((&label_loop_begin, &label_loop_end)),
     );
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());

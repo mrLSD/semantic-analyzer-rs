@@ -9,8 +9,8 @@ use semantic_analyzer::types::{
     block_state::BlockState,
     semantic::SemanticStack,
     types::{PrimitiveTypes, Type},
-    Constant, ConstantExpression, ConstantValue, Function, InnerValueName, LabelName, Value,
-    ValueName,
+    Constant, ConstantExpression, ConstantValue, Function, FunctionParameter, InnerValueName,
+    LabelName, Value, ValueName,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -277,7 +277,12 @@ fn block_state_instructions_with_parent() {
     let logic_condition = LogicCondition::And;
     bst.logic_condition(logic_condition, 1, 2, 3);
     bst.if_condition_logic(label.clone(), label, 1);
+    let func_arg = FunctionParameter {
+        name: ast::ParameterName::new(Ident::new("x")).into(),
+        parameter_type: Type::Primitive(PrimitiveTypes::Ptr),
+    };
+    bst.function_arg(val, func_arg);
 
     let parent_ctx = parent_bst.borrow().get_context().get();
-    assert_eq!(parent_ctx.len(), 16);
+    assert_eq!(parent_ctx.len(), 17);
 }

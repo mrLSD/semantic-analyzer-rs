@@ -19,7 +19,7 @@ use crate::types::semantic::{GlobalSemanticContext, SemanticContext, SemanticSta
 use crate::types::types::{Type, TypeName};
 use crate::types::{
     error, Binding, Constant, ConstantName, Function, FunctionCall, FunctionName,
-    FunctionStatement, LabelName, LetBinding, Value,
+    FunctionParameter, FunctionStatement, InnerValueName, LabelName, LetBinding, Value,
 };
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -74,6 +74,7 @@ impl Default for State {
 
 impl State {
     /// Init new `State`
+    #[must_use]
     pub fn new() -> Self {
         Self {
             global: GlobalState {
@@ -129,7 +130,7 @@ impl State {
         // identification for using it in functions body.
 
         // First pass is Imports and Types
-        for main in data.iter() {
+        for main in data {
             match main {
                 ast::MainStatement::Import(import) => self.import(import),
                 ast::MainStatement::Types(types) => self.types(types),
@@ -137,7 +138,7 @@ impl State {
             }
         }
         // Declaration pass for Constants and Functions
-        for main in data.iter() {
+        for main in data {
             match main {
                 ast::MainStatement::Constant(constant) => self.constant(constant),
                 ast::MainStatement::Function(function) => self.function_declaration(function),
@@ -146,7 +147,7 @@ impl State {
         }
 
         // After getting all functions declarations, fetch only functions body
-        for main in data.iter() {
+        for main in data {
             if let ast::MainStatement::Function(function) = main {
                 self.function_body(function);
             }
@@ -182,7 +183,7 @@ impl State {
     /// If expression contains `Constant` check is constant exists.
     /// Values doesn't check as it's just `Primitive Values`.
     /// Also check all expression tree branches.
-    /// If ConstantValue doesn't exist add error to `Error State` and `return` false result.
+    /// If `ConstantValue` doesn't exist add error to `Error State` and `return` false result.
     pub fn check_constant_value_expression(
         &mut self,
         data: &Option<(ast::ExpressionOperations, Box<ast::ConstantExpression<'_>>)>,
@@ -207,7 +208,7 @@ impl State {
                     }
                     self.check_constant_value_expression(&child_data.operation)
                 }
-                _ => true,
+                ast::ConstantValue::Value(_) => true,
             }
         } else {
             true
@@ -278,6 +279,60 @@ impl State {
             .function_declaration(data.clone().into());
     }
 
+    /// Init function parameters.
+    /// It's init function parameters as values, same as let-binding.
+    /// And add instructions to `SemanticStack`.
+    fn init_func_params(
+        &mut self,
+        function_state: &Rc<RefCell<BlockState>>,
+        fn_params: &Vec<ast::FunctionParameter<'_>>,
+    ) {
+        for fn_param in fn_params {
+            let func_param: FunctionParameter = fn_param.clone().into();
+            let arg_name = func_param.clone().to_string();
+
+            // Find value in current state and parent states
+            let value = function_state
+                .borrow()
+                .get_value_name(&arg_name.clone().into());
+            // Calculate `inner_name` as unique for current and all parent states
+            let inner_name: InnerValueName = if value.is_none() {
+                // if value not found in all states check and set
+                // `inner_value` from value name
+                // NOTE: value number not incremented
+                arg_name.clone().into()
+            } else {
+                // Function parameter name can't be with the same name.
+                // Produce error
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::FunctionArgumentNameDuplicated,
+                    arg_name,
+                    CodeLocation::new(1, 1),
+                ));
+                return;
+            };
+            // Set value parameters
+            let value = Value {
+                inner_name: inner_name.clone(),
+                inner_type: func_param.parameter_type.clone(),
+                mutable: false,
+                alloca: false,
+                malloc: false,
+            };
+            // Value inserted only to current state by Value name and Value data
+            function_state
+                .borrow_mut()
+                .values
+                .insert(arg_name.into(), value.clone());
+            // Set `inner_name` to current state and all parent states
+            function_state
+                .borrow_mut()
+                .set_inner_value_name(&inner_name);
+
+            function_state.borrow_mut().function_arg(value, func_param);
+        }
+    }
+
     /// Function body analyze.
     /// It is basic execution entity for program flow.
     /// It's operate sub analyze for function elements. It's contain
@@ -286,6 +341,8 @@ impl State {
         // Init empty function body state
         let body_state = Rc::new(RefCell::new(BlockState::new(None)));
         self.add_state_context(body_state.clone());
+        // Init function parameters - add to SemanticStackContext
+        self.init_func_params(&body_state, &data.parameters);
         // Flag to indicate is function return called
         let mut return_is_called = false;
         // Fetch function elements and gather errors
@@ -308,7 +365,7 @@ impl State {
                     self.function_call(fn_call, &body_state);
                 }
                 ast::BodyStatement::If(if_condition) => {
-                    self.if_condition(if_condition, &body_state, None, None);
+                    self.if_condition(if_condition, &body_state, &None, None);
                 }
                 ast::BodyStatement::Loop(loop_statement) => {
                     self.loop_statement(loop_statement, &body_state);
@@ -455,9 +512,7 @@ impl State {
         let bind_data: Binding = data.clone().into();
 
         // Find value in current state and parent states
-        let value = if let Some(val) = function_state.borrow().get_value_name(&bind_data.name) {
-            val
-        } else {
+        let Some(value) = function_state.borrow().get_value_name(&bind_data.name) else {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::ValueNotFound,
                 bind_data.to_string(),
@@ -569,16 +624,14 @@ impl State {
             ));
             return function_body_state.borrow().last_register_number;
         }
-        match left_res.expr_type {
-            Type::Primitive(_) => (),
-            _ => {
-                self.add_error(error::StateErrorResult::new(
-                    error::StateErrorKind::ConditionExpressionNotSupported,
-                    left_res.expr_type.to_string(),
-                    data.left.left.location(),
-                ));
-                return function_body_state.borrow().last_register_number;
-            }
+        if let Type::Primitive(_) = left_res.expr_type {
+        } else {
+            self.add_error(error::StateErrorResult::new(
+                error::StateErrorKind::ConditionExpressionNotSupported,
+                left_res.expr_type.to_string(),
+                data.left.left.location(),
+            ));
+            return function_body_state.borrow().last_register_number;
         }
 
         // Increment register
@@ -619,7 +672,7 @@ impl State {
     /// # If-condition body
     /// Analyze body for ant if condition:
     /// - if, else, if-else
-    /// NOTE: label_end - is always already exists
+    /// NOTE: `label_end` - is always already exists
     /// ## Return
     /// Return body statement "return" status
     pub fn if_condition_body(
@@ -630,7 +683,7 @@ impl State {
         label_loop: Option<(&LabelName, &LabelName)>,
     ) -> bool {
         let mut return_is_called = false;
-        for body in body.iter() {
+        for body in body {
             if return_is_called {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::ForbiddenCodeAfterReturnDeprecated,
@@ -652,7 +705,7 @@ impl State {
                     self.if_condition(
                         if_condition,
                         if_body_state,
-                        Some(label_end.clone()),
+                        &Some(label_end.clone()),
                         label_loop,
                     );
                 }
@@ -691,7 +744,7 @@ impl State {
         let mut return_is_called = false;
         let mut break_is_called = false;
         let mut continue_is_called = false;
-        for body in body.iter() {
+        for body in body {
             if return_is_called {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::ForbiddenCodeAfterReturnDeprecated,
@@ -728,7 +781,7 @@ impl State {
                     self.if_condition(
                         if_condition,
                         if_body_state,
-                        Some(label_if_end.clone()),
+                        &Some(label_if_end.clone()),
                         Some((label_loop_start, label_loop_end)),
                     );
                 }
@@ -835,16 +888,20 @@ impl State {
     /// context, and main goal is to end all of if-condition nodes in
     /// the same flow with same `if-end` label. It's especially important
     /// for `else-if` condition.
+    ///
+    /// ## Panics
+    /// `label_loop` is must be set, it's special case for the Loop,
+    /// when `label_loop` should always be set. If it doesn't set, it's
+    /// unexpected behavior and program algorithm error
     pub fn if_condition(
         &mut self,
         data: &ast::IfStatement<'_>,
         function_body_state: &Rc<RefCell<BlockState>>,
-        label_end: Option<LabelName>,
+        label_end: &Option<LabelName>,
         label_loop: Option<(&LabelName, &LabelName)>,
     ) {
         // It can't contain `else` and `if-else` on the same time
-        if data.else_statement.is_some() && data.else_if_statement.is_some() {
-            let stm = data.else_if_statement.clone().unwrap();
+        if let (Some(_), Some(stm)) = (&data.else_statement, &data.else_if_statement) {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::IfElseDuplicated,
                 String::from("if-condition"),
@@ -877,7 +934,7 @@ impl State {
             |label| label,
         );
         // To set if-end as single return point check is it previously set
-        let is_set_label_if_end = label_end.clone().is_some();
+        let is_set_label_if_end = label_end.is_some();
         let is_else = data.else_statement.is_some() || data.else_if_statement.is_some();
 
         // Analyse if-conditions
@@ -966,7 +1023,7 @@ impl State {
                 self.if_condition(
                     else_if_statement,
                     function_body_state,
-                    Some(label_if_end.clone()),
+                    &Some(label_if_end.clone()),
                     label_loop,
                 );
             }
@@ -1017,7 +1074,7 @@ impl State {
         let mut return_is_called = false;
         let mut break_is_called = false;
         let mut continue_is_called = false;
-        for body in data.iter() {
+        for body in data {
             if return_is_called {
                 self.add_error(error::StateErrorResult::new(
                     error::StateErrorKind::ForbiddenCodeAfterReturnDeprecated,
@@ -1053,7 +1110,7 @@ impl State {
                 ast::LoopBodyStatement::If(if_condition) => self.if_condition(
                     if_condition,
                     &loop_body_state,
-                    None,
+                    &None,
                     Some((&label_loop_begin, &label_loop_end)),
                 ),
                 ast::LoopBodyStatement::Loop(loop_statement) => {
@@ -1270,7 +1327,7 @@ impl State {
                 let last_register_number = body_state.borrow().last_register_number;
                 body_state.borrow_mut().expression_struct_value(
                     val.clone(),
-                    attributes.clone().attr_index,
+                    attributes.attr_index,
                     last_register_number,
                 );
 
@@ -1371,7 +1428,7 @@ impl State {
                         ast::ExpressionValue::Expression(Box::new(ast::Expression {
                             expression_value: data.expression_value,
                             operation: Some((
-                                op.clone(),
+                                op,
                                 Box::new(ast::Expression {
                                     expression_value: expr.expression_value,
                                     operation: None,
