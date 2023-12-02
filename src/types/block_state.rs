@@ -200,16 +200,33 @@ impl BlockState {
 
 impl SemanticContext for BlockState {
     fn expression_value(&mut self, expression: Value, register_number: u64) {
-        self.context.expression_value(expression, register_number);
+        self.context
+            .expression_value(expression.clone(), register_number);
+        if let Some(parent) = &self.parent {
+            parent
+                .borrow_mut()
+                .expression_value(expression, register_number);
+        }
     }
 
     fn expression_const(&mut self, expression: Constant, register_number: u64) {
-        self.context.expression_const(expression, register_number);
+        self.context
+            .expression_const(expression.clone(), register_number);
+        if let Some(parent) = &self.parent {
+            parent
+                .borrow_mut()
+                .expression_const(expression, register_number);
+        }
     }
 
     fn expression_struct_value(&mut self, expression: Value, index: u32, register_number: u64) {
         self.context
-            .expression_struct_value(expression, index, register_number)
+            .expression_struct_value(expression.clone(), index, register_number);
+        if let Some(parent) = &self.parent {
+            parent
+                .borrow_mut()
+                .expression_struct_value(expression, index, register_number)
+        }
     }
 
     fn expression_operation(
@@ -219,37 +236,74 @@ impl SemanticContext for BlockState {
         right_value: ExpressionResult,
         register_number: u64,
     ) {
-        self.context
-            .expression_operation(operation, left_value, right_value, register_number);
+        self.context.expression_operation(
+            operation.clone(),
+            left_value.clone(),
+            right_value.clone(),
+            register_number,
+        );
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().expression_operation(
+                operation,
+                left_value,
+                right_value,
+                register_number,
+            );
+        }
     }
 
     fn call(&mut self, call: Function, params: Vec<ExpressionResult>, register_number: u64) {
-        self.context.call(call, params, register_number);
+        self.context
+            .call(call.clone(), params.clone(), register_number);
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().call(call, params, register_number);
+        }
     }
 
     fn let_binding(&mut self, let_decl: Value, expr_result: ExpressionResult) {
-        self.context.let_binding(let_decl, expr_result);
+        self.context
+            .let_binding(let_decl.clone(), expr_result.clone());
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().let_binding(let_decl, expr_result);
+        }
     }
 
     fn binding(&mut self, val: Value, expr_result: ExpressionResult) {
-        self.context.binding(val, expr_result);
+        self.context.binding(val.clone(), expr_result.clone());
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().binding(val, expr_result);
+        }
     }
 
     fn expression_function_return(&mut self, expr_result: ExpressionResult) {
-        self.context.expression_function_return(expr_result);
+        self.context.expression_function_return(expr_result.clone());
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().expression_function_return(expr_result);
+        }
     }
 
     fn expression_function_return_with_label(&mut self, expr_result: ExpressionResult) {
         self.context
-            .expression_function_return_with_label(expr_result);
+            .expression_function_return_with_label(expr_result.clone());
+        if let Some(parent) = &self.parent {
+            parent
+                .borrow_mut()
+                .expression_function_return_with_label(expr_result);
+        }
     }
 
     fn set_label(&mut self, label: LabelName) {
-        self.context.set_label(label);
+        self.context.set_label(label.clone());
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().set_label(label);
+        }
     }
 
     fn jump_to(&mut self, label: LabelName) {
-        self.context.jump_to(label);
+        self.context.jump_to(label.clone());
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().jump_to(label);
+        }
     }
 
     fn if_condition_expression(
@@ -258,8 +312,16 @@ impl SemanticContext for BlockState {
         label_if_begin: LabelName,
         label_if_end: LabelName,
     ) {
-        self.context
-            .if_condition_expression(expr_result, label_if_begin, label_if_end);
+        self.context.if_condition_expression(
+            expr_result.clone(),
+            label_if_begin.clone(),
+            label_if_end.clone(),
+        );
+        if let Some(parent) = &self.parent {
+            parent
+                .borrow_mut()
+                .if_condition_expression(expr_result, label_if_begin, label_if_end);
+        }
     }
 
     fn condition_expression(
@@ -269,12 +331,27 @@ impl SemanticContext for BlockState {
         condition: Condition,
         register_number: u64,
     ) {
-        self.context
-            .condition_expression(left_result, right_result, condition, register_number);
+        self.context.condition_expression(
+            left_result.clone(),
+            right_result.clone(),
+            condition.clone(),
+            register_number,
+        );
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().condition_expression(
+                left_result,
+                right_result,
+                condition,
+                register_number,
+            );
+        }
     }
 
     fn jump_function_return(&mut self, expr_result: ExpressionResult) {
-        self.context.jump_function_return(expr_result);
+        self.context.jump_function_return(expr_result.clone());
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().jump_function_return(expr_result);
+        }
     }
 
     fn logic_condition(
@@ -285,11 +362,19 @@ impl SemanticContext for BlockState {
         register_number: u64,
     ) {
         self.context.logic_condition(
-            logic_condition,
+            logic_condition.clone(),
             left_register_result,
             right_register_result,
             register_number,
         );
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().logic_condition(
+                logic_condition,
+                left_register_result,
+                right_register_result,
+                register_number,
+            );
+        }
     }
 
     fn if_condition_logic(
@@ -298,7 +383,15 @@ impl SemanticContext for BlockState {
         label_if_end: LabelName,
         result_register: u64,
     ) {
-        self.context
-            .if_condition_logic(label_if_begin, label_if_end, result_register);
+        self.context.if_condition_logic(
+            label_if_begin.clone(),
+            label_if_end.clone(),
+            result_register,
+        );
+        if let Some(parent) = &self.parent {
+            parent
+                .borrow_mut()
+                .if_condition_logic(label_if_begin, label_if_end, result_register);
+        }
     }
 }

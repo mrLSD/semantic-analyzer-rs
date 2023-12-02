@@ -1,5 +1,6 @@
 use semantic_analyzer::ast::{self, Ident};
 use semantic_analyzer::semantic::State;
+use semantic_analyzer::types::semantic::SemanticContext;
 use semantic_analyzer::types::{
     block_state::BlockState,
     semantic::SemanticStack,
@@ -221,4 +222,20 @@ fn block_state_last_register_inc() {
     assert_eq!(bst3.last_register_number, 1);
     // For grcov
     format!("{bst3:?}");
+}
+
+#[test]
+fn block_state_instructions_with_parent() {
+    let parent_bst = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut bst = BlockState::new(Some(parent_bst.clone()));
+    let val = Value {
+        inner_name: String::from("x").into(),
+        inner_type: Type::Primitive(PrimitiveTypes::Ptr),
+        mutable: false,
+        alloca: false,
+        malloc: false,
+    };
+    bst.expression_value(val, 1);
+    let parent_ctx = parent_bst.borrow().get_context().get();
+    assert_eq!(parent_ctx.len(), 1);
 }
