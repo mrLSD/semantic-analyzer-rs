@@ -1,11 +1,16 @@
 use semantic_analyzer::ast::{self, Ident};
 use semantic_analyzer::semantic::State;
+use semantic_analyzer::types::condition::{Condition, LogicCondition};
+use semantic_analyzer::types::expression::{
+    ExpressionOperations, ExpressionResult, ExpressionResultValue,
+};
 use semantic_analyzer::types::semantic::SemanticContext;
 use semantic_analyzer::types::{
     block_state::BlockState,
     semantic::SemanticStack,
     types::{PrimitiveTypes, Type},
-    InnerValueName, LabelName, Value, ValueName,
+    Constant, ConstantExpression, ConstantValue, Function, InnerValueName, LabelName, Value,
+    ValueName,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -235,7 +240,44 @@ fn block_state_instructions_with_parent() {
         alloca: false,
         malloc: false,
     };
-    bst.expression_value(val, 1);
+    bst.expression_value(val.clone(), 1);
+    let expr_const: Constant = Constant {
+        name: String::from("cnt1").into(),
+        constant_type: Type::Primitive(PrimitiveTypes::Ptr),
+        constant_value: ConstantExpression {
+            value: ConstantValue::Constant(String::from("cnt2").into()),
+            operation: None,
+        },
+    };
+    bst.expression_const(expr_const, 1);
+    bst.expression_struct_value(val.clone(), 1, 1);
+    let expr_op = ExpressionOperations::Plus;
+    let expr_res = ExpressionResult {
+        expr_type: Type::Primitive(PrimitiveTypes::Ptr),
+        expr_value: ExpressionResultValue::Register(1),
+    };
+    bst.expression_operation(expr_op, expr_res.clone(), expr_res.clone(), 1);
+    let call_fn = Function {
+        inner_name: String::from("fn1").into(),
+        inner_type: Type::Primitive(PrimitiveTypes::Ptr),
+        parameters: vec![],
+    };
+    bst.call(call_fn, vec![], 1);
+    bst.let_binding(val.clone(), expr_res.clone());
+    bst.binding(val.clone(), expr_res.clone());
+    bst.expression_function_return(expr_res.clone());
+    bst.expression_function_return_with_label(expr_res.clone());
+    let label: LabelName = String::from("label").into();
+    bst.set_label(label.clone());
+    bst.jump_to(label.clone());
+    bst.if_condition_expression(expr_res.clone(), label.clone(), label.clone());
+    let condition = Condition::Great;
+    bst.condition_expression(expr_res.clone(), expr_res.clone(), condition, 1);
+    bst.jump_function_return(expr_res);
+    let logic_condition = LogicCondition::And;
+    bst.logic_condition(logic_condition, 1, 2, 3);
+    bst.if_condition_logic(label.clone(), label, 1);
+
     let parent_ctx = parent_bst.borrow().get_context().get();
-    assert_eq!(parent_ctx.len(), 1);
+    assert_eq!(parent_ctx.len(), 16);
 }
