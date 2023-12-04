@@ -2,7 +2,7 @@
 //! Block state Semantic types.
 
 use super::semantic::SemanticStack;
-use super::{Constant, Function, InnerValueName, LabelName, Value, ValueName};
+use super::{Constant, Function, FunctionParameter, InnerValueName, LabelName, Value, ValueName};
 use crate::types::condition::{Condition, LogicCondition};
 use crate::types::expression::{ExpressionOperations, ExpressionResult};
 use crate::types::semantic::SemanticContext;
@@ -392,6 +392,13 @@ impl SemanticContext for BlockState {
             parent
                 .borrow_mut()
                 .if_condition_logic(label_if_begin, label_if_end, result_register);
+        }
+    }
+
+    fn function_arg(&mut self, value: Value, func_arg: FunctionParameter) {
+        self.context.function_arg(value.clone(), func_arg.clone());
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().function_arg(value, func_arg);
         }
     }
 }
