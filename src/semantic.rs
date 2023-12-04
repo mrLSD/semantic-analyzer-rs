@@ -19,7 +19,7 @@ use crate::types::semantic::{GlobalSemanticContext, SemanticContext, SemanticSta
 use crate::types::types::{Type, TypeName};
 use crate::types::{
     error, Binding, Constant, ConstantName, Function, FunctionCall, FunctionName,
-    FunctionStatement, LabelName, LetBinding, Value,
+    FunctionParameter, FunctionStatement, InnerValueName, LabelName, LetBinding, Value,
 };
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -278,6 +278,60 @@ impl State {
             .function_declaration(data.clone().into());
     }
 
+    /// Init function parameters.
+    /// It's init function parameters as values, same as let-binding.
+    /// And add instructions to `SemanticStack`.
+    fn init_func_params(
+        &mut self,
+        function_state: &Rc<RefCell<BlockState>>,
+        fn_params: &Vec<ast::FunctionParameter<'_>>,
+    ) {
+        for fn_param in fn_params {
+            let func_param: FunctionParameter = fn_param.clone().into();
+            let arg_name = func_param.clone().to_string();
+
+            // Find value in current state and parent states
+            let value = function_state
+                .borrow()
+                .get_value_name(&arg_name.clone().into());
+            // Calculate `inner_name` as unique for current and all parent states
+            let inner_name: InnerValueName = if value.is_none() {
+                // if value not found in all states check and set
+                // `inner_value` from value name
+                // NOTE: value number not incremented
+                arg_name.clone().into()
+            } else {
+                // Function parameter name can't be with the same name.
+                // Produce error
+                self.add_error(error::StateErrorResult::new(
+                    error::StateErrorKind::FunctionArgumentNameDuplicated,
+                    arg_name,
+                    CodeLocation::new(1, 1),
+                ));
+                return;
+            };
+            // Set value parameters
+            let value = Value {
+                inner_name: inner_name.clone(),
+                inner_type: func_param.parameter_type.clone(),
+                mutable: false,
+                alloca: false,
+                malloc: false,
+            };
+            // Value inserted only to current state by Value name and Value data
+            function_state
+                .borrow_mut()
+                .values
+                .insert(arg_name.into(), value.clone());
+            // Set `inner_name` to current state and all parent states
+            function_state
+                .borrow_mut()
+                .set_inner_value_name(&inner_name);
+
+            function_state.borrow_mut().function_arg(value, func_param);
+        }
+    }
+
     /// Function body analyze.
     /// It is basic execution entity for program flow.
     /// It's operate sub analyze for function elements. It's contain
@@ -286,6 +340,8 @@ impl State {
         // Init empty function body state
         let body_state = Rc::new(RefCell::new(BlockState::new(None)));
         self.add_state_context(body_state.clone());
+        // Init function parameters - add to SemanticStackContext
+        self.init_func_params(&body_state, &data.parameters);
         // Flag to indicate is function return called
         let mut return_is_called = false;
         // Fetch function elements and gather errors

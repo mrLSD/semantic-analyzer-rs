@@ -5,7 +5,7 @@
 use super::condition::{Condition, LogicCondition};
 use super::expression::{ExpressionOperations, ExpressionResult};
 use super::types::StructTypes;
-use super::{Constant, Function, FunctionStatement, LabelName, Value};
+use super::{Constant, Function, FunctionParameter, FunctionStatement, LabelName, Value};
 
 pub trait GlobalSemanticContext {
     fn function_declaration(&mut self, fn_decl: FunctionStatement);
@@ -60,6 +60,7 @@ pub trait SemanticContext {
         label_if_end: LabelName,
         result_register: u64,
     );
+    fn function_arg(&mut self, value: Value, func_arg: FunctionParameter);
 }
 
 /// # Semantic stack
@@ -363,6 +364,16 @@ impl SemanticContext for SemanticStack {
             result_register,
         });
     }
+
+    /// Push Context to the stack as `function argument` data.
+    /// This instruction should allocate pointer (if argument type is
+    /// not Ptr) and store argument value to the pointer.
+    ///
+    /// ## Parameters
+    /// - `func_arg` - function parameter data
+    fn function_arg(&mut self, value: Value, func_arg: FunctionParameter) {
+        self.push(SemanticStackContext::FunctionArg { value, func_arg });
+    }
 }
 
 /// # Semantic stack Context
@@ -447,5 +458,9 @@ pub enum SemanticStackContext {
         label_if_begin: LabelName,
         label_if_end: LabelName,
         result_register: u64,
+    },
+    FunctionArg {
+        value: Value,
+        func_arg: FunctionParameter,
     },
 }

@@ -31,6 +31,7 @@ pub enum StateErrorKind {
     ForbiddenCodeAfterReturnDeprecated,
     ForbiddenCodeAfterContinueDeprecated,
     ForbiddenCodeAfterBreakDeprecated,
+    FunctionArgumentNameDuplicated,
 }
 
 /// State error location. Useful to determine location of error
