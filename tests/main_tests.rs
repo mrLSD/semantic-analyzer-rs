@@ -1,6 +1,7 @@
 use crate::utils::SemanticTest;
 use semantic_analyzer::ast::{self, GetName, Ident};
 use semantic_analyzer::types::error::StateErrorKind;
+use semantic_analyzer::types::expression::ExpressionOperations;
 use semantic_analyzer::types::{
     expression::{ExpressionResult, ExpressionResultValue},
     semantic::SemanticStackContext,
@@ -543,4 +544,168 @@ fn if_return_from_function() {
             fn_decl: fn1.into()
         }
     );
+}
+
+#[test]
+fn function_args_and_let_binding() {
+    let mut t = SemanticTest::new();
+    let body_let_binding = ast::BodyStatement::LetBinding(ast::LetBinding {
+        name: ast::ValueName::new(Ident::new("y")),
+        mutable: true,
+        value_type: Some(ast::Type::Primitive(ast::PrimitiveTypes::U64)),
+        value: Box::new(ast::Expression {
+            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(23)),
+            operation: Some((
+                ast::ExpressionOperations::Plus,
+                Box::new(ast::Expression {
+                    expression_value: ast::ExpressionValue::ValueName(ast::ValueName::new(
+                        Ident::new("x"),
+                    )),
+                    operation: None,
+                }),
+            )),
+        }),
+    });
+    let body_expr_return = ast::BodyStatement::Expression(ast::Expression {
+        expression_value: ast::ExpressionValue::ValueName(ast::ValueName::new(Ident::new("y"))),
+        operation: None,
+    });
+
+    let fn_param1 = ast::FunctionParameter {
+        name: ast::ParameterName::new(Ident::new("x")),
+        parameter_type: ast::Type::Primitive(ast::PrimitiveTypes::U64),
+    };
+    let fn1 = ast::FunctionStatement {
+        name: ast::FunctionName::new(Ident::new("fn1")),
+        parameters: vec![fn_param1.clone()],
+        result_type: ast::Type::Primitive(ast::PrimitiveTypes::U64),
+        body: vec![body_let_binding, body_expr_return],
+    };
+    let fn_stm = ast::MainStatement::Function(fn1.clone());
+    let main_stm: ast::Main = vec![fn_stm];
+    t.state.run(&main_stm);
+    assert!(t.is_empty_error());
+
+    assert_eq!(t.state.context.len(), 1);
+    let ctx = t.state.context[0].borrow();
+    assert!(ctx.children.is_empty());
+    assert!(ctx.parent.is_none());
+
+    let stm_ctx = ctx.get_context().get();
+    let ty = Type::Primitive(PrimitiveTypes::U64);
+    let value_x = Value {
+        inner_name: "x".into(),
+        inner_type: ty.clone(),
+        mutable: false,
+        alloca: false,
+        malloc: false,
+    };
+    let value_y = Value {
+        inner_name: "y.0".into(),
+        inner_type: ty.clone(),
+        mutable: true,
+        alloca: false,
+        malloc: false,
+    };
+    assert_eq!(
+        stm_ctx[0],
+        SemanticStackContext::FunctionArg {
+            value: value_x.clone(),
+            func_arg: fn_param1.into()
+        }
+    );
+    assert_eq!(
+        stm_ctx[1],
+        SemanticStackContext::ExpressionValue {
+            expression: value_x,
+            register_number: 1
+        }
+    );
+    assert_eq!(
+        stm_ctx[2],
+        SemanticStackContext::ExpressionOperation {
+            operation: ExpressionOperations::Plus,
+            left_value: ExpressionResult {
+                expr_type: ty.clone(),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(23))
+            },
+            right_value: ExpressionResult {
+                expr_type: ty.clone(),
+                expr_value: ExpressionResultValue::Register(1)
+            },
+            register_number: 2
+        }
+    );
+    assert_eq!(
+        stm_ctx[3],
+        SemanticStackContext::LetBinding {
+            let_decl: value_y.clone(),
+            expr_result: ExpressionResult {
+                expr_type: ty.clone(),
+                expr_value: ExpressionResultValue::Register(2),
+            },
+        }
+    );
+    assert_eq!(
+        stm_ctx[4],
+        SemanticStackContext::ExpressionValue {
+            expression: value_y,
+            register_number: 3
+        }
+    );
+    assert_eq!(
+        stm_ctx[5],
+        SemanticStackContext::ExpressionFunctionReturn {
+            expr_result: ExpressionResult {
+                expr_type: ty.clone(),
+                expr_value: ExpressionResultValue::Register(3),
+            }
+        }
+    );
+
+    // Verify global entities
+    let fn_state = t
+        .state
+        .global
+        .functions
+        .get(&fn1.clone().name().into())
+        .unwrap();
+    assert_eq!(fn_state.inner_name, fn1.name.clone().into());
+    assert_eq!(fn_state.inner_type, fn1.result_type.clone().into());
+    assert_eq!(fn_state.parameters.len(), 1);
+    assert_eq!(fn_state.parameters[0], ty);
+    let global_ctx = t.state.global.context.get();
+    assert_eq!(global_ctx.len(), 1);
+    assert_eq!(
+        global_ctx[0],
+        SemanticStackContext::FunctionDeclaration {
+            fn_decl: fn1.into()
+        }
+    );
+}
+
+#[test]
+fn function_args_duplication() {
+    let mut t = SemanticTest::new();
+    let body_expr_return = ast::BodyStatement::Expression(ast::Expression {
+        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U64(10)),
+        operation: None,
+    });
+
+    let fn_param1 = ast::FunctionParameter {
+        name: ast::ParameterName::new(Ident::new("x")),
+        parameter_type: ast::Type::Primitive(ast::PrimitiveTypes::U64),
+    };
+    let fn_param2 = fn_param1.clone();
+    let fn1 = ast::FunctionStatement {
+        name: ast::FunctionName::new(Ident::new("fn1")),
+        parameters: vec![fn_param1.clone(), fn_param2.clone()],
+        result_type: ast::Type::Primitive(ast::PrimitiveTypes::U64),
+        body: vec![body_expr_return],
+    };
+    let fn_stm = ast::MainStatement::Function(fn1.clone());
+    let main_stm: ast::Main = vec![fn_stm];
+    t.state.run(&main_stm);
+    assert!(t.check_errors_len(1));
+    assert!(t.check_error(StateErrorKind::FunctionArgumentNameDuplicated));
 }
