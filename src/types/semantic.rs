@@ -70,6 +70,7 @@ pub struct SemanticStack(Vec<SemanticStackContext>);
 
 impl SemanticStack {
     /// Init Semantic stack
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -80,6 +81,7 @@ impl SemanticStack {
     }
 
     /// Get all context stack data as array data
+    #[must_use]
     pub fn get(self) -> Vec<SemanticStackContext> {
         self.0
     }
@@ -320,9 +322,9 @@ impl SemanticContext for SemanticStack {
     /// Result of calculation stored to `register_number`.
     ///
     /// ## Parameters
-    /// - left_register_result - result of left condition
-    /// - right_register_result - result of right condition
-    /// - register_number - register to store instruction result
+    /// - `left_register_result` - result of left condition
+    /// - `right_register_result` - result of right condition
+    /// - `register_number` - register to store instruction result
     fn logic_condition(
         &mut self,
         logic_condition: LogicCondition,

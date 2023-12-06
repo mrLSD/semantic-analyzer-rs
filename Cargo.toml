@@ -1,6 +1,6 @@
 [package]
 name = "semantic-analyzer"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Evgeny Ukhanov <mrlsd@ya.ru>"]
 description = "Semantic analyzer library for compilers written in Rust for semantic analysis of programming languages AST"
 keywords = ["compiler", "semantic-analisis", "semantic-alalyzer", "compiler-design", "semantic"]
@@ -12,6 +12,10 @@ repository = "https://github.com/mrLSD/semantic-analyzer-rs"
 
 [lib]
 doctest = false
+
+#[lints.clippy]
+#pedantic = "deny"
+#nursery = "deny"
 
 [dependencies]
 nom_locate = "4.2"

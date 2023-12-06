@@ -33,6 +33,7 @@ impl GetName for ImportName<'_> {
 }
 
 impl<'a> ImportName<'a> {
+    #[must_use]
     pub const fn new(ident: Ident<'a>) -> Self {
         Self(ident)
     }
@@ -47,6 +48,7 @@ pub struct ConstantName<'a>(Ident<'a>);
 
 impl<'a> ConstantName<'a> {
     /// Init `ConstantName`, especially useful for testing
+    #[must_use]
     pub const fn new(name: Ident<'a>) -> Self {
         Self(name)
     }
@@ -69,6 +71,7 @@ impl GetName for ConstantName<'_> {
 pub struct FunctionName<'a>(Ident<'a>);
 
 impl<'a> FunctionName<'a> {
+    #[must_use]
     pub const fn new(name: Ident<'a>) -> Self {
         Self(name)
     }
@@ -92,6 +95,7 @@ impl<'a> ToString for FunctionName<'a> {
 pub struct ParameterName<'a>(Ident<'a>);
 
 impl<'a> ParameterName<'a> {
+    #[must_use]
     pub const fn new(name: Ident<'a>) -> Self {
         Self(name)
     }
@@ -112,6 +116,7 @@ impl ToString for ParameterName<'_> {
 pub struct ValueName<'a>(Ident<'a>);
 
 impl<'a> ValueName<'a> {
+    #[must_use]
     pub const fn new(name: Ident<'a>) -> Self {
         Self(name)
     }
@@ -138,16 +143,19 @@ impl CodeLocation {
     /// Initialize code location with:
     /// - `location` - line of source code
     /// - `offset` - position on the line of source code
+    #[must_use]
     pub const fn new(location: u32, offset: usize) -> Self {
         Self(location, offset)
     }
 
     /// Get location line in the source
+    #[must_use]
     pub const fn line(&self) -> u32 {
         self.0
     }
 
     /// Get location position on the line in the source
+    #[must_use]
     pub const fn offset(&self) -> usize {
         self.1
     }
@@ -383,6 +391,7 @@ pub enum PrimitiveValue {
 }
 
 impl PrimitiveValue {
+    #[must_use]
     pub const fn get_type(&self) -> Type<'_> {
         match self {
             Self::U8(_) => Type::Primitive(PrimitiveTypes::U8),
@@ -451,6 +460,8 @@ pub enum ExpressionOperations {
 }
 
 impl ExpressionOperations {
+    /// Get expression operation priority level
+    #[must_use]
     pub const fn priority(&self) -> u8 {
         match self {
             Self::Plus => 5,

@@ -49,6 +49,7 @@ pub struct BlockState {
 
 impl BlockState {
     /// Init block state with optional `parent` state
+    #[must_use]
     pub fn new(parent: Option<Rc<RefCell<Self>>>) -> Self {
         // Get values from parent
         let (last_register_number, inner_values_name, labels, manual_return) =
@@ -76,6 +77,7 @@ impl BlockState {
         }
     }
 
+    #[must_use]
     pub fn get_context(&self) -> SemanticStack {
         self.context.clone()
     }
@@ -95,7 +97,7 @@ impl BlockState {
     }
 
     /// Get child Block state
-    pub fn set_child(&mut self, child: Rc<RefCell<BlockState>>) {
+    pub fn set_child(&mut self, child: Rc<RefCell<Self>>) {
         self.children.push(child);
     }
 
@@ -108,6 +110,7 @@ impl BlockState {
     }
 
     /// Check is `inner_value_name` exist in current and parent states
+    #[must_use]
     pub fn is_inner_value_name_exist(&self, name: &InnerValueName) -> bool {
         if self.inner_values_name.contains(name) {
             return true;
@@ -119,6 +122,7 @@ impl BlockState {
 
     /// Get `Value` by value name from current state.
     /// If not found on current state - recursively find in parent states.
+    #[must_use]
     pub fn get_value_name(&self, name: &ValueName) -> Option<Value> {
         if let Some(val) = self.values.get(name) {
             return Some(val.clone());
@@ -129,6 +133,7 @@ impl BlockState {
     }
 
     /// Check is label name exist in current and parent states
+    #[must_use]
     pub fn is_label_name_exist(&self, name: &LabelName) -> bool {
         if self.labels.contains(name) {
             return true;
@@ -147,10 +152,11 @@ impl BlockState {
     }
 
     /// Set attribute counter - increment, if counter exist.
+    #[must_use]
     pub fn set_attr_counter(val: &str) -> String {
         let val_attr: Vec<&str> = val.split('.').collect();
         if val_attr.len() == 2 {
-            let i: u64 = val_attr[1].parse().expect("expect integer");
+            let i: u64 = val_attr[1].parse().unwrap_or_default();
             format!("{}.{:?}", val_attr[0], i + 1)
         } else {
             format!("{}.0", val_attr[0])
@@ -179,6 +185,7 @@ impl BlockState {
 
     /// Get next `inner_value_name` by name counter for current and
     /// parent states. The `inner_value_name` should always be unique.
+    #[must_use]
     pub fn get_next_inner_name(&self, val: &InnerValueName) -> InnerValueName {
         // Increment inner value name counter for shadowed variable
         let name: InnerValueName = Self::set_attr_counter(&val.to_string()).into();
@@ -225,7 +232,7 @@ impl SemanticContext for BlockState {
         if let Some(parent) = &self.parent {
             parent
                 .borrow_mut()
-                .expression_struct_value(expression, index, register_number)
+                .expression_struct_value(expression, index, register_number);
         }
     }
 
