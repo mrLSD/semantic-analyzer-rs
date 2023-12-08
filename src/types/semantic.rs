@@ -7,6 +7,11 @@ use super::expression::{ExpressionOperations, ExpressionResult};
 use super::types::StructTypes;
 use super::{Constant, Function, FunctionParameter, FunctionStatement, LabelName, Value};
 
+/// Semantic Context trait contain instructions set functions
+/// for Global Stack context. It includes:
+/// - functions
+/// - types
+/// - constants
 pub trait GlobalSemanticContext {
     fn function_declaration(&mut self, fn_decl: FunctionStatement);
     fn constant(&mut self, const_decl: Constant);
