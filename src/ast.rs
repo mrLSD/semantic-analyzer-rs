@@ -4,12 +4,146 @@
 //! represent `Turing-complete` state machine.
 
 use nom_locate::LocatedSpan;
+#[cfg(feature = "codec")]
+use serde::{
+    de::{self, Deserialize, Deserializer, MapAccess, Visitor},
+    ser::{Serialize, SerializeStruct, Serializer},
+};
 
 /// Max priority level fpr expressions operations
 pub const MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS: u8 = 9;
 
 /// Basic `Ident` entity for elements of AST
-pub type Ident<'a> = LocatedSpan<&'a str>;
+#[derive(Clone, Debug, Copy, PartialEq, Eq)]
+pub struct Ident<'a>(LocatedSpan<&'a str>);
+
+impl<'a> Ident<'a> {
+    #[must_use]
+    pub fn new(ident: &'a str) -> Ident<'a> {
+        Self(LocatedSpan::new(ident))
+    }
+
+    #[must_use]
+    pub fn fragment(&self) -> &'a str {
+        self.0.fragment()
+    }
+
+    #[must_use]
+    pub fn location_line(&self) -> u32 {
+        self.0.location_line()
+    }
+
+    #[must_use]
+    pub fn location_offset(&self) -> usize {
+        self.0.location_offset()
+    }
+}
+
+impl<'a> std::fmt::Display for Ident<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.fragment())
+    }
+}
+
+impl<'a> From<&'a str> for Ident<'a> {
+    fn from(value: &'a str) -> Ident<'a> {
+        Ident::new(value)
+    }
+}
+
+/// Ident Serializer
+#[cfg(feature = "codec")]
+impl<'a> Serialize for Ident<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let fragment = self.0.into_fragment_and_extra();
+        let mut state = serializer.serialize_struct("Ident", 4)?;
+        state.serialize_field("offset", &self.0.location_offset())?;
+        state.serialize_field("line", &self.0.location_line())?;
+        state.serialize_field("fragment", &fragment.0)?;
+        state.serialize_field("extra", &fragment.1)?;
+        state.end()
+    }
+}
+
+/// Ident Deserializer
+#[cfg(feature = "codec")]
+impl<'de: 'a, 'a> Deserialize<'de> for Ident<'a> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct IdentVisitor<'a> {
+            marker: std::marker::PhantomData<fn() -> Ident<'a>>,
+        }
+
+        impl<'de: 'a, 'a> Visitor<'de> for IdentVisitor<'a> {
+            type Value = Ident<'de>;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("struct Ident")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<Ident<'de>, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut offset = None;
+                let mut line = None;
+                let mut fragment = None;
+                let mut extra = None;
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "offset" => {
+                            if offset.is_some() {
+                                return Err(de::Error::duplicate_field("offset"));
+                            }
+                            offset = Some(map.next_value()?);
+                        }
+                        "line" => {
+                            if line.is_some() {
+                                return Err(de::Error::duplicate_field("line"));
+                            }
+                            line = Some(map.next_value()?);
+                        }
+                        "fragment" => {
+                            if fragment.is_some() {
+                                return Err(de::Error::duplicate_field("fragment"));
+                            }
+                            fragment = Some(map.next_value()?);
+                        }
+                        "extra" => {
+                            if extra.is_some() {
+                                return Err(de::Error::duplicate_field("extra"));
+                            }
+                            extra = Some(map.next_value()?);
+                        }
+                        _ => return Err(de::Error::unknown_field(&key, FIELDS)),
+                    }
+                }
+                let offset = offset.ok_or_else(|| de::Error::missing_field("offset"))?;
+                let line = line.ok_or_else(|| de::Error::missing_field("line"))?;
+                let fragment = fragment.ok_or_else(|| de::Error::missing_field("fragment"))?;
+                #[allow(clippy::let_unit_value)]
+                let extra = extra.ok_or_else(|| de::Error::missing_field("extra"))?;
+                let located =
+                    unsafe { LocatedSpan::new_from_raw_offset(offset, line, fragment, extra) };
+                Ok(Ident(located))
+            }
+        }
+
+        const FIELDS: &[&str] = &["offset", "line", "fragment", "extra"];
+        deserializer.deserialize_struct(
+            "Ident",
+            FIELDS,
+            IdentVisitor {
+                marker: std::marker::PhantomData,
+            },
+        )
+    }
+}
 
 /// `GetName` trait, represent name of specific entity.
 pub trait GetName {
@@ -24,6 +158,7 @@ pub trait GetLocation {
 
 /// Import name element of AST
 #[derive(Debug, Clone, PartialEq, Eq)]
+// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ImportName<'a>(Ident<'a>);
 
 impl GetName for ImportName<'_> {
