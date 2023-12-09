@@ -6,8 +6,9 @@
 use nom_locate::LocatedSpan;
 #[cfg(feature = "codec")]
 use serde::{
-    de::{self, Deserialize, Deserializer, MapAccess, Visitor},
-    ser::{Serialize, SerializeStruct, Serializer},
+    de::{self, Deserializer, MapAccess, Visitor},
+    ser::{SerializeStruct, Serializer},
+    Deserialize, Serialize,
 };
 
 /// Max priority level fpr expressions operations
@@ -17,6 +18,7 @@ pub const MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS: u8 = 9;
 #[derive(Clone, Debug, Copy, PartialEq, Eq)]
 pub struct Ident<'a>(LocatedSpan<&'a str>);
 
+/// Ident methods mirroring `LocatedSpan`
 impl<'a> Ident<'a> {
     #[must_use]
     pub fn new(ident: &'a str) -> Ident<'a> {
@@ -158,8 +160,8 @@ pub trait GetLocation {
 
 /// Import name element of AST
 #[derive(Debug, Clone, PartialEq, Eq)]
-// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct ImportName<'a>(Ident<'a>);
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+pub struct ImportName<'a>(#[cfg_attr(feature = "codec", serde(borrow))] Ident<'a>);
 
 impl GetName for ImportName<'_> {
     fn name(&self) -> String {
@@ -179,7 +181,8 @@ pub type ImportPath<'a> = Vec<ImportName<'a>>;
 
 /// `ConstantName` constant name for `Constant` elements of AST
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ConstantName<'a>(Ident<'a>);
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+pub struct ConstantName<'a>(#[cfg_attr(feature = "codec", serde(borrow))] Ident<'a>);
 
 impl<'a> ConstantName<'a> {
     /// Init `ConstantName`, especially useful for testing
@@ -203,7 +206,8 @@ impl GetName for ConstantName<'_> {
 
 /// `FunctionName` function name for `Function` elements of AST.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FunctionName<'a>(Ident<'a>);
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+pub struct FunctionName<'a>(#[cfg_attr(feature = "codec", serde(borrow))] Ident<'a>);
 
 impl<'a> FunctionName<'a> {
     #[must_use]
@@ -227,7 +231,8 @@ impl<'a> ToString for FunctionName<'a> {
 /// `ParameterName` parameter name element of AST, used for `Function`
 /// parameters declaration.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ParameterName<'a>(Ident<'a>);
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+pub struct ParameterName<'a>(#[cfg_attr(feature = "codec", serde(borrow))] Ident<'a>);
 
 impl<'a> ParameterName<'a> {
     #[must_use]
@@ -248,7 +253,8 @@ impl ToString for ParameterName<'_> {
 /// - `Binding` declaration
 /// - `ExpressionValue` declaration
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ValueName<'a>(Ident<'a>);
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+pub struct ValueName<'a>(#[cfg_attr(feature = "codec", serde(borrow))] Ident<'a>);
 
 impl<'a> ValueName<'a> {
     #[must_use]
@@ -272,6 +278,7 @@ impl GetName for ValueName<'_> {
 /// `CodeLocation` code location of source for AST elements.
 /// Contains: `line` nad `position`.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct CodeLocation(u32, usize);
 
 impl CodeLocation {
@@ -299,6 +306,7 @@ impl CodeLocation {
 /// `PrimitiveTypes` primitive types elements of AST.
 /// It's represent basic (primitive) types.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum PrimitiveTypes {
     U8,
     U16,
@@ -344,8 +352,10 @@ impl GetName for PrimitiveTypes {
 /// - value name of struct type
 /// - value struct type attribute
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct ExpressionStructValue<'a> {
     /// Value name of struct typed value
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub name: ValueName<'a>,
     /// Attribute name of struct typed value
     pub attribute: ValueName<'a>,
@@ -356,8 +366,10 @@ pub struct ExpressionStructValue<'a> {
 /// - attribute name
 /// - attribute type
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct StructType<'a> {
     /// Attribute name entity of struct type
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub attr_name: Ident<'a>,
     /// Attribute type entity of struct type
     pub attr_type: Type<'a>,
@@ -372,8 +384,10 @@ impl GetName for StructType<'_> {
 /// `StructTypes` struct type element of AST.
 /// Basic entity to declare struct complex types and its attributes.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct StructTypes<'a> {
     /// Struct type name
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub name: Ident<'a>,
     /// Struct type attributes
     pub attributes: Vec<StructType<'a>>,
@@ -397,8 +411,10 @@ impl<'a> GetName for StructTypes<'a> {
 /// - Struct types
 /// - Arrays
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum Type<'a> {
     Primitive(PrimitiveTypes),
+    #[cfg_attr(feature = "codec", serde(borrow))]
     Struct(StructTypes<'a>),
     Array(Box<Self>, u32),
 }
@@ -420,7 +436,9 @@ impl<'a> GetName for Type<'a> {
 /// - `constant` it can contain other constant
 /// - `value` - primitive value (like numbers etc.)
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum ConstantValue<'a> {
+    #[cfg_attr(feature = "codec", serde(borrow))]
     Constant(ConstantName<'a>),
     Value(PrimitiveValue),
 }
@@ -432,8 +450,10 @@ pub enum ConstantValue<'a> {
 /// constant expression. So it can be represented as Constant expression
 /// tree as operations with other constant expressions.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct ConstantExpression<'a> {
     /// Constant value - can be other constant 0r primitive value
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub value: ConstantValue<'a>,
     /// Constant expression optional expression operation with other constant expression declarations.
     pub operation: Option<(ExpressionOperations, Box<ConstantExpression<'a>>)>,
@@ -445,8 +465,10 @@ pub struct ConstantExpression<'a> {
 /// - constant type
 /// - constant value - based on constant expression
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct Constant<'a> {
     /// Constant name
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub name: ConstantName<'a>,
     /// Constant type
     pub constant_type: Type<'a>,
@@ -469,8 +491,10 @@ impl GetName for Constant<'_> {
 /// `FunctionParameter` function parameter element of AST.
 /// Used for `FunctionStatement` declaration.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct FunctionParameter<'a> {
     /// Function parameter name
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub name: ParameterName<'a>,
     /// Function parameter type
     pub parameter_type: Type<'a>,
@@ -480,8 +504,10 @@ pub struct FunctionParameter<'a> {
 /// Basic entity of program logic. It contains function declaration and
 /// function body.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct FunctionStatement<'a> {
     /// Function name
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub name: FunctionName<'a>,
     /// Function parameters
     pub parameters: Vec<FunctionParameter<'a>>,
@@ -507,6 +533,7 @@ impl GetName for FunctionStatement<'_> {
 /// Values based on primitive types.
 /// Used for `ConstantValue` and `ExpressionValue`.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum PrimitiveValue {
     U8(u8),
     U16(u16),
@@ -558,8 +585,10 @@ impl PrimitiveValue {
 /// - `StructValue` - value of expression based on `Struct` types.
 /// - `Expression` - expression representation (sub branch)
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum ExpressionValue<'a> {
     /// Value name of expression
+    #[cfg_attr(feature = "codec", serde(borrow))]
     ValueName(ValueName<'a>),
     /// Primitive value of expression (like numbers etc.)
     PrimitiveValue(PrimitiveValue),
@@ -576,6 +605,7 @@ pub enum ExpressionValue<'a> {
 /// - `ConstantExpression` - expression of constant declaration
 /// - `Expression` - part of operations for expressions
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum ExpressionOperations {
     Plus,
     Minus,
@@ -622,8 +652,10 @@ impl ExpressionOperations {
 /// operations with other expression. So it can be expression tree
 /// with expression operations.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct Expression<'a> {
     /// Expression value itself
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub expression_value: ExpressionValue<'a>,
     /// Optional expression operation with other expression value
     pub operation: Option<(ExpressionOperations, Box<Expression<'a>>)>,
@@ -639,8 +671,10 @@ impl GetLocation for Expression<'_> {
 /// `LetBinding` let binding element of AST. Basic entity
 /// for `values` declarations.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct LetBinding<'a> {
     /// Value name of let binding
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub name: ValueName<'a>,
     /// Mutability flag of binding
     pub mutable: bool,
@@ -666,8 +700,10 @@ impl GetName for LetBinding<'_> {
 /// for `values` re-declaration, to bind new values for already
 /// declared values.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct Binding<'a> {
     /// Binding value name
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub name: ValueName<'a>,
     /// Value expression as result of binding
     pub value: Box<Expression<'a>>,
@@ -688,8 +724,10 @@ impl GetName for Binding<'_> {
 /// `FunctionCall` function call element of AST.
 /// Basic entity for function call representation.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct FunctionCall<'a> {
     /// Function name of called function
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub name: FunctionName<'a>,
     /// Function parameters, represented through expression
     pub parameters: Vec<Expression<'a>>,
@@ -711,6 +749,7 @@ impl GetName for FunctionCall<'_> {
 /// Used for `ExpressionCondition`. Contains basic condition
 /// entities: `<. >, ==, <=, >=, !=`
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum Condition {
     Great,
     Less,
@@ -723,6 +762,7 @@ pub enum Condition {
 /// `LogicCondition` declaration of logical condition operation.
 /// It can contains only: `and`, `or`. Used for `IfCondition` elemnt of AST.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum LogicCondition {
     And,
     Or,
@@ -732,8 +772,10 @@ pub enum LogicCondition {
 /// Used in `ExpressionLogicCondition` for `IfCondition` declaration.
 /// It contains condition between twe expressions.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct ExpressionCondition<'a> {
     /// Left expression
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub left: Expression<'a>,
     /// Condition between left and right expressions
     pub condition: Condition,
@@ -749,8 +791,10 @@ pub struct ExpressionCondition<'a> {
 /// other `ExpressionLogicCondition`. So finally ir can represent tree
 /// expressions logic conditions.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct ExpressionLogicCondition<'a> {
     /// Left expression condition
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub left: ExpressionCondition<'a>,
     /// Optional right side contain logic operation to other `ExpressionLogicCondition`
     pub right: Option<(LogicCondition, Box<ExpressionLogicCondition<'a>>)>,
@@ -761,8 +805,10 @@ pub struct ExpressionLogicCondition<'a> {
 /// - single expression condition
 /// - logic expression condition tree
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum IfCondition<'a> {
     /// Single if condition based on expression
+    #[cfg_attr(feature = "codec", serde(borrow))]
     Single(Expression<'a>),
     /// Logic expression condition tree
     Logic(ExpressionLogicCondition<'a>),
@@ -775,8 +821,10 @@ pub enum IfCondition<'a> {
 /// - Ff-else-body statement - body of else-condition success
 /// - Else-if-body statement - body of else-if-condition success
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct IfStatement<'a> {
     /// If-condition
+    #[cfg_attr(feature = "codec", serde(borrow))]
     pub condition: IfCondition<'a>,
     /// If-body statement - body of if-condition success
     pub body: IfBodyStatements<'a>,
@@ -796,8 +844,10 @@ impl GetLocation for IfStatement<'_> {
 /// `BodyStatement` one of the basic AST elements.
 /// It's part of Function body.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum BodyStatement<'a> {
     /// Let-binding function declaration
+    #[cfg_attr(feature = "codec", serde(borrow))]
     LetBinding(LetBinding<'a>),
     /// Binding function declaration
     Binding(Binding<'a>),
@@ -816,7 +866,9 @@ pub enum BodyStatement<'a> {
 /// `IfBodyStatement` statement of if-body elements tree of AST.
 /// Used as body statement of If-control flow.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum IfBodyStatement<'a> {
+    #[cfg_attr(feature = "codec", serde(borrow))]
     LetBinding(LetBinding<'a>),
     Binding(Binding<'a>),
     FunctionCall(FunctionCall<'a>),
@@ -828,7 +880,9 @@ pub enum IfBodyStatement<'a> {
 /// `IfLoopBodyStatement` statement of loop-if-body elements tree of AST.
 /// Used as body statement of If-control flow in the `Loop` AST element.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum IfLoopBodyStatement<'a> {
+    #[cfg_attr(feature = "codec", serde(borrow))]
     LetBinding(LetBinding<'a>),
     Binding(Binding<'a>),
     FunctionCall(FunctionCall<'a>),
@@ -842,7 +896,9 @@ pub enum IfLoopBodyStatement<'a> {
 /// `IfBodyStatements` set of elements in the AST, that represents
 /// control flow: `if`, `loop`
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum IfBodyStatements<'a> {
+    #[cfg_attr(feature = "codec", serde(borrow))]
     If(Vec<IfBodyStatement<'a>>),
     Loop(Vec<IfLoopBodyStatement<'a>>),
 }
@@ -850,7 +906,9 @@ pub enum IfBodyStatements<'a> {
 /// `LoopBodyStatement` statement of loop-body elements tree of AST.
 /// Used as body statement of loop-control flow.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum LoopBodyStatement<'a> {
+    #[cfg_attr(feature = "codec", serde(borrow))]
     LetBinding(LetBinding<'a>),
     Binding(Binding<'a>),
     FunctionCall(FunctionCall<'a>),
@@ -863,8 +921,10 @@ pub enum LoopBodyStatement<'a> {
 
 /// `MainStatement` main AST statement for all elements.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum MainStatement<'a> {
     /// Import declarations
+    #[cfg_attr(feature = "codec", serde(borrow))]
     Import(ImportPath<'a>),
     /// Constant declarations
     Constant(Constant<'a>),
