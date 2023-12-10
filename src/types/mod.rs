@@ -25,9 +25,12 @@ use self::expression::{Expression, ExpressionOperations};
 use self::types::Type;
 use crate::ast;
 use crate::ast::GetName;
+#[cfg(feature = "codec")]
+use serde::{Deserialize, Serialize};
 
 /// Value name type
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct ValueName(String);
 
 impl From<ast::ValueName<'_>> for ValueName {
@@ -56,6 +59,7 @@ impl ToString for ValueName {
 
 /// Inner value name type
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct InnerValueName(String);
 
 impl From<ValueName> for InnerValueName {
@@ -84,6 +88,7 @@ impl ToString for InnerValueName {
 
 /// Label name type
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct LabelName(String);
 
 impl From<String> for LabelName {
@@ -100,6 +105,7 @@ impl ToString for LabelName {
 
 /// Function name type
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct FunctionName(String);
 
 impl From<String> for FunctionName {
@@ -121,6 +127,7 @@ impl ToString for FunctionName {
 
 /// Constant name type
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct ConstantName(String);
 
 impl From<ast::ConstantName<'_>> for ConstantName {
@@ -143,6 +150,7 @@ impl ToString for ConstantName {
 
 /// Constant value can contain other constant or primitive value
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum ConstantValue {
     Constant(ConstantName),
     Value(PrimitiveValue),
@@ -160,6 +168,7 @@ impl From<ast::ConstantValue<'_>> for ConstantValue {
 /// Constant expression represent expression operation between
 /// constant values, and represent flat tree
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct ConstantExpression {
     /// Constant value for expression operation
     pub value: ConstantValue,
@@ -181,6 +190,7 @@ impl From<ast::ConstantExpression<'_>> for ConstantExpression {
 /// # Constant
 /// Can contain: name, type
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct Constant {
     /// Constant name
     pub name: ConstantName,
@@ -205,6 +215,7 @@ impl From<ast::Constant<'_>> for Constant {
 /// - alloca - stack allocation
 /// - malloc - malloc allocation
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct Value {
     /// Inner value name
     pub inner_name: InnerValueName,
@@ -228,6 +239,7 @@ pub struct Value {
 /// their parameters to use in normal execution
 /// flog.
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct Function {
     /// Inner function name
     pub inner_name: FunctionName,
@@ -239,6 +251,7 @@ pub struct Function {
 
 /// Parameter name type for Functions parameter
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct ParameterName(String);
 
 impl From<ast::ParameterName<'_>> for ParameterName {
@@ -249,6 +262,7 @@ impl From<ast::ParameterName<'_>> for ParameterName {
 
 /// Function parameter one of the basic entity for `FunctionStatement`
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct FunctionParameter {
     /// Function parameter name
     pub name: ParameterName,
@@ -279,6 +293,7 @@ impl ToString for FunctionParameter {
 /// - function result type
 /// - function body statements
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct FunctionStatement {
     /// Function name
     pub name: FunctionName,
@@ -305,6 +320,7 @@ impl From<ast::FunctionStatement<'_>> for FunctionStatement {
 /// Statement of body. Body is basic entity for functions and
 /// represent basic functions elements.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum BodyStatement {
     LetBinding(LetBinding),
     Binding(Binding),
@@ -332,6 +348,7 @@ impl From<ast::BodyStatement<'_>> for BodyStatement {
 /// # Let binding
 /// Value initialization through binding.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct LetBinding {
     /// Value name
     pub name: ValueName,
@@ -363,6 +380,7 @@ impl From<ast::LetBinding<'_>> for LetBinding {
 /// Primitive value is most primitive and basic values entity.
 /// It's basic elements for all other values elements.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum PrimitiveValue {
     U8(u8),
     U16(u16),
@@ -428,6 +446,7 @@ impl ToString for PrimitiveValue {
 /// # Function call
 /// Basic struct for function call representation
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct FunctionCall {
     /// Call function name
     pub name: FunctionName,
@@ -452,6 +471,7 @@ impl From<ast::FunctionCall<'_>> for FunctionCall {
 
 /// `Binding` represents mutable binding for previously bind values
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct Binding {
     /// Binding value name
     pub name: ValueName,

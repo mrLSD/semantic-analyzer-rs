@@ -21,6 +21,8 @@ use crate::types::{
     error, Binding, Constant, ConstantName, Function, FunctionCall, FunctionName,
     FunctionParameter, FunctionStatement, InnerValueName, LabelName, LetBinding, Value,
 };
+#[cfg(feature = "codec")]
+use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -37,6 +39,7 @@ use std::rc::Rc;
 /// Semantic analyzer for Global State context. It's can be used for
 /// post-verification process, linting, Codegen.
 #[derive(Debug)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct GlobalState {
     /// Constants declarations
     pub constants: HashMap<ConstantName, Constant>,
@@ -49,6 +52,35 @@ pub struct GlobalState {
     pub context: SemanticStack,
 }
 
+#[cfg(feature = "codec")]
+fn serialize_rc_refcell_vec<S, T>(
+    val: &Vec<Rc<RefCell<T>>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+    T: Serialize,
+{
+    let mut seq = serializer.serialize_seq(Some(val.len()))?;
+    for item in val {
+        seq.serialize_element(&*item.borrow())?;
+    }
+    seq.end()
+}
+
+#[cfg(feature = "codec")]
+fn deserialize_rc_refcell_vec<'de, D, T>(deserializer: D) -> Result<Vec<Rc<RefCell<T>>>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    let vec = Vec::<T>::deserialize(deserializer)?;
+    Ok(vec
+        .into_iter()
+        .map(|item| Rc::new(RefCell::new(item)))
+        .collect())
+}
+
 /// # State
 /// Basic entity that contains:
 /// - `Global State` - types, constants, functions declaration and
@@ -57,10 +89,18 @@ pub struct GlobalState {
 /// - `Context` stack for `Block state` of each functions body state
 /// - `Error State` contains errors stack as result of Semantic analyzer
 #[derive(Debug)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct State {
     /// Global State for current State
     pub global: GlobalState,
     /// Context for all `Block State` stack that related to concrete functions body.
+    #[cfg_attr(
+        feature = "codec",
+        serde(
+            serialize_with = "serialize_rc_refcell_vec",
+            deserialize_with = "deserialize_rc_refcell_vec"
+        )
+    )]
     pub context: Vec<Rc<RefCell<BlockState>>>,
     /// Error state results stack
     pub errors: Vec<error::StateErrorResult>,

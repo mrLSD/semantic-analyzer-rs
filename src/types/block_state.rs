@@ -6,9 +6,86 @@ use super::{Constant, Function, FunctionParameter, InnerValueName, LabelName, Va
 use crate::types::condition::{Condition, LogicCondition};
 use crate::types::expression::{ExpressionOperations, ExpressionResult};
 use crate::types::semantic::SemanticContext;
+#[cfg(feature = "codec")]
+use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+
+#[cfg(feature = "codec")]
+fn serialize_rc_refcell<S, T>(rc: &Rc<RefCell<T>>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+    T: Serialize,
+{
+    T::serialize(&*rc.borrow(), serializer)
+}
+
+#[cfg(feature = "codec")]
+fn serialize_rc_refcell_option<S, T>(
+    val: &Option<Rc<RefCell<T>>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+    T: Serialize,
+{
+    match val {
+        Some(rc) => serialize_rc_refcell(rc, serializer),
+        None => serializer.serialize_none(),
+    }
+}
+
+#[cfg(feature = "codec")]
+fn serialize_rc_refcell_vec<S, T>(
+    val: &Vec<Rc<RefCell<T>>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+    T: Serialize,
+{
+    let mut seq = serializer.serialize_seq(Some(val.len()))?;
+    for item in val {
+        seq.serialize_element(&*item.borrow())?;
+    }
+    seq.end()
+}
+
+#[cfg(feature = "codec")]
+fn _deserialize_rc_refcell<'de, D, T>(deserializer: D) -> Result<Rc<RefCell<T>>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    let value = T::deserialize(deserializer)?;
+    Ok(Rc::new(RefCell::new(value)))
+}
+
+#[cfg(feature = "codec")]
+fn deserialize_rc_refcell_option<'de, D, T>(
+    deserializer: D,
+) -> Result<Option<Rc<RefCell<T>>>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    let opt = Option::<T>::deserialize(deserializer)?;
+    Ok(opt.map(|value| Rc::new(RefCell::new(value))))
+}
+
+#[cfg(feature = "codec")]
+fn deserialize_rc_refcell_vec<'de, D, T>(deserializer: D) -> Result<Vec<Rc<RefCell<T>>>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    let vec = Vec::<T>::deserialize(deserializer)?;
+    Ok(vec
+        .into_iter()
+        .map(|item| Rc::new(RefCell::new(item)))
+        .collect())
+}
 
 /// # Block state
 /// - `values` - contains unique values map for current state but not unique
@@ -28,6 +105,7 @@ use std::rc::Rc;
 /// other state, for example: if-flow, loop-flow
 /// - `parent` - represent parent states.  
 #[derive(Debug)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct BlockState {
     /// State values
     pub values: HashMap<ValueName, Value>,
@@ -40,8 +118,22 @@ pub struct BlockState {
     /// Manual return from other states
     pub manual_return: bool,
     /// Parent state
+    #[cfg_attr(
+        feature = "codec",
+        serde(
+            serialize_with = "serialize_rc_refcell_option",
+            deserialize_with = "deserialize_rc_refcell_option"
+        )
+    )]
     pub parent: Option<Rc<RefCell<BlockState>>>,
     /// children states
+    #[cfg_attr(
+        feature = "codec",
+        serde(
+            serialize_with = "serialize_rc_refcell_vec",
+            deserialize_with = "deserialize_rc_refcell_vec"
+        )
+    )]
     pub children: Vec<Rc<RefCell<BlockState>>>,
     /// Semantic stack context for Block state
     context: SemanticStack,

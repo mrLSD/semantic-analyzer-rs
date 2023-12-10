@@ -4,12 +4,15 @@
 use super::types::Type;
 use super::{FunctionCall, PrimitiveValue, ValueName};
 use crate::ast;
+#[cfg(feature = "codec")]
+use serde::{Deserialize, Serialize};
 
 /// # Expression result
 /// Contains analyzing results of expression:
 /// - `expr_type` - result type of expression
 /// - `expr_value` - result value of expression
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct ExpressionResult {
     /// Result type of expression
     pub expr_type: Type,
@@ -23,6 +26,7 @@ pub struct ExpressionResult {
 /// - Register that contain result of expression
 ///   evaluation or call.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum ExpressionResultValue {
     PrimitiveValue(PrimitiveValue),
     Register(u64),
@@ -35,6 +39,7 @@ pub enum ExpressionResultValue {
 /// - function call - call of function with params
 /// - expression - contains other expression
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum ExpressionValue {
     ValueName(ValueName),
     PrimitiveValue(PrimitiveValue),
@@ -72,6 +77,7 @@ impl From<ast::ExpressionValue<'_>> for ExpressionValue {
 /// Expression value of struct type. It's represent access to
 /// struct attributes of values with struct type
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct ExpressionStructValue {
     /// Value name for structure value
     pub name: ValueName,
@@ -97,6 +103,7 @@ impl From<ast::ExpressionStructValue<'_>> for ExpressionStructValue {
 /// Basic  expression operations - calculations and
 /// logic operations
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub enum ExpressionOperations {
     Plus,
     Minus,
@@ -142,6 +149,7 @@ impl From<ast::ExpressionOperations> for ExpressionOperations {
 /// `ExpressionValue` and optional operations with other
 /// expressions. So it's represent flat tree.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct Expression {
     /// Expression value
     pub expression_value: ExpressionValue,
