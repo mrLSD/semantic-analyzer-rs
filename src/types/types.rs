@@ -3,6 +3,8 @@
 
 use super::{FunctionName, ValueName};
 use crate::ast::{self, GetName};
+#[cfg(feature = "codec")]
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// `TypeAttributes` type attributes trait.
@@ -22,6 +24,7 @@ pub trait TypeAttributes {
 
 /// Type name representation
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct TypeName(String);
 
 impl GetName for TypeName {
@@ -48,6 +51,11 @@ impl ToString for TypeName {
 /// - struct type
 /// - array type
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum Type {
     Primitive(PrimitiveTypes),
     Struct(StructTypes),
@@ -129,6 +137,11 @@ impl From<ast::Type<'_>> for Type {
 /// # Primitive types
 /// Most primitive type. It's basic elements for other types.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum PrimitiveTypes {
     U8,
     U16,
@@ -195,6 +208,7 @@ impl From<ast::PrimitiveTypes> for PrimitiveTypes {
 /// # Struct types
 /// Basic entity for struct type itself.
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct StructTypes {
     /// Type name
     pub name: String,
@@ -245,6 +259,7 @@ impl From<ast::StructTypes<'_>> for StructTypes {
 
 /// `StructAttributeType` is type for Struct attributes fields.
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct StructAttributeType {
     /// Attribute name for struct type
     pub attr_name: ValueName,

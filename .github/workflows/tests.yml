@@ -18,7 +18,7 @@ jobs:
           - nightly
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - uses: actions-rs/toolchain@v1
@@ -37,9 +37,9 @@ jobs:
             ~/.cargo/git/db/
           key: ${{ runner.os }}-cargo
       - name: Build
-        run: cargo build
+        run: cargo build --all-features
       - name: Test
-        run: cargo test --all-targets
+        run: cargo test --all-targets --all-features
         env:
           CARGO_INCREMENTAL: '0'
           RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Copt-level=0 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'

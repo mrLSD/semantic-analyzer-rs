@@ -1,6 +1,6 @@
 [package]
 name = "semantic-analyzer"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Evgeny Ukhanov <mrlsd@ya.ru>"]
 description = "Semantic analyzer library for compilers written in Rust for semantic analysis of programming languages AST"
 keywords = ["compiler", "semantic-analisis", "semantic-alalyzer", "compiler-design", "semantic"]
@@ -13,9 +13,17 @@ repository = "https://github.com/mrLSD/semantic-analyzer-rs"
 [lib]
 doctest = false
 
-#[lints.clippy]
-#pedantic = "deny"
-#nursery = "deny"
+# It requieres MSRV: 1.74
+# [lints.clippy]
+# pedantic = "deny"
+# nursery = "deny"
 
 [dependencies]
 nom_locate = "4.2"
+serde = { version =  "1", features = ["derive"], optional = true }
+
+[dev-dependencies]
+serde_json = "1"
+
+[features]
+codec = ["serde"]

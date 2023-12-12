@@ -2,9 +2,16 @@
 //! Errors types for Semantic analyzer result of Error state.
 
 use crate::ast::CodeLocation;
+#[cfg(feature = "codec")]
+use serde::{Deserialize, Serialize};
 
 /// Common errors kind for the State.
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum StateErrorKind {
     /// Common error indicate errors in the State
     Common,
@@ -35,11 +42,13 @@ pub enum StateErrorKind {
 }
 
 /// State error location. Useful to determine location of error
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct StateErrorLocation(pub CodeLocation);
 
 /// State error result data representation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct StateErrorResult {
     /// Kind of error
     pub kind: StateErrorKind,

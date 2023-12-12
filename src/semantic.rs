@@ -21,6 +21,8 @@ use crate::types::{
     error, Binding, Constant, ConstantName, Function, FunctionCall, FunctionName,
     FunctionParameter, FunctionStatement, InnerValueName, LabelName, LetBinding, Value,
 };
+#[cfg(feature = "codec")]
+use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -37,6 +39,7 @@ use std::rc::Rc;
 /// Semantic analyzer for Global State context. It's can be used for
 /// post-verification process, linting, Codegen.
 #[derive(Debug)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct GlobalState {
     /// Constants declarations
     pub constants: HashMap<ConstantName, Constant>,
@@ -57,10 +60,12 @@ pub struct GlobalState {
 /// - `Context` stack for `Block state` of each functions body state
 /// - `Error State` contains errors stack as result of Semantic analyzer
 #[derive(Debug)]
+#[cfg_attr(feature = "codec", derive(Serialize))]
 pub struct State {
     /// Global State for current State
     pub global: GlobalState,
     /// Context for all `Block State` stack that related to concrete functions body.
+    #[cfg_attr(feature = "codec", serde(skip))]
     pub context: Vec<Rc<RefCell<BlockState>>>,
     /// Error state results stack
     pub errors: Vec<error::StateErrorResult>,

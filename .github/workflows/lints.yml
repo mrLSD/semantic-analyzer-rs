@@ -18,7 +18,7 @@ jobs:
           - stable
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - uses: actions-rs/toolchain@v1
@@ -28,6 +28,8 @@ jobs:
           override: true
           components: rustfmt, clippy
       - name: Format
-        run: cargo fmt --check
+        run: cargo fmt --all -- --check
+      - name: Clippy no-default-features
+        run: cargo clippy --all --all-targets --no-default-features -- -D warnings
       - name: Clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --all --all-targets --all-features -- -D warnings

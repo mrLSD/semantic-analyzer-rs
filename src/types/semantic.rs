@@ -6,7 +6,14 @@ use super::condition::{Condition, LogicCondition};
 use super::expression::{ExpressionOperations, ExpressionResult};
 use super::types::StructTypes;
 use super::{Constant, Function, FunctionParameter, FunctionStatement, LabelName, Value};
+#[cfg(feature = "codec")]
+use serde::{Deserialize, Serialize};
 
+/// Semantic Context trait contain instructions set functions
+/// for Global Stack context. It includes:
+/// - functions
+/// - types
+/// - constants
 pub trait GlobalSemanticContext {
     fn function_declaration(&mut self, fn_decl: FunctionStatement);
     fn constant(&mut self, const_decl: Constant);
@@ -66,6 +73,7 @@ pub trait SemanticContext {
 /// # Semantic stack
 /// Semantic stack represent stack of Semantic Context results
 #[derive(Debug, Default, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct SemanticStack(Vec<SemanticStackContext>);
 
 impl SemanticStack {
@@ -382,6 +390,11 @@ impl SemanticContext for SemanticStack {
 /// Context data of Semantic results. Contains type declarations
 /// for specific instructions.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum SemanticStackContext {
     ExpressionValue {
         expression: Value,
