@@ -11,6 +11,8 @@
 //! - `Errors` - semantic analyzes errors.z
 
 use crate::ast::{self, CodeLocation, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
+#[cfg(feature = "codec")]
+use crate::types::block_state::rc_serializer;
 use crate::types::block_state::BlockState;
 use crate::types::expression::{
     Expression, ExpressionResult, ExpressionResultValue, ExpressionStructValue,
@@ -22,7 +24,7 @@ use crate::types::{
     FunctionParameter, FunctionStatement, InnerValueName, LabelName, LetBinding, Value,
 };
 #[cfg(feature = "codec")]
-use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -52,35 +54,6 @@ pub struct GlobalState {
     pub context: SemanticStack,
 }
 
-#[cfg(feature = "codec")]
-fn serialize_rc_refcell_vec<S, T>(
-    val: &Vec<Rc<RefCell<T>>>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-    T: Serialize,
-{
-    let mut seq = serializer.serialize_seq(Some(val.len()))?;
-    for item in val {
-        seq.serialize_element(&*item.borrow())?;
-    }
-    seq.end()
-}
-
-#[cfg(feature = "codec")]
-fn deserialize_rc_refcell_vec<'de, D, T>(deserializer: D) -> Result<Vec<Rc<RefCell<T>>>, D::Error>
-where
-    D: Deserializer<'de>,
-    T: Deserialize<'de>,
-{
-    let vec = Vec::<T>::deserialize(deserializer)?;
-    Ok(vec
-        .into_iter()
-        .map(|item| Rc::new(RefCell::new(item)))
-        .collect())
-}
-
 /// # State
 /// Basic entity that contains:
 /// - `Global State` - types, constants, functions declaration and
@@ -97,8 +70,8 @@ pub struct State {
     #[cfg_attr(
         feature = "codec",
         serde(
-            serialize_with = "serialize_rc_refcell_vec",
-            deserialize_with = "deserialize_rc_refcell_vec"
+            serialize_with = "rc_serializer::serialize_vec",
+            deserialize_with = "rc_serializer::deserialize_vec"
         )
     )]
     pub context: Vec<Rc<RefCell<BlockState>>>,
