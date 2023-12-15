@@ -4,6 +4,7 @@
 use super::types::Type;
 use super::{FunctionCall, PrimitiveValue, ValueName};
 use crate::ast;
+use crate::types::semantic::ExtendedExpression;
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
 
@@ -68,8 +69,8 @@ impl ToString for ExpressionValue {
     }
 }
 
-impl From<ast::ExpressionValue<'_>> for ExpressionValue {
-    fn from(value: ast::ExpressionValue<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::ExpressionValue<'_, E>> for ExpressionValue {
+    fn from(value: ast::ExpressionValue<'_, E>) -> Self {
         match value {
             ast::ExpressionValue::ValueName(v) => Self::ValueName(v.into()),
             ast::ExpressionValue::PrimitiveValue(v) => Self::PrimitiveValue(v.into()),
@@ -78,6 +79,7 @@ impl From<ast::ExpressionValue<'_>> for ExpressionValue {
             ast::ExpressionValue::Expression(v) => {
                 Self::Expression(Box::new(v.as_ref().clone().into()))
             }
+            ast::ExpressionValue::ExtendedExpression(..) => todo!(),
         }
     }
 }
@@ -175,8 +177,8 @@ impl ToString for Expression {
     }
 }
 
-impl From<ast::Expression<'_>> for Expression {
-    fn from(value: ast::Expression<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::Expression<'_, E>> for Expression {
+    fn from(value: ast::Expression<'_, E>) -> Self {
         Self {
             expression_value: value.expression_value.into(),
             operation: value

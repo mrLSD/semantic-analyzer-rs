@@ -15,7 +15,9 @@ use crate::types::block_state::BlockState;
 use crate::types::expression::{
     Expression, ExpressionResult, ExpressionResultValue, ExpressionStructValue,
 };
-use crate::types::semantic::{GlobalSemanticContext, SemanticContext, SemanticStack};
+use crate::types::semantic::{
+    ExtendedExpression, GlobalSemanticContext, SemanticContext, SemanticStack,
+};
 use crate::types::types::{Type, TypeName};
 use crate::types::{
     error, Binding, Constant, ConstantName, Function, FunctionCall, FunctionName,
@@ -129,7 +131,7 @@ impl State {
     /// Run semantic analyzer that covers all flow for AST.
     /// It's do not return any results, but fill results fir the `Semantic State`.
     ///
-    pub fn run(&mut self, data: &ast::Main<'_>) {
+    pub fn run<E: ExtendedExpression>(&mut self, data: &ast::Main<'_, E>) {
         // Execute each kind of analyzing and return errors data.
         // For functions - fetch only declaration for fast-forward
         // identification for using it in functions body.
@@ -245,7 +247,10 @@ impl State {
     }
 
     /// Function declaration analyze. Add it to Global State/M
-    pub fn function_declaration(&mut self, data: &ast::FunctionStatement<'_>) {
+    pub fn function_declaration<E: ExtendedExpression>(
+        &mut self,
+        data: &ast::FunctionStatement<'_, E>,
+    ) {
         if self.global.functions.contains_key(&data.name().into()) {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::FunctionAlreadyExist,
@@ -342,7 +347,7 @@ impl State {
     /// It is basic execution entity for program flow.
     /// It's operate sub analyze for function elements. It's contain
     /// Body State for current and child states.
-    pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) {
+    pub fn function_body<E: ExtendedExpression>(&mut self, data: &ast::FunctionStatement<'_, E>) {
         // Init empty function body state
         let body_state = Rc::new(RefCell::new(BlockState::new(None)));
         self.add_state_context(body_state.clone());
@@ -389,7 +394,7 @@ impl State {
                     }
                     if let Some(res) = expr_result {
                         // Check expression type and do not exist from flow
-                        self.check_type_exists(&res.expr_type, &expr, &expression.clone());
+                        self.check_type_exists(&res.expr_type, &expr, expression);
                         let fn_ty: Type = data.result_type.clone().into();
                         if fn_ty != res.expr_type {
                             self.add_error(error::StateErrorResult::new(
@@ -441,9 +446,9 @@ impl State {
     /// 4. Insert value to current values state map: value `name` -> `Data`
     /// 5. Store `inner_name` in current and parent states
     /// 6. Codegen
-    pub fn let_binding(
+    pub fn let_binding<E: ExtendedExpression>(
         &mut self,
-        data: &ast::LetBinding<'_>,
+        data: &ast::LetBinding<'_, E>,
         function_state: &Rc<RefCell<BlockState>>,
     ) {
         // Call value analytics before putting let-value to state
@@ -509,7 +514,11 @@ impl State {
     /// 2. Read value for current state.
     /// 3. Update value to current values state map: value `name` -> `Data`
     /// 4. Codegen with Store action
-    pub fn binding(&mut self, data: &ast::Binding<'_>, function_state: &Rc<RefCell<BlockState>>) {
+    pub fn binding<E: ExtendedExpression>(
+        &mut self,
+        data: &ast::Binding<'_, E>,
+        function_state: &Rc<RefCell<BlockState>>,
+    ) {
         // Call value analytics before putting let-value to state
         let Some(expr_result) = self.expression(&data.value, function_state) else {
             return;
@@ -549,9 +558,9 @@ impl State {
     ///
     /// ## Errors
     /// Return error if function name doesn't exist in global state
-    pub fn function_call(
+    pub fn function_call<E: ExtendedExpression>(
         &mut self,
-        data: &ast::FunctionCall<'_>,
+        data: &ast::FunctionCall<'_, E>,
         body_state: &Rc<RefCell<BlockState>>,
     ) -> Option<Type> {
         let func_call_data: FunctionCall = data.clone().into();
@@ -597,9 +606,9 @@ impl State {
     /// Analyse condition operations.
     /// ## Return
     /// Return result register of `condition-expression` calculation.
-    pub fn condition_expression(
+    pub fn condition_expression<E: ExtendedExpression>(
         &mut self,
-        data: &ast::ExpressionLogicCondition<'_>,
+        data: &ast::ExpressionLogicCondition<'_, E>,
         function_body_state: &Rc<RefCell<BlockState>>,
     ) -> u64 {
         // Analyse left expression of left condition
@@ -680,9 +689,9 @@ impl State {
     /// NOTE: `label_end` - is always already exists
     /// ## Return
     /// Return body statement "return" status
-    pub fn if_condition_body(
+    pub fn if_condition_body<E: ExtendedExpression>(
         &mut self,
-        body: &[ast::IfBodyStatement<'_>],
+        body: &[ast::IfBodyStatement<'_, E>],
         if_body_state: &Rc<RefCell<BlockState>>,
         label_end: &LabelName,
         label_loop: Option<(&LabelName, &LabelName)>,
@@ -738,9 +747,9 @@ impl State {
     /// - if, else, if-else
     /// ## Return
     /// Return body statement "return" status
-    pub fn if_condition_loop_body(
+    pub fn if_condition_loop_body<E: ExtendedExpression>(
         &mut self,
-        body: &[ast::IfLoopBodyStatement<'_>],
+        body: &[ast::IfLoopBodyStatement<'_, E>],
         if_body_state: &Rc<RefCell<BlockState>>,
         label_if_end: &LabelName,
         label_loop_start: &LabelName,
@@ -823,9 +832,9 @@ impl State {
     /// # If conditions calculations
     /// Calculate conditions for if-condition. It can contain
     /// simple and logic conditions.
-    pub fn if_condition_calculation(
+    pub fn if_condition_calculation<E: ExtendedExpression>(
         &mut self,
-        condition: &ast::IfCondition<'_>,
+        condition: &ast::IfCondition<'_, E>,
         if_body_state: &Rc<RefCell<BlockState>>,
         label_if_begin: &LabelName,
         label_if_else: &LabelName,
@@ -898,9 +907,9 @@ impl State {
     /// `label_loop` is must be set, it's special case for the Loop,
     /// when `label_loop` should always be set. If it doesn't set, it's
     /// unexpected behavior and program algorithm error
-    pub fn if_condition(
+    pub fn if_condition<E: ExtendedExpression>(
         &mut self,
-        data: &ast::IfStatement<'_>,
+        data: &ast::IfStatement<'_, E>,
         function_body_state: &Rc<RefCell<BlockState>>,
         label_end: &Option<LabelName>,
         label_loop: Option<(&LabelName, &LabelName)>,
@@ -1046,9 +1055,9 @@ impl State {
     /// - loop body
     /// - end of loop
     /// - return, break, continue
-    pub fn loop_statement(
+    pub fn loop_statement<E: ExtendedExpression>(
         &mut self,
-        data: &[ast::LoopBodyStatement<'_>],
+        data: &[ast::LoopBodyStatement<'_, E>],
         function_body_state: &Rc<RefCell<BlockState>>,
     ) {
         // Create state for loop-body, from parent func state because
@@ -1186,9 +1195,9 @@ impl State {
     ///         - Value -> tmp2 = load -> tmp3 = OP tmp1, tmp2 -> TmpRegister
     ///         - FuncCall -> tmp2 = call ->  tmp3 = OP tmp1, tmp2 -> TmpRegister
     ///         4.3. Operations -> recursively invoke 4.2.
-    pub fn expression(
+    pub fn expression<E: ExtendedExpression>(
         &mut self,
-        data: &ast::Expression<'_>,
+        data: &ast::Expression<'_, E>,
         body_state: &Rc<RefCell<BlockState>>,
     ) -> Option<ExpressionResult> {
         // Fold expression operations priority
@@ -1207,10 +1216,10 @@ impl State {
     /// Left-value contains optional Expression result for left side
     /// of expression.
     #[allow(clippy::too_many_lines)]
-    pub fn expression_operation(
+    pub fn expression_operation<E: ExtendedExpression>(
         &mut self,
         left_value: Option<&ExpressionResult>,
-        right_expression: &ast::Expression<'_>,
+        right_expression: &ast::Expression<'_, E>,
         op: Option<&ast::ExpressionOperations>,
         body_state: &Rc<RefCell<BlockState>>,
     ) -> Option<ExpressionResult> {
@@ -1348,6 +1357,7 @@ impl State {
                 // Subexpression should be analyzed independently
                 self.expression(expr, body_state)?
             }
+            ast::ExpressionValue::ExtendedExpression(expr) => expr.expression(self, body_state),
         };
         // Check left expression side and generate expression operation code
         let expression_result = if let (Some(left_value), Some(op)) = (left_value, op) {
@@ -1399,7 +1409,9 @@ impl State {
     ///
     /// ## Return
     /// New folded expressions tree.
-    fn expression_operations_priority(data: ast::Expression<'_>) -> ast::Expression<'_> {
+    fn expression_operations_priority<E: ExtendedExpression>(
+        data: ast::Expression<'_, E>,
+    ) -> ast::Expression<'_, E> {
         let mut data = data;
         for priority in (0..=MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS).rev() {
             data = Self::fetch_op_priority(data, priority);
@@ -1421,7 +1433,10 @@ impl State {
     /// expression tree from left to right.
     /// If priority level not equal, we just return income expression, or
     /// if it has subbranch - launch fetching subbranch
-    fn fetch_op_priority(data: ast::Expression<'_>, priority_level: u8) -> ast::Expression<'_> {
+    fn fetch_op_priority<E: ExtendedExpression>(
+        data: ast::Expression<'_, E>,
+        priority_level: u8,
+    ) -> ast::Expression<'_, E> {
         // Check is expression contains right side with operation
         if let Some((op, expr)) = data.clone().operation {
             // Check is right expression contain subbranch (sub operation)

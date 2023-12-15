@@ -6,8 +6,13 @@ use super::condition::{Condition, LogicCondition};
 use super::expression::{ExpressionOperations, ExpressionResult};
 use super::types::StructTypes;
 use super::{Constant, Function, FunctionParameter, FunctionStatement, LabelName, Value};
+use crate::semantic::State;
+use crate::types::block_state::BlockState;
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::fmt::Debug;
+use std::rc::Rc;
 
 /// Semantic Context trait contain instructions set functions
 /// for Global Stack context. It includes:
@@ -68,6 +73,30 @@ pub trait SemanticContext {
         result_register: u64,
     );
     fn function_arg(&mut self, value: Value, func_arg: FunctionParameter);
+}
+
+/// Trait describe AST input receiving
+pub trait GetAst {
+    type Ast;
+    fn get_ast(&self) -> Self::Ast;
+}
+
+/// Semantic Context trait contains custom instruction implementation
+/// to flexibly extend context instructions.
+pub trait SemanticContextInstruction: GetAst {
+    /// Custom instruction implementation.
+    /// Ast should be received from `GetAst` trait.
+    fn instruction(&self) -> Box<Self>;
+}
+
+/// Extended Expression for semantic analyzer.
+pub trait ExtendedExpression: GetAst + Debug + Clone + PartialEq {
+    // Custom expression. Ast should be received from `GetAst` trait.
+    fn expression(
+        &self,
+        state: &mut State,
+        block_state: &Rc<RefCell<BlockState>>,
+    ) -> ExpressionResult;
 }
 
 /// # Semantic stack

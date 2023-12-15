@@ -25,6 +25,7 @@ use self::expression::{Expression, ExpressionOperations};
 use self::types::Type;
 use crate::ast;
 use crate::ast::GetName;
+use crate::types::semantic::ExtendedExpression;
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
 
@@ -309,8 +310,8 @@ pub struct FunctionStatement {
     pub body: Vec<BodyStatement>,
 }
 
-impl From<ast::FunctionStatement<'_>> for FunctionStatement {
-    fn from(value: ast::FunctionStatement<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::FunctionStatement<'_, E>> for FunctionStatement {
+    fn from(value: ast::FunctionStatement<'_, E>) -> Self {
         Self {
             name: value.name.into(),
             parameters: value.parameters.iter().map(|v| v.clone().into()).collect(),
@@ -339,8 +340,8 @@ pub enum BodyStatement {
     Return(Expression),
 }
 
-impl From<ast::BodyStatement<'_>> for BodyStatement {
-    fn from(value: ast::BodyStatement<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::BodyStatement<'_, E>> for BodyStatement {
+    fn from(value: ast::BodyStatement<'_, E>) -> Self {
         match value {
             ast::BodyStatement::LetBinding(v) => Self::LetBinding(v.into()),
             ast::BodyStatement::Binding(v) => Self::Binding(v.into()),
@@ -374,8 +375,8 @@ impl ToString for LetBinding {
     }
 }
 
-impl From<ast::LetBinding<'_>> for LetBinding {
-    fn from(value: ast::LetBinding<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::LetBinding<'_, E>> for LetBinding {
+    fn from(value: ast::LetBinding<'_, E>) -> Self {
         Self {
             name: value.name.into(),
             mutable: value.mutable,
@@ -472,8 +473,8 @@ impl ToString for FunctionCall {
     }
 }
 
-impl From<ast::FunctionCall<'_>> for FunctionCall {
-    fn from(value: ast::FunctionCall<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::FunctionCall<'_, E>> for FunctionCall {
+    fn from(value: ast::FunctionCall<'_, E>) -> Self {
         Self {
             name: value.name.into(),
             parameters: value.parameters.iter().map(|v| v.clone().into()).collect(),
@@ -497,8 +498,8 @@ impl ToString for Binding {
     }
 }
 
-impl From<ast::Binding<'_>> for Binding {
-    fn from(value: ast::Binding<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::Binding<'_, E>> for Binding {
+    fn from(value: ast::Binding<'_, E>) -> Self {
         Self {
             name: value.name.into(),
             value: Box::new(value.value.as_ref().clone().into()),
