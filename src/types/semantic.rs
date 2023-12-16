@@ -94,7 +94,7 @@ pub trait ExtendedExpression: GetAst + Debug + Clone + PartialEq {
     // Custom expression. Ast should be received from `GetAst` trait.
     fn expression(
         &self,
-        state: &mut State,
+        state: &mut State<Self>,
         block_state: &Rc<RefCell<BlockState>>,
     ) -> ExpressionResult;
 }
