@@ -77,6 +77,7 @@ impl<'de: 'a, 'a> Deserialize<'de> for Ident<'a> {
     where
         D: Deserializer<'de>,
     {
+        // grcov-excl-start
         struct IdentVisitor<'a> {
             marker: std::marker::PhantomData<fn() -> Ident<'a>>,
         }
@@ -134,6 +135,7 @@ impl<'de: 'a, 'a> Deserialize<'de> for Ident<'a> {
                     unsafe { LocatedSpan::new_from_raw_offset(offset, line, fragment, extra) };
                 Ok(Ident(located))
             }
+            // grcov-excl-end
         }
 
         const FIELDS: &[&str] = &["offset", "line", "fragment", "extra"];
@@ -306,7 +308,11 @@ impl CodeLocation {
 /// `PrimitiveTypes` primitive types elements of AST.
 /// It's represent basic (primitive) types.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum PrimitiveTypes {
     U8,
     U16,
@@ -411,7 +417,11 @@ impl<'a> GetName for StructTypes<'a> {
 /// - Struct types
 /// - Arrays
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum Type<'a> {
     Primitive(PrimitiveTypes),
     #[cfg_attr(feature = "codec", serde(borrow))]
@@ -436,7 +446,11 @@ impl<'a> GetName for Type<'a> {
 /// - `constant` it can contain other constant
 /// - `value` - primitive value (like numbers etc.)
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum ConstantValue<'a> {
     #[cfg_attr(feature = "codec", serde(borrow))]
     Constant(ConstantName<'a>),
@@ -533,7 +547,11 @@ impl GetName for FunctionStatement<'_> {
 /// Values based on primitive types.
 /// Used for `ConstantValue` and `ExpressionValue`.
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum PrimitiveValue {
     U8(u8),
     U16(u16),
@@ -585,7 +603,11 @@ impl PrimitiveValue {
 /// - `StructValue` - value of expression based on `Struct` types.
 /// - `Expression` - expression representation (sub branch)
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum ExpressionValue<'a> {
     /// Value name of expression
     #[cfg_attr(feature = "codec", serde(borrow))]
@@ -605,7 +627,11 @@ pub enum ExpressionValue<'a> {
 /// - `ConstantExpression` - expression of constant declaration
 /// - `Expression` - part of operations for expressions
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum ExpressionOperations {
     Plus,
     Minus,
@@ -671,7 +697,7 @@ impl GetLocation for Expression<'_> {
 /// `LetBinding` let binding element of AST. Basic entity
 /// for `values` declarations.
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize), serde(tag = "type"))]
 pub struct LetBinding<'a> {
     /// Value name of let binding
     #[cfg_attr(feature = "codec", serde(borrow))]
@@ -749,7 +775,11 @@ impl GetName for FunctionCall<'_> {
 /// Used for `ExpressionCondition`. Contains basic condition
 /// entities: `<. >, ==, <=, >=, !=`
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum Condition {
     Great,
     Less,
@@ -762,7 +792,11 @@ pub enum Condition {
 /// `LogicCondition` declaration of logical condition operation.
 /// It can contains only: `and`, `or`. Used for `IfCondition` elemnt of AST.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum LogicCondition {
     And,
     Or,
@@ -805,7 +839,11 @@ pub struct ExpressionLogicCondition<'a> {
 /// - single expression condition
 /// - logic expression condition tree
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum IfCondition<'a> {
     /// Single if condition based on expression
     #[cfg_attr(feature = "codec", serde(borrow))]
@@ -844,7 +882,11 @@ impl GetLocation for IfStatement<'_> {
 /// `BodyStatement` one of the basic AST elements.
 /// It's part of Function body.
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum BodyStatement<'a> {
     /// Let-binding function declaration
     #[cfg_attr(feature = "codec", serde(borrow))]
@@ -866,7 +908,11 @@ pub enum BodyStatement<'a> {
 /// `IfBodyStatement` statement of if-body elements tree of AST.
 /// Used as body statement of If-control flow.
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum IfBodyStatement<'a> {
     #[cfg_attr(feature = "codec", serde(borrow))]
     LetBinding(LetBinding<'a>),
@@ -881,6 +927,7 @@ pub enum IfBodyStatement<'a> {
 /// Used as body statement of If-control flow in the `Loop` AST element.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "codec", serde(tag = "type", content = "content"))]
 pub enum IfLoopBodyStatement<'a> {
     #[cfg_attr(feature = "codec", serde(borrow))]
     LetBinding(LetBinding<'a>),
@@ -896,7 +943,11 @@ pub enum IfLoopBodyStatement<'a> {
 /// `IfBodyStatements` set of elements in the AST, that represents
 /// control flow: `if`, `loop`
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum IfBodyStatements<'a> {
     #[cfg_attr(feature = "codec", serde(borrow))]
     If(Vec<IfBodyStatement<'a>>),
@@ -906,7 +957,11 @@ pub enum IfBodyStatements<'a> {
 /// `LoopBodyStatement` statement of loop-body elements tree of AST.
 /// Used as body statement of loop-control flow.
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum LoopBodyStatement<'a> {
     #[cfg_attr(feature = "codec", serde(borrow))]
     LetBinding(LetBinding<'a>),
@@ -921,7 +976,11 @@ pub enum LoopBodyStatement<'a> {
 
 /// `MainStatement` main AST statement for all elements.
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum MainStatement<'a> {
     /// Import declarations
     #[cfg_attr(feature = "codec", serde(borrow))]
