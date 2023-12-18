@@ -51,7 +51,11 @@ impl ToString for TypeName {
 /// - struct type
 /// - array type
 #[derive(Debug, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum Type {
     Primitive(PrimitiveTypes),
     Struct(StructTypes),
@@ -133,7 +137,11 @@ impl From<ast::Type<'_>> for Type {
 /// # Primitive types
 /// Most primitive type. It's basic elements for other types.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum PrimitiveTypes {
     U8,
     U16,

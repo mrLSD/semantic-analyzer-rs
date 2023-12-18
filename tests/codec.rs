@@ -1,8 +1,20 @@
+use crate::utils::SemanticTest;
 use semantic_analyzer::ast::{self, Ident};
+use semantic_analyzer::types::block_state::BlockState;
+use semantic_analyzer::types::condition::{
+    Condition, IfLoopBodyStatement, LogicCondition, LoopBodyStatement,
+};
+use semantic_analyzer::types::types::{PrimitiveTypes, Type};
+use semantic_analyzer::types::{InnerValueName, LabelName, PrimitiveValue, Value};
+use std::cell::RefCell;
+use std::rc::Rc;
+
+mod utils;
 
 #[test]
 fn basic_ast_serialize() {
-    // Import
+    let mut t = SemanticTest::new();
+
     let imports: ast::ImportPath = vec![ast::ImportName::new(Ident::new("import1"))];
     let import_stm = ast::MainStatement::Import(imports);
 
@@ -158,10 +170,12 @@ fn basic_ast_serialize() {
 
     let main_stm: ast::Main = vec![import_stm, constant_stm, ty_stm, fn1_stm, fn2_stm];
     let json = serde_json::to_string(&main_stm).unwrap();
-    // println!("{json}");
-    // assert_eq!(json, JSON_AST);
     let ser_ast: ast::Main = serde_json::from_str(&json).unwrap();
     assert_eq!(main_stm, ser_ast);
+
+    t.state.run(&main_stm);
+    assert!(t.is_empty_error());
+    let _json_state = serde_json::to_string(&t.state).unwrap();
 }
 
 #[test]
@@ -216,4 +230,59 @@ fn ast_extended_serde_check() {
     let to_json = serde_json::to_string(&lbs).unwrap();
     let to_val = serde_json::from_str(&to_json).unwrap();
     assert_eq!(lbs, to_val);
+}
+
+#[test]
+fn semantic_extended_serde_check() {
+    // It covers uncovered serde parts
+    let iv: InnerValueName = "x".into();
+    let to_json = serde_json::to_string(&iv).unwrap();
+    let to_val = serde_json::from_str(&to_json).unwrap();
+    assert_eq!(iv, to_val);
+
+    let lbl: LabelName = String::from("lbl").into();
+    let to_json = serde_json::to_string(&lbl).unwrap();
+    let to_val = serde_json::from_str(&to_json).unwrap();
+    assert_eq!(lbl, to_val);
+
+    let v = Value {
+        inner_name: "x".into(),
+        inner_type: Type::Primitive(PrimitiveTypes::Ptr),
+        mutable: false,
+        alloca: false,
+        malloc: false,
+    };
+    let to_json = serde_json::to_string(&v).unwrap();
+    let to_val = serde_json::from_str(&to_json).unwrap();
+    assert_eq!(v, to_val);
+
+    let parent_bs = BlockState::new(None);
+    let bs = BlockState::new(Some(Rc::new(RefCell::new(parent_bs))));
+    let to_json = serde_json::to_string(&bs).unwrap();
+    let _to_val: BlockState = serde_json::from_str(&to_json).unwrap();
+
+    let lcond = LogicCondition::Or;
+    let to_json = serde_json::to_string(&lcond).unwrap();
+    let to_val = serde_json::from_str(&to_json).unwrap();
+    assert_eq!(lcond, to_val);
+
+    let cond = Condition::GreatEq;
+    let to_json = serde_json::to_string(&cond).unwrap();
+    let to_val = serde_json::from_str(&to_json).unwrap();
+    assert_eq!(cond, to_val);
+
+    let lbs = LoopBodyStatement::Break;
+    let to_json = serde_json::to_string(&lbs).unwrap();
+    let to_val = serde_json::from_str(&to_json).unwrap();
+    assert_eq!(lbs, to_val);
+
+    let lbs = IfLoopBodyStatement::Break;
+    let to_json = serde_json::to_string(&lbs).unwrap();
+    let to_val = serde_json::from_str(&to_json).unwrap();
+    assert_eq!(lbs, to_val);
+
+    let pv = PrimitiveValue::Ptr;
+    let to_json = serde_json::to_string(&pv).unwrap();
+    let to_val = serde_json::from_str(&to_json).unwrap();
+    assert_eq!(pv, to_val);
 }

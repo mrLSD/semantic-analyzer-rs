@@ -26,7 +26,11 @@ pub struct ExpressionResult {
 /// - Register that contain result of expression
 ///   evaluation or call.
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum ExpressionResultValue {
     PrimitiveValue(PrimitiveValue),
     Register(u64),
@@ -39,7 +43,11 @@ pub enum ExpressionResultValue {
 /// - function call - call of function with params
 /// - expression - contains other expression
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum ExpressionValue {
     ValueName(ValueName),
     PrimitiveValue(PrimitiveValue),
@@ -103,7 +111,11 @@ impl From<ast::ExpressionStructValue<'_>> for ExpressionStructValue {
 /// Basic  expression operations - calculations and
 /// logic operations
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum ExpressionOperations {
     Plus,
     Minus,

@@ -7,7 +7,11 @@ use serde::{Deserialize, Serialize};
 
 /// Common errors kind for the State.
 #[derive(Debug, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum StateErrorKind {
     /// Common error indicate errors in the State
     Common,

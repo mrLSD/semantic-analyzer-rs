@@ -9,7 +9,11 @@ use serde::{Deserialize, Serialize};
 
 /// Basic logical conditions mostly for compare expressions
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum Condition {
     Great,
     Less,
@@ -35,7 +39,11 @@ impl From<ast::Condition> for Condition {
 /// Logical conditions type representation.
 /// Usefulf for logical expressions.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum LogicCondition {
     And,
     Or,
@@ -99,7 +107,11 @@ impl From<ast::ExpressionLogicCondition<'_>> for ExpressionLogicCondition {
 /// - simple - just expression
 /// - logic - represented through `ExpressionLogicCondition`
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum IfCondition {
     Single(Expression),
     Logic(ExpressionLogicCondition),
@@ -146,7 +158,11 @@ impl From<ast::IfStatement<'_>> for IfStatement {
 /// - if-body-statement related only
 /// - loop-body-statement related - special case for the loops
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum IfBodyStatements {
     If(Vec<IfBodyStatement>),
     Loop(Vec<IfLoopBodyStatement>),
@@ -165,7 +181,11 @@ impl From<ast::IfBodyStatements<'_>> for IfBodyStatements {
 
 /// Loop body statement represents body for the loop
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum LoopBodyStatement {
     LetBinding(LetBinding),
     Binding(Binding),
@@ -196,7 +216,11 @@ impl From<ast::LoopBodyStatement<'_>> for LoopBodyStatement {
 
 /// If-body statement represents body for the if-body
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum IfBodyStatement {
     LetBinding(LetBinding),
     Binding(Binding),
@@ -224,7 +248,11 @@ impl From<ast::IfBodyStatement<'_>> for IfBodyStatement {
 /// If-loop body statements represent body of if-body
 /// in the loops
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum IfLoopBodyStatement {
     LetBinding(LetBinding),
     Binding(Binding),

@@ -390,7 +390,11 @@ impl SemanticContext for SemanticStack {
 /// Context data of Semantic results. Contains type declarations
 /// for specific instructions.
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum SemanticStackContext {
     ExpressionValue {
         expression: Value,

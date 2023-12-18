@@ -11,8 +11,6 @@
 //! - `Errors` - semantic analyzes errors.z
 
 use crate::ast::{self, CodeLocation, GetLocation, GetName, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS};
-#[cfg(feature = "codec")]
-use crate::types::block_state::rc_serializer;
 use crate::types::block_state::BlockState;
 use crate::types::expression::{
     Expression, ExpressionResult, ExpressionResultValue, ExpressionStructValue,
@@ -62,18 +60,12 @@ pub struct GlobalState {
 /// - `Context` stack for `Block state` of each functions body state
 /// - `Error State` contains errors stack as result of Semantic analyzer
 #[derive(Debug)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "codec", derive(Serialize))]
 pub struct State {
     /// Global State for current State
     pub global: GlobalState,
     /// Context for all `Block State` stack that related to concrete functions body.
-    #[cfg_attr(
-        feature = "codec",
-        serde(
-            serialize_with = "rc_serializer::serialize_vec",
-            deserialize_with = "rc_serializer::deserialize_vec"
-        )
-    )]
+    #[cfg_attr(feature = "codec", serde(skip))]
     pub context: Vec<Rc<RefCell<BlockState>>>,
     /// Error state results stack
     pub errors: Vec<error::StateErrorResult>,

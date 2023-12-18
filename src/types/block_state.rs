@@ -499,6 +499,7 @@ pub mod rc_serializer {
 
     /// Deserializer for `Vec<Rc<RefCell<T>>`
     #[allow(clippy::missing_errors_doc)]
+    // grcov-excl-start
     pub fn deserialize_vec<'de, D, T>(deserializer: D) -> Result<Vec<Rc<RefCell<T>>>, D::Error>
     where
         D: Deserializer<'de>,
@@ -509,5 +510,5 @@ pub mod rc_serializer {
             .into_iter()
             .map(|item| Rc::new(RefCell::new(item)))
             .collect())
-    }
+    } // grcov-excl-end
 }

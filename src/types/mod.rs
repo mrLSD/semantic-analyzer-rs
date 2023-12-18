@@ -150,7 +150,11 @@ impl ToString for ConstantName {
 
 /// Constant value can contain other constant or primitive value
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum ConstantValue {
     Constant(ConstantName),
     Value(PrimitiveValue),
@@ -320,7 +324,11 @@ impl From<ast::FunctionStatement<'_>> for FunctionStatement {
 /// Statement of body. Body is basic entity for functions and
 /// represent basic functions elements.
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum BodyStatement {
     LetBinding(LetBinding),
     Binding(Binding),
@@ -380,7 +388,11 @@ impl From<ast::LetBinding<'_>> for LetBinding {
 /// Primitive value is most primitive and basic values entity.
 /// It's basic elements for all other values elements.
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "codec",
+    derive(Serialize, Deserialize),
+    serde(tag = "type", content = "content")
+)]
 pub enum PrimitiveValue {
     U8(u8),
     U16(u16),
