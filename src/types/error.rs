@@ -42,12 +42,12 @@ pub enum StateErrorKind {
 }
 
 /// State error location. Useful to determine location of error
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct StateErrorLocation(pub CodeLocation);
 
 /// State error result data representation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct StateErrorResult {
     /// Kind of error
