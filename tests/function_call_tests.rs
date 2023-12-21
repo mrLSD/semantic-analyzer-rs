@@ -1,4 +1,4 @@
-use crate::utils::SemanticTest;
+use crate::utils::{CustomExpression, SemanticTest};
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{CodeLocation, GetLocation, GetName, Ident};
 use semantic_analyzer::types::block_state::BlockState;
@@ -13,7 +13,7 @@ mod utils;
 #[test]
 fn func_call_transform() {
     let fn_name = ast::FunctionName::new(Ident::new("fn1"));
-    let fn_call = ast::FunctionCall {
+    let fn_call = ast::FunctionCall::<CustomExpression> {
         name: fn_name.clone(),
         parameters: vec![],
     };
@@ -25,7 +25,9 @@ fn func_call_transform() {
     assert!(fn_call_into.parameters.is_empty());
 
     let param1 = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Ptr),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
+            ast::PrimitiveValue::Ptr,
+        ),
         operation: None,
     };
     let fn_call2 = ast::FunctionCall {

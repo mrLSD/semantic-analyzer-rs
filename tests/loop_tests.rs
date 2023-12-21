@@ -1,4 +1,4 @@
-use crate::utils::SemanticTest;
+use crate::utils::{CustomExpression, SemanticTest};
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::Ident;
 use semantic_analyzer::types::block_state::BlockState;
@@ -20,7 +20,9 @@ fn loop_transform() {
         mutable: false,
         value_type: None,
         value: Box::new(ast::Expression {
-            expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
+            expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
+                ast::PrimitiveValue::Bool(true),
+            ),
             operation: None,
         }),
     };
@@ -74,11 +76,11 @@ fn loop_transform() {
             LoopBodyStatement::Return(val) => assert_eq!(val, return_statement.clone().into()),
             LoopBodyStatement::Break => assert_eq!(
                 LoopBodyStatement::Break,
-                ast::LoopBodyStatement::Break.into()
+                ast::LoopBodyStatement::<CustomExpression>::Break.into()
             ),
             LoopBodyStatement::Continue => assert_eq!(
                 LoopBodyStatement::Continue,
-                ast::LoopBodyStatement::Continue.into()
+                ast::LoopBodyStatement::<CustomExpression>::Continue.into()
             ),
         }
     }

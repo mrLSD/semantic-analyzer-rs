@@ -1,38 +1,16 @@
-use crate::utils::SemanticTest;
+use crate::utils::{CustomExpression, SemanticTest};
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{CodeLocation, GetLocation, GetName, Ident, ValueName};
-use semantic_analyzer::semantic::State;
 use semantic_analyzer::types::block_state::BlockState;
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::expression::{ExpressionResult, ExpressionResultValue};
-use semantic_analyzer::types::semantic::{ExtendedExpression, GetAst, SemanticStackContext};
+use semantic_analyzer::types::semantic::SemanticStackContext;
 use semantic_analyzer::types::types::{PrimitiveTypes, Type};
 use semantic_analyzer::types::{Binding, InnerValueName, PrimitiveValue, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
 
 mod utils;
-
-#[derive(Clone, Debug, PartialEq)]
-struct CustomExpression;
-
-impl GetAst for CustomExpression {
-    type Ast = ();
-
-    fn get_ast(&self) -> Self::Ast {
-        todo!()
-    }
-}
-
-impl ExtendedExpression for CustomExpression {
-    fn expression(
-        &self,
-        state: &mut State,
-        _block_state: &Rc<RefCell<BlockState>>,
-    ) -> ExpressionResult {
-        todo!()
-    }
-}
 
 #[test]
 fn binding_transform() {

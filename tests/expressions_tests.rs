@@ -1,4 +1,4 @@
-use crate::utils::SemanticTest;
+use crate::utils::{CustomExpression, SemanticTest};
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{
     CodeLocation, GetLocation, GetName, Ident, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS,
@@ -57,7 +57,7 @@ fn set_result_type(
 fn expression_ast_transform() {
     let value_name = ast::ValueName::new(Ident::new("x"));
     let expr = ast::Expression {
-        expression_value: ast::ExpressionValue::ValueName(value_name.clone()),
+        expression_value: ast::ExpressionValue::<CustomExpression>::ValueName(value_name.clone()),
         operation: None,
     };
     assert_eq!(expr.location(), CodeLocation::new(1, 0));
@@ -87,7 +87,7 @@ fn expression_ast_transform_primitive_value_i8() {
     assert_eq!(PrimitiveValue::I8(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -105,7 +105,7 @@ fn expression_ast_transform_primitive_value_i16() {
     assert_eq!(PrimitiveValue::I16(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -123,7 +123,7 @@ fn expression_ast_transform_primitive_value_i32() {
     assert_eq!(PrimitiveValue::I32(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -141,7 +141,7 @@ fn expression_ast_transform_primitive_value_i64() {
     assert_eq!(PrimitiveValue::I64(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -159,7 +159,7 @@ fn expression_ast_transform_primitive_value_u8() {
     assert_eq!(PrimitiveValue::U8(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -177,7 +177,7 @@ fn expression_ast_transform_primitive_value_u16() {
     assert_eq!(PrimitiveValue::U16(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -195,7 +195,7 @@ fn expression_ast_transform_primitive_value_u32() {
     assert_eq!(PrimitiveValue::U32(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -213,7 +213,7 @@ fn expression_ast_transform_primitive_value_u64() {
     assert_eq!(PrimitiveValue::U64(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -231,7 +231,7 @@ fn expression_ast_transform_primitive_value_f32() {
     assert_eq!(PrimitiveValue::F32(3.1), expr_val);
     assert_eq!(expr_val.to_string(), "3.1");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -249,7 +249,7 @@ fn expression_ast_transform_primitive_value_f64() {
     assert_eq!(PrimitiveValue::F64(3.1), expr_val);
     assert_eq!(expr_val.to_string(), "3.1");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -267,7 +267,7 @@ fn expression_ast_transform_primitive_value_bool() {
     assert_eq!(PrimitiveValue::Bool(true), expr_val);
     assert_eq!(expr_val.to_string(), "true");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -285,7 +285,7 @@ fn expression_ast_transform_primitive_value_string() {
     assert_eq!(PrimitiveValue::String("str".to_string()), expr_val);
     assert_eq!(expr_val.to_string(), "str");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -303,7 +303,7 @@ fn expression_ast_transform_primitive_value_char() {
     assert_eq!(PrimitiveValue::Char('a'), expr_val);
     assert_eq!(expr_val.to_string(), "a");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -321,7 +321,7 @@ fn expression_ast_transform_primitive_value_ptr() {
     assert_eq!(PrimitiveValue::Ptr, expr_val);
     assert_eq!(expr_val.to_string(), "ptr");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -339,7 +339,7 @@ fn expression_ast_transform_primitive_value_none() {
     assert_eq!(PrimitiveValue::None, expr_val);
     assert_eq!(expr_val.to_string(), "None");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -360,7 +360,7 @@ fn expression_ast_transform_primitive_struct_value() {
 fn expression_ast_transform_expression() {
     let val = ast::PrimitiveValue::Ptr;
     let sub_expr = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
         operation: None,
     };
     let expr: Expression = ast::Expression {

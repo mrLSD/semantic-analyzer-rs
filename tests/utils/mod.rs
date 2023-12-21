@@ -1,8 +1,37 @@
 use semantic_analyzer::semantic::State;
+use semantic_analyzer::types::block_state::BlockState;
 use semantic_analyzer::types::error::StateErrorKind;
+use semantic_analyzer::types::expression::ExpressionResult;
+use semantic_analyzer::types::semantic::{ExtendedExpression, GetAst};
+#[cfg(feature = "codec")]
+use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::rc::Rc;
+
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+pub struct CustomExpression;
+
+impl GetAst for CustomExpression {
+    type Ast = ();
+
+    fn get_ast(&self) -> Self::Ast {
+        todo!()
+    }
+}
+
+impl ExtendedExpression for CustomExpression {
+    fn expression(
+        &self,
+        _state: &mut State<Self>,
+        _block_state: &Rc<RefCell<BlockState>>,
+    ) -> ExpressionResult {
+        todo!()
+    }
+}
 
 pub struct SemanticTest {
-    pub state: State,
+    pub state: State<CustomExpression>,
 }
 
 impl Default for SemanticTest {

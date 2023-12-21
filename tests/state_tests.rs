@@ -1,3 +1,4 @@
+use crate::utils::CustomExpression;
 use semantic_analyzer::ast::{self, Ident};
 use semantic_analyzer::semantic::State;
 use semantic_analyzer::types::condition::{Condition, LogicCondition};
@@ -15,9 +16,11 @@ use semantic_analyzer::types::{
 use std::cell::RefCell;
 use std::rc::Rc;
 
+mod utils;
+
 #[test]
 fn state_init() {
-    let st = State::default();
+    let st = State::<CustomExpression>::default();
     // For grcov
     format!("{st:?}");
     assert!(st.global.types.is_empty());
@@ -32,7 +35,7 @@ fn state_init() {
 fn state_block_state_count() {
     let bst1 = Rc::new(RefCell::new(BlockState::new(None)));
     let bst2 = Rc::new(RefCell::new(BlockState::new(Some(bst1.clone()))));
-    let mut st1 = State::default();
+    let mut st1 = State::<CustomExpression>::default();
     st1.context.push(bst1);
     st1.context.push(bst2);
     assert_eq!(st1.context.len(), 2);

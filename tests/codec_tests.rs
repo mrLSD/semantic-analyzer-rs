@@ -3,7 +3,7 @@ mod utils;
 #[cfg(test)]
 #[cfg(feature = "codec")]
 mod test {
-    use crate::utils::SemanticTest;
+    use crate::utils::{CustomExpression, SemanticTest};
     use semantic_analyzer::ast::{self, CodeLocation, Ident};
     use semantic_analyzer::types::block_state::BlockState;
     use semantic_analyzer::types::condition::{
@@ -179,9 +179,10 @@ mod test {
         };
         let fn2_stm = ast::MainStatement::Function(fn2.clone());
 
-        let main_stm: ast::Main = vec![import_stm, constant_stm, ty_stm, fn1_stm, fn2_stm];
+        let main_stm: ast::Main<CustomExpression> =
+            vec![import_stm, constant_stm, ty_stm, fn1_stm, fn2_stm];
         let json = serde_json::to_string(&main_stm).unwrap();
-        let ser_ast: ast::Main = serde_json::from_str(&json).unwrap();
+        let ser_ast: ast::Main<CustomExpression> = serde_json::from_str(&json).unwrap();
         assert_eq!(main_stm, ser_ast);
 
         t.state.run(&main_stm);
@@ -237,7 +238,7 @@ mod test {
         let to_val = serde_json::from_str(&to_json).unwrap();
         assert_eq!(est, to_val);
 
-        let lbs = ast::LoopBodyStatement::Continue;
+        let lbs = ast::LoopBodyStatement::<CustomExpression>::Continue;
         let to_json = serde_json::to_string(&lbs).unwrap();
         let to_val = serde_json::from_str(&to_json).unwrap();
         assert_eq!(lbs, to_val);
