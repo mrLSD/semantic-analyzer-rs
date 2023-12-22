@@ -12,6 +12,7 @@ mod test {
     use semantic_analyzer::types::error::{StateErrorKind, StateErrorLocation, StateErrorResult};
     use semantic_analyzer::types::expression::{
         ExpressionOperations, ExpressionResult, ExpressionResultValue, ExpressionStructValue,
+        ExtendedExpressionValue,
     };
     use semantic_analyzer::types::types::{PrimitiveTypes, Type};
     use semantic_analyzer::types::{InnerValueName, LabelName, PrimitiveValue, Value};
@@ -327,5 +328,10 @@ mod test {
         let to_json = serde_json::to_string(&state_err).unwrap();
         let to_val = serde_json::from_str(&to_json).unwrap();
         assert_eq!(state_err, to_val);
+
+        let expr_raw = r#""x""#;
+        let ext_expr: ExtendedExpressionValue = serde_json::from_str(expr_raw).unwrap();
+        let to_json = serde_json::to_string(&ext_expr).unwrap();
+        assert_eq!(to_json, expr_raw);
     }
 }

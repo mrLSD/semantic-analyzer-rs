@@ -37,6 +37,13 @@ pub enum ExpressionResultValue {
     Register(u64),
 }
 
+/// `ExtendedExpressionValue` represent simplified string
+/// data of custom extended `ExpressionValue`. For now
+/// used only for display errors.
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+pub struct ExtendedExpressionValue(String);
+
 /// Expression value kinds:
 /// - value name - initialized through let-binding
 /// - primitive value - most primitive value, like integers etc.
@@ -55,6 +62,7 @@ pub enum ExpressionValue {
     StructValue(ExpressionStructValue),
     FunctionCall(FunctionCall),
     Expression(Box<Expression>),
+    ExtendedExpression(ExtendedExpressionValue),
 }
 
 impl ToString for ExpressionValue {
@@ -65,6 +73,7 @@ impl ToString for ExpressionValue {
             Self::StructValue(st_val) => st_val.clone().to_string(),
             Self::FunctionCall(fn_call) => fn_call.clone().to_string(),
             Self::Expression(val) => val.to_string(),
+            Self::ExtendedExpression(val) => val.clone().0,
         }
     }
 }
@@ -79,7 +88,9 @@ impl<E: ExtendedExpression> From<ast::ExpressionValue<'_, E>> for ExpressionValu
             ast::ExpressionValue::Expression(v) => {
                 Self::Expression(Box::new(v.as_ref().clone().into()))
             }
-            ast::ExpressionValue::ExtendedExpression(..) => todo!(),
+            ast::ExpressionValue::ExtendedExpression(expr) => {
+                Self::ExtendedExpression(ExtendedExpressionValue(format!("{expr:?}")))
+            }
         }
     }
 }

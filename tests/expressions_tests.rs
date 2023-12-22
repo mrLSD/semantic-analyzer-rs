@@ -3,11 +3,12 @@ use semantic_analyzer::ast;
 use semantic_analyzer::ast::{
     CodeLocation, GetLocation, GetName, Ident, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS,
 };
+use semantic_analyzer::semantic::State;
 use semantic_analyzer::types::expression::ExpressionOperations::{Minus, Multiply, Plus};
 use semantic_analyzer::types::expression::{
     Expression, ExpressionOperations, ExpressionResult, ExpressionStructValue, ExpressionValue,
 };
-use semantic_analyzer::types::semantic::SemanticStackContext;
+use semantic_analyzer::types::semantic::{ExtendedExpression, GetAst, SemanticStackContext};
 use semantic_analyzer::types::{
     block_state::BlockState,
     error::StateErrorKind,
@@ -1192,4 +1193,84 @@ fn expression_multiple_operation_simple4() {
     assert_eq!(state[1], set_result_type(Minus, false, 100, true, 1, 2));
     assert_eq!(state[2], set_result_type(Minus, true, 2, false, 15, 3));
     assert!(t.is_empty_error());
+}
+
+#[test]
+fn custom_expression() {
+    #[derive(Clone, Debug, PartialEq)]
+    pub enum AstCustomExpression {
+        GoIn(u32, u32),
+        GoOut(u32, u32),
+    }
+
+    impl GetAst for AstCustomExpression {
+        type Ast = AstCustomExpression;
+        fn get_ast(&self) -> Self::Ast {
+            self.clone()
+        }
+    }
+
+    impl ExtendedExpression for AstCustomExpression {
+        fn expression(
+            &self,
+            _state: &mut State<Self>,
+            block_state: &Rc<RefCell<BlockState>>,
+        ) -> ExpressionResult {
+            block_state.borrow_mut().inc_register();
+            let reg = block_state.borrow().last_register_number;
+            ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::U32),
+                expr_value: ExpressionResultValue::Register(reg),
+            }
+        }
+    }
+
+    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
+    let mut state: State<AstCustomExpression> = State::default();
+    let next_expr = ast::Expression {
+        expression_value: ast::ExpressionValue::ExtendedExpression(Box::new(
+            AstCustomExpression::GoIn(10, 20),
+        )),
+        operation: None,
+    };
+    let expr = ast::Expression {
+        expression_value: ast::ExpressionValue::ExtendedExpression(Box::new(
+            AstCustomExpression::GoOut(30, 40),
+        )),
+        operation: Some((ast::ExpressionOperations::Plus, Box::new(next_expr))),
+    };
+    let expr_into: Expression = expr.clone().into();
+    // For grcov
+    format!("{:#?}", expr_into);
+    // For grcov
+    format!("{:#?}", expr_into.to_string());
+    let res = state.expression(&expr, &block_state).unwrap();
+    assert!(state.errors.is_empty());
+
+    assert_eq!(
+        res,
+        ExpressionResult {
+            expr_type: Type::Primitive(PrimitiveTypes::U32),
+            expr_value: ExpressionResultValue::Register(3)
+        }
+    );
+    let state = block_state.borrow().get_context().clone().get();
+    assert_eq!(state.len(), 1);
+    println!("{state:#?}");
+
+    assert_eq!(
+        state[0],
+        SemanticStackContext::ExpressionOperation {
+            operation: ExpressionOperations::Plus,
+            left_value: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::U32),
+                expr_value: ExpressionResultValue::Register(1)
+            },
+            right_value: ExpressionResult {
+                expr_type: Type::Primitive(PrimitiveTypes::U32),
+                expr_value: ExpressionResultValue::Register(2)
+            },
+            register_number: 3
+        }
+    );
 }
