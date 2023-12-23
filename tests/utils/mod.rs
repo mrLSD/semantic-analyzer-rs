@@ -1,8 +1,10 @@
 use semantic_analyzer::semantic::State;
 use semantic_analyzer::types::block_state::BlockState;
 use semantic_analyzer::types::error::StateErrorKind;
-use semantic_analyzer::types::expression::ExpressionResult;
-use semantic_analyzer::types::semantic::{ExtendedExpression, GetAst};
+use semantic_analyzer::types::expression::{ExpressionResult, ExpressionResultValue};
+use semantic_analyzer::types::semantic::{ExtendedExpression, GetAst, SemanticContextInstruction};
+use semantic_analyzer::types::types::{PrimitiveTypes, Type};
+use semantic_analyzer::types::PrimitiveValue;
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
@@ -15,18 +17,25 @@ pub struct CustomExpression;
 impl GetAst for CustomExpression {
     type Ast = ();
 
-    fn get_ast(&self) -> Self::Ast {
-        todo!()
-    }
+    fn get_ast(&self) -> Self::Ast {}
 }
 
 impl ExtendedExpression for CustomExpression {
     fn expression(
         &self,
         _state: &mut State<Self>,
-        _block_state: &Rc<RefCell<BlockState>>,
+        _block_state: &Rc<RefCell<BlockState<Self>>>,
     ) -> ExpressionResult {
-        todo!()
+        ExpressionResult {
+            expr_type: Type::Primitive(PrimitiveTypes::Ptr),
+            expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Ptr),
+        }
+    }
+}
+
+impl SemanticContextInstruction for CustomExpression {
+    fn instruction(&self) -> Box<Self> {
+        Box::new(Self)
     }
 }
 

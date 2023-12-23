@@ -269,10 +269,10 @@ mod test {
         let to_val = serde_json::from_str(&to_json).unwrap();
         assert_eq!(v, to_val);
 
-        let parent_bs = BlockState::new(None);
+        let parent_bs: BlockState<CustomExpression> = BlockState::new(None);
         let bs = BlockState::new(Some(Rc::new(RefCell::new(parent_bs))));
         let to_json = serde_json::to_string(&bs).unwrap();
-        let _to_val: BlockState = serde_json::from_str(&to_json).unwrap();
+        let _to_val: BlockState<CustomExpression> = serde_json::from_str(&to_json).unwrap();
 
         let lcond = LogicCondition::Or;
         let to_json = serde_json::to_string(&lcond).unwrap();
