@@ -21,6 +21,6 @@ fn error_trace() {
         err_res2.trace_state(),
         "[ReturnNotFound] for value \"test2\" at: 2:2"
     );
-    let errs = vec![err_res, err_res2.clone()];
+    let errs = [err_res, err_res2.clone()];
     assert_eq!(errs.len(), 2);
 }

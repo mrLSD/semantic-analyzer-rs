@@ -156,7 +156,7 @@ pub trait GetName {
 }
 
 /// `GetLocation` represent location of source data for AST element.
-/// Useful to locate specific source code location, espessialt for `Ident`.
+/// Useful to locate specific source code location, especially for `Ident`.
 pub trait GetLocation {
     fn location(&self) -> CodeLocation;
 }
@@ -225,9 +225,9 @@ impl GetLocation for FunctionName<'_> {
     }
 }
 
-impl<'a> ToString for FunctionName<'a> {
-    fn to_string(&self) -> String {
-        (*self.0.fragment()).to_string()
+impl<'a> std::fmt::Display for FunctionName<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.fragment())
     }
 }
 
@@ -244,9 +244,9 @@ impl<'a> ParameterName<'a> {
     }
 }
 
-impl ToString for ParameterName<'_> {
-    fn to_string(&self) -> String {
-        (*self.0.fragment()).to_string()
+impl std::fmt::Display for ParameterName<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.fragment())
     }
 }
 
@@ -793,7 +793,7 @@ pub enum Condition {
 }
 
 /// `LogicCondition` declaration of logical condition operation.
-/// It can contains only: `and`, `or`. Used for `IfCondition` elemnt of AST.
+/// It can contains only: `and`, `or`. Used for `IfCondition` element of AST.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "codec",
@@ -816,7 +816,7 @@ pub struct ExpressionCondition<'a, E: ExtendedExpression> {
     pub left: Expression<'a, E>,
     /// Condition between left and right expressions
     pub condition: Condition,
-    /// Righ expression
+    /// Right expression
     pub right: Expression<'a, E>,
 }
 
