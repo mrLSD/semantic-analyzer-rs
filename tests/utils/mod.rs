@@ -1,8 +1,40 @@
 use semantic_analyzer::semantic::State;
+use semantic_analyzer::types::block_state::BlockState;
 use semantic_analyzer::types::error::StateErrorKind;
+use semantic_analyzer::types::expression::{ExpressionResult, ExpressionResultValue};
+use semantic_analyzer::types::semantic::{ExtendedExpression, SemanticContextInstruction};
+use semantic_analyzer::types::types::{PrimitiveTypes, Type};
+use semantic_analyzer::types::PrimitiveValue;
+#[cfg(feature = "codec")]
+use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::rc::Rc;
+
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+pub struct CustomExpression;
+
+impl ExtendedExpression for CustomExpression {
+    fn expression<I: SemanticContextInstruction>(
+        &self,
+        _state: &mut State<Self, I>,
+        _block_state: &Rc<RefCell<BlockState<I>>>,
+    ) -> ExpressionResult {
+        ExpressionResult {
+            expr_type: Type::Primitive(PrimitiveTypes::Ptr),
+            expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Ptr),
+        }
+    }
+}
+
+impl SemanticContextInstruction for CustomExpression {
+    fn instruction(&self) -> Box<Self> {
+        Box::new(Self)
+    }
+}
 
 pub struct SemanticTest {
-    pub state: State,
+    pub state: State<CustomExpression, CustomExpression>,
 }
 
 impl Default for SemanticTest {

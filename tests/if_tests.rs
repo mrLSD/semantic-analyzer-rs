@@ -1,4 +1,4 @@
-use crate::utils::SemanticTest;
+use crate::utils::{CustomExpression, SemanticTest};
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{CodeLocation, GetLocation, Ident};
 use semantic_analyzer::types::block_state::BlockState;
@@ -19,7 +19,9 @@ mod utils;
 #[test]
 fn if_single_transform() {
     let if_condition_expr = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::F32(1.2)),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
+            ast::PrimitiveValue::F32(1.2),
+        ),
         operation: None,
     };
     let if_condition = ast::IfCondition::Single(if_condition_expr.clone());
@@ -115,7 +117,9 @@ fn if_single_transform() {
 #[test]
 fn if_logic_transform() {
     let if_condition_expr = ast::Expression {
-        expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::F32(1.2)),
+        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
+            ast::PrimitiveValue::F32(1.2),
+        ),
         operation: None,
     };
     let if_condition_expr_into: Expression = if_condition_expr.clone().into();

@@ -15,7 +15,10 @@ use crate::types::block_state::BlockState;
 use crate::types::expression::{
     Expression, ExpressionResult, ExpressionResultValue, ExpressionStructValue,
 };
-use crate::types::semantic::{GlobalSemanticContext, SemanticContext, SemanticStack};
+use crate::types::semantic::{
+    ExtendedExpression, GlobalSemanticContext, SemanticContext, SemanticContextInstruction,
+    SemanticStack,
+};
 use crate::types::types::{Type, TypeName};
 use crate::types::{
     error, Binding, Constant, ConstantName, Function, FunctionCall, FunctionName,
@@ -25,6 +28,7 @@ use crate::types::{
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::rc::Rc;
 
 /// # Global State
@@ -40,7 +44,7 @@ use std::rc::Rc;
 /// post-verification process, linting, Codegen.
 #[derive(Debug)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
-pub struct GlobalState {
+pub struct GlobalState<I: SemanticContextInstruction> {
     /// Constants declarations
     pub constants: HashMap<ConstantName, Constant>,
     /// Types declarations
@@ -49,7 +53,7 @@ pub struct GlobalState {
     pub functions: HashMap<FunctionName, Function>,
     /// Context as Semantic Stack Context results contains basic semantic
     /// result tree for Global context state.
-    pub context: SemanticStack,
+    pub context: SemanticStack<I>,
 }
 
 /// # State
@@ -61,23 +65,36 @@ pub struct GlobalState {
 /// - `Error State` contains errors stack as result of Semantic analyzer
 #[derive(Debug)]
 #[cfg_attr(feature = "codec", derive(Serialize))]
-pub struct State {
+pub struct State<E, I>
+where
+    E: ExtendedExpression,
+    I: SemanticContextInstruction,
+{
     /// Global State for current State
-    pub global: GlobalState,
+    pub global: GlobalState<I>,
     /// Context for all `Block State` stack that related to concrete functions body.
     #[cfg_attr(feature = "codec", serde(skip))]
-    pub context: Vec<Rc<RefCell<BlockState>>>,
+    pub context: Vec<Rc<RefCell<BlockState<I>>>>,
     /// Error state results stack
     pub errors: Vec<error::StateErrorResult>,
+    phantom: PhantomData<E>,
 }
 
-impl Default for State {
+impl<E, I> Default for State<E, I>
+where
+    E: ExtendedExpression,
+    I: SemanticContextInstruction,
+{
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl State {
+impl<E, I> State<E, I>
+where
+    E: ExtendedExpression,
+    I: SemanticContextInstruction,
+{
     /// Init new `State`
     #[must_use]
     pub fn new() -> Self {
@@ -90,6 +107,7 @@ impl State {
             },
             context: Vec::new(),
             errors: Vec::new(),
+            phantom: PhantomData,
         }
     }
 
@@ -99,7 +117,7 @@ impl State {
     }
 
     /// Add `State context` with body state context block
-    fn add_state_context(&mut self, state_body: Rc<RefCell<BlockState>>) {
+    fn add_state_context(&mut self, state_body: Rc<RefCell<BlockState<I>>>) {
         self.context.push(state_body);
     }
 
@@ -129,7 +147,7 @@ impl State {
     /// Run semantic analyzer that covers all flow for AST.
     /// It's do not return any results, but fill results fir the `Semantic State`.
     ///
-    pub fn run(&mut self, data: &ast::Main<'_>) {
+    pub fn run(&mut self, data: &ast::Main<'_, E>) {
         // Execute each kind of analyzing and return errors data.
         // For functions - fetch only declaration for fast-forward
         // identification for using it in functions body.
@@ -245,7 +263,7 @@ impl State {
     }
 
     /// Function declaration analyze. Add it to Global State/M
-    pub fn function_declaration(&mut self, data: &ast::FunctionStatement<'_>) {
+    pub fn function_declaration(&mut self, data: &ast::FunctionStatement<'_, E>) {
         if self.global.functions.contains_key(&data.name().into()) {
             self.add_error(error::StateErrorResult::new(
                 error::StateErrorKind::FunctionAlreadyExist,
@@ -289,7 +307,7 @@ impl State {
     /// And add instructions to `SemanticStack`.
     fn init_func_params(
         &mut self,
-        function_state: &Rc<RefCell<BlockState>>,
+        function_state: &Rc<RefCell<BlockState<I>>>,
         fn_params: &Vec<ast::FunctionParameter<'_>>,
     ) {
         for fn_param in fn_params {
@@ -342,7 +360,7 @@ impl State {
     /// It is basic execution entity for program flow.
     /// It's operate sub analyze for function elements. It's contain
     /// Body State for current and child states.
-    pub fn function_body(&mut self, data: &ast::FunctionStatement<'_>) {
+    pub fn function_body(&mut self, data: &ast::FunctionStatement<'_, E>) {
         // Init empty function body state
         let body_state = Rc::new(RefCell::new(BlockState::new(None)));
         self.add_state_context(body_state.clone());
@@ -389,7 +407,7 @@ impl State {
                     }
                     if let Some(res) = expr_result {
                         // Check expression type and do not exist from flow
-                        self.check_type_exists(&res.expr_type, &expr, &expression.clone());
+                        self.check_type_exists(&res.expr_type, &expr, expression);
                         let fn_ty: Type = data.result_type.clone().into();
                         if fn_ty != res.expr_type {
                             self.add_error(error::StateErrorResult::new(
@@ -443,8 +461,8 @@ impl State {
     /// 6. Codegen
     pub fn let_binding(
         &mut self,
-        data: &ast::LetBinding<'_>,
-        function_state: &Rc<RefCell<BlockState>>,
+        data: &ast::LetBinding<'_, E>,
+        function_state: &Rc<RefCell<BlockState<I>>>,
     ) {
         // Call value analytics before putting let-value to state
         let Some(expr_result) = self.expression(&data.value, function_state) else {
@@ -509,7 +527,11 @@ impl State {
     /// 2. Read value for current state.
     /// 3. Update value to current values state map: value `name` -> `Data`
     /// 4. Codegen with Store action
-    pub fn binding(&mut self, data: &ast::Binding<'_>, function_state: &Rc<RefCell<BlockState>>) {
+    pub fn binding(
+        &mut self,
+        data: &ast::Binding<'_, E>,
+        function_state: &Rc<RefCell<BlockState<I>>>,
+    ) {
         // Call value analytics before putting let-value to state
         let Some(expr_result) = self.expression(&data.value, function_state) else {
             return;
@@ -551,8 +573,8 @@ impl State {
     /// Return error if function name doesn't exist in global state
     pub fn function_call(
         &mut self,
-        data: &ast::FunctionCall<'_>,
-        body_state: &Rc<RefCell<BlockState>>,
+        data: &ast::FunctionCall<'_, E>,
+        body_state: &Rc<RefCell<BlockState<I>>>,
     ) -> Option<Type> {
         let func_call_data: FunctionCall = data.clone().into();
         // Check is function exists in global functions stat
@@ -599,8 +621,8 @@ impl State {
     /// Return result register of `condition-expression` calculation.
     pub fn condition_expression(
         &mut self,
-        data: &ast::ExpressionLogicCondition<'_>,
-        function_body_state: &Rc<RefCell<BlockState>>,
+        data: &ast::ExpressionLogicCondition<'_, E>,
+        function_body_state: &Rc<RefCell<BlockState<I>>>,
     ) -> u64 {
         // Analyse left expression of left condition
         let left_expr = &data.left.left;
@@ -682,8 +704,8 @@ impl State {
     /// Return body statement "return" status
     pub fn if_condition_body(
         &mut self,
-        body: &[ast::IfBodyStatement<'_>],
-        if_body_state: &Rc<RefCell<BlockState>>,
+        body: &[ast::IfBodyStatement<'_, E>],
+        if_body_state: &Rc<RefCell<BlockState<I>>>,
         label_end: &LabelName,
         label_loop: Option<(&LabelName, &LabelName)>,
     ) -> bool {
@@ -740,8 +762,8 @@ impl State {
     /// Return body statement "return" status
     pub fn if_condition_loop_body(
         &mut self,
-        body: &[ast::IfLoopBodyStatement<'_>],
-        if_body_state: &Rc<RefCell<BlockState>>,
+        body: &[ast::IfLoopBodyStatement<'_, E>],
+        if_body_state: &Rc<RefCell<BlockState<I>>>,
         label_if_end: &LabelName,
         label_loop_start: &LabelName,
         label_loop_end: &LabelName,
@@ -825,8 +847,8 @@ impl State {
     /// simple and logic conditions.
     pub fn if_condition_calculation(
         &mut self,
-        condition: &ast::IfCondition<'_>,
-        if_body_state: &Rc<RefCell<BlockState>>,
+        condition: &ast::IfCondition<'_, E>,
+        if_body_state: &Rc<RefCell<BlockState<I>>>,
         label_if_begin: &LabelName,
         label_if_else: &LabelName,
         label_if_end: &LabelName,
@@ -900,8 +922,8 @@ impl State {
     /// unexpected behavior and program algorithm error
     pub fn if_condition(
         &mut self,
-        data: &ast::IfStatement<'_>,
-        function_body_state: &Rc<RefCell<BlockState>>,
+        data: &ast::IfStatement<'_, E>,
+        function_body_state: &Rc<RefCell<BlockState<I>>>,
         label_end: &Option<LabelName>,
         label_loop: Option<(&LabelName, &LabelName)>,
     ) {
@@ -1048,8 +1070,8 @@ impl State {
     /// - return, break, continue
     pub fn loop_statement(
         &mut self,
-        data: &[ast::LoopBodyStatement<'_>],
-        function_body_state: &Rc<RefCell<BlockState>>,
+        data: &[ast::LoopBodyStatement<'_, E>],
+        function_body_state: &Rc<RefCell<BlockState<I>>>,
     ) {
         // Create state for loop-body, from parent func state because
         // loop-state can contain sub-state, that can be independent from parent
@@ -1188,8 +1210,8 @@ impl State {
     ///         4.3. Operations -> recursively invoke 4.2.
     pub fn expression(
         &mut self,
-        data: &ast::Expression<'_>,
-        body_state: &Rc<RefCell<BlockState>>,
+        data: &ast::Expression<'_, E>,
+        body_state: &Rc<RefCell<BlockState<I>>>,
     ) -> Option<ExpressionResult> {
         // Fold expression operations priority
         let expr = Self::expression_operations_priority(data.clone());
@@ -1210,9 +1232,9 @@ impl State {
     pub fn expression_operation(
         &mut self,
         left_value: Option<&ExpressionResult>,
-        right_expression: &ast::Expression<'_>,
+        right_expression: &ast::Expression<'_, E>,
         op: Option<&ast::ExpressionOperations>,
-        body_state: &Rc<RefCell<BlockState>>,
+        body_state: &Rc<RefCell<BlockState<I>>>,
     ) -> Option<ExpressionResult> {
         // Get right side value from expression.
         // If expression return error immediately return error
@@ -1348,6 +1370,7 @@ impl State {
                 // Subexpression should be analyzed independently
                 self.expression(expr, body_state)?
             }
+            ast::ExpressionValue::ExtendedExpression(expr) => expr.expression(self, body_state),
         };
         // Check left expression side and generate expression operation code
         let expression_result = if let (Some(left_value), Some(op)) = (left_value, op) {
@@ -1399,7 +1422,7 @@ impl State {
     ///
     /// ## Return
     /// New folded expressions tree.
-    fn expression_operations_priority(data: ast::Expression<'_>) -> ast::Expression<'_> {
+    fn expression_operations_priority(data: ast::Expression<'_, E>) -> ast::Expression<'_, E> {
         let mut data = data;
         for priority in (0..=MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS).rev() {
             data = Self::fetch_op_priority(data, priority);
@@ -1421,7 +1444,10 @@ impl State {
     /// expression tree from left to right.
     /// If priority level not equal, we just return income expression, or
     /// if it has subbranch - launch fetching subbranch
-    fn fetch_op_priority(data: ast::Expression<'_>, priority_level: u8) -> ast::Expression<'_> {
+    fn fetch_op_priority(
+        data: ast::Expression<'_, E>,
+        priority_level: u8,
+    ) -> ast::Expression<'_, E> {
         // Check is expression contains right side with operation
         if let Some((op, expr)) = data.clone().operation {
             // Check is right expression contain subbranch (sub operation)

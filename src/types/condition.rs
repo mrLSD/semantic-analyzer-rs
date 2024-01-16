@@ -4,6 +4,7 @@
 use super::expression::Expression;
 use super::{Binding, FunctionCall, LetBinding};
 use crate::ast;
+use crate::types::semantic::ExtendedExpression;
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
 
@@ -70,8 +71,8 @@ pub struct ExpressionCondition {
     pub right: Expression,
 }
 
-impl From<ast::ExpressionCondition<'_>> for ExpressionCondition {
-    fn from(value: ast::ExpressionCondition<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::ExpressionCondition<'_, E>> for ExpressionCondition {
+    fn from(value: ast::ExpressionCondition<'_, E>) -> Self {
         Self {
             left: value.left.into(),
             condition: value.condition.into(),
@@ -92,8 +93,10 @@ pub struct ExpressionLogicCondition {
     pub right: Option<(LogicCondition, Box<ExpressionLogicCondition>)>,
 }
 
-impl From<ast::ExpressionLogicCondition<'_>> for ExpressionLogicCondition {
-    fn from(value: ast::ExpressionLogicCondition<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::ExpressionLogicCondition<'_, E>>
+    for ExpressionLogicCondition
+{
+    fn from(value: ast::ExpressionLogicCondition<'_, E>) -> Self {
         Self {
             left: value.left.into(),
             right: value
@@ -117,8 +120,8 @@ pub enum IfCondition {
     Logic(ExpressionLogicCondition),
 }
 
-impl From<ast::IfCondition<'_>> for IfCondition {
-    fn from(value: ast::IfCondition<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::IfCondition<'_, E>> for IfCondition {
+    fn from(value: ast::IfCondition<'_, E>) -> Self {
         match value {
             ast::IfCondition::Single(v) => Self::Single(v.into()),
             ast::IfCondition::Logic(v) => Self::Logic(v.into()),
@@ -141,8 +144,8 @@ pub struct IfStatement {
     pub else_if_statement: Option<Box<IfStatement>>,
 }
 
-impl From<ast::IfStatement<'_>> for IfStatement {
-    fn from(value: ast::IfStatement<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::IfStatement<'_, E>> for IfStatement {
+    fn from(value: ast::IfStatement<'_, E>) -> Self {
         Self {
             condition: value.condition.into(),
             body: value.body.into(),
@@ -168,8 +171,8 @@ pub enum IfBodyStatements {
     Loop(Vec<IfLoopBodyStatement>),
 }
 
-impl From<ast::IfBodyStatements<'_>> for IfBodyStatements {
-    fn from(value: ast::IfBodyStatements<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::IfBodyStatements<'_, E>> for IfBodyStatements {
+    fn from(value: ast::IfBodyStatements<'_, E>) -> Self {
         match value {
             ast::IfBodyStatements::If(v) => Self::If(v.iter().map(|v| v.clone().into()).collect()),
             ast::IfBodyStatements::Loop(v) => {
@@ -197,8 +200,8 @@ pub enum LoopBodyStatement {
     Continue,
 }
 
-impl From<ast::LoopBodyStatement<'_>> for LoopBodyStatement {
-    fn from(value: ast::LoopBodyStatement<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::LoopBodyStatement<'_, E>> for LoopBodyStatement {
+    fn from(value: ast::LoopBodyStatement<'_, E>) -> Self {
         match value {
             ast::LoopBodyStatement::LetBinding(v) => Self::LetBinding(v.into()),
             ast::LoopBodyStatement::Binding(v) => Self::Binding(v.into()),
@@ -230,8 +233,8 @@ pub enum IfBodyStatement {
     Return(Expression),
 }
 
-impl From<ast::IfBodyStatement<'_>> for IfBodyStatement {
-    fn from(value: ast::IfBodyStatement<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::IfBodyStatement<'_, E>> for IfBodyStatement {
+    fn from(value: ast::IfBodyStatement<'_, E>) -> Self {
         match value {
             ast::IfBodyStatement::LetBinding(v) => Self::LetBinding(v.into()),
             ast::IfBodyStatement::Binding(v) => Self::Binding(v.into()),
@@ -264,8 +267,8 @@ pub enum IfLoopBodyStatement {
     Continue,
 }
 
-impl From<ast::IfLoopBodyStatement<'_>> for IfLoopBodyStatement {
-    fn from(value: ast::IfLoopBodyStatement<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::IfLoopBodyStatement<'_, E>> for IfLoopBodyStatement {
+    fn from(value: ast::IfLoopBodyStatement<'_, E>) -> Self {
         match value {
             ast::IfLoopBodyStatement::LetBinding(v) => Self::LetBinding(v.into()),
             ast::IfLoopBodyStatement::Binding(v) => Self::Binding(v.into()),

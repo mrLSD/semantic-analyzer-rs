@@ -9,7 +9,7 @@
 </div>
 
 Semantic analyzer is an open source semantic analyzer for programming languages 
-that makes it easy to build your own efficient compilers.
+that makes it easy to build your own efficient compilers with extensibility in mind.
 
 ## 🌀 What is the library for and what tasks does it solve
 
@@ -52,6 +52,10 @@ Supported condition expressions and condition expression correctness check.
 
 ✅ **Building the Symbol Table**: For analyzing used the symbol table as data structure used by the semantic analyzer to keep track of 
 symbols (variables, functions, constants) in the source code. Each entry in the symbol table contains the symbol's name, type, and scope related for block state, and other relevant information.
+
+✅ **Generic expression value**: The ability to expand custom expressions for AST,
+according to compiler requirements. And the ability to implement custom instructions 
+for these custom expressions in the **Semantic Stack Context**.
 
 ### 🌳 Semantic State Tree
 
@@ -103,6 +107,17 @@ that meets the initial requirements of the semantic analyzer. As a library for l
 analysis and source code parsing, it is recommended to use: [nom is a parser combinators library](https://github.com/rust-bakery/nom).
 
 AST displays the **Turing complete** programming language and contains all the necessary elements for this.
+
+## 🔋 🔌 Extensibility
+
+Since `AST` is predefined, but in real conditions it may be necessary to expand the 
+functionality for the specific needs of the `compiler`, has been added the functionality 
+of the `AST` extensibility and the additional generated set of `Instructions` for 
+the **Semantic Stack Context**.
+
+- [x] 🚨 **Genetic expression value**: The ability to expand custom expressions for z, according to compiler requirements. 
+The ability to implement custom instructions for these custom expressions in the 
+**Semantic Stack Context**.
 
 ## 🛋️ Examples
 

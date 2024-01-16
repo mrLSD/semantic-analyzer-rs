@@ -1,4 +1,4 @@
-use crate::utils::SemanticTest;
+use crate::utils::{CustomExpression, SemanticTest};
 use semantic_analyzer::ast::{self, GetName, Ident};
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::expression::ExpressionOperations;
@@ -105,7 +105,8 @@ fn main_run() {
         body: vec![body_expr_return],
     };
     let fn2_stm = ast::MainStatement::Function(fn2.clone());
-    let main_stm: ast::Main = vec![import_stm, constant_stm, ty_stm, fn_stm, fn2_stm];
+    let main_stm: ast::Main<CustomExpression> =
+        vec![import_stm, constant_stm, ty_stm, fn_stm, fn2_stm];
     // For grcov
     format!("{main_stm:#?}");
     t.state.run(&main_stm);
@@ -360,7 +361,7 @@ fn double_return() {
         body: vec![body_return, body_expr],
     };
     let fn_stm = ast::MainStatement::Function(fn1);
-    let main_stm: ast::Main = vec![fn_stm];
+    let main_stm: ast::Main<CustomExpression> = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.check_errors_len(2), "Errors: {:?}", t.state.errors.len());
     assert!(t.check_error_index(0, StateErrorKind::ForbiddenCodeAfterReturnDeprecated));
@@ -381,7 +382,7 @@ fn wrong_return_type() {
         body: vec![body_return],
     };
     let fn_stm = ast::MainStatement::Function(fn1);
-    let main_stm: ast::Main = vec![fn_stm];
+    let main_stm: ast::Main<CustomExpression> = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
@@ -405,7 +406,7 @@ fn expression_as_return() {
         body: vec![body_expr],
     };
     let fn_stm = ast::MainStatement::Function(fn1.clone());
-    let main_stm: ast::Main = vec![fn_stm];
+    let main_stm: ast::Main<CustomExpression> = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.is_empty_error());
 
@@ -467,7 +468,7 @@ fn if_return_from_function() {
         body: vec![body_if, body_expr_return],
     };
     let fn_stm = ast::MainStatement::Function(fn1.clone());
-    let main_stm: ast::Main = vec![fn_stm];
+    let main_stm: ast::Main<CustomExpression> = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.is_empty_error());
 
@@ -582,7 +583,7 @@ fn function_args_and_let_binding() {
         body: vec![body_let_binding, body_expr_return],
     };
     let fn_stm = ast::MainStatement::Function(fn1.clone());
-    let main_stm: ast::Main = vec![fn_stm];
+    let main_stm: ast::Main<CustomExpression> = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.is_empty_error());
 
@@ -704,7 +705,7 @@ fn function_args_duplication() {
         body: vec![body_expr_return],
     };
     let fn_stm = ast::MainStatement::Function(fn1.clone());
-    let main_stm: ast::Main = vec![fn_stm];
+    let main_stm: ast::Main<CustomExpression> = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.check_errors_len(1));
     assert!(t.check_error(StateErrorKind::FunctionArgumentNameDuplicated));

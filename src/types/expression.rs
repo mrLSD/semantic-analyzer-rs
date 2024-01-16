@@ -4,6 +4,7 @@
 use super::types::Type;
 use super::{FunctionCall, PrimitiveValue, ValueName};
 use crate::ast;
+use crate::types::semantic::ExtendedExpression;
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
 
@@ -36,6 +37,13 @@ pub enum ExpressionResultValue {
     Register(u64),
 }
 
+/// `ExtendedExpressionValue` represent simplified string
+/// data of custom extended `ExpressionValue`. For now
+/// used only for display errors.
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+pub struct ExtendedExpressionValue(String);
+
 /// Expression value kinds:
 /// - value name - initialized through let-binding
 /// - primitive value - most primitive value, like integers etc.
@@ -54,6 +62,7 @@ pub enum ExpressionValue {
     StructValue(ExpressionStructValue),
     FunctionCall(FunctionCall),
     Expression(Box<Expression>),
+    ExtendedExpression(ExtendedExpressionValue),
 }
 
 impl ToString for ExpressionValue {
@@ -64,12 +73,13 @@ impl ToString for ExpressionValue {
             Self::StructValue(st_val) => st_val.clone().to_string(),
             Self::FunctionCall(fn_call) => fn_call.clone().to_string(),
             Self::Expression(val) => val.to_string(),
+            Self::ExtendedExpression(val) => val.clone().0,
         }
     }
 }
 
-impl From<ast::ExpressionValue<'_>> for ExpressionValue {
-    fn from(value: ast::ExpressionValue<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::ExpressionValue<'_, E>> for ExpressionValue {
+    fn from(value: ast::ExpressionValue<'_, E>) -> Self {
         match value {
             ast::ExpressionValue::ValueName(v) => Self::ValueName(v.into()),
             ast::ExpressionValue::PrimitiveValue(v) => Self::PrimitiveValue(v.into()),
@@ -77,6 +87,9 @@ impl From<ast::ExpressionValue<'_>> for ExpressionValue {
             ast::ExpressionValue::FunctionCall(v) => Self::FunctionCall(v.into()),
             ast::ExpressionValue::Expression(v) => {
                 Self::Expression(Box::new(v.as_ref().clone().into()))
+            }
+            ast::ExpressionValue::ExtendedExpression(expr) => {
+                Self::ExtendedExpression(ExtendedExpressionValue(format!("{expr:?}")))
             }
         }
     }
@@ -175,8 +188,8 @@ impl ToString for Expression {
     }
 }
 
-impl From<ast::Expression<'_>> for Expression {
-    fn from(value: ast::Expression<'_>) -> Self {
+impl<E: ExtendedExpression> From<ast::Expression<'_, E>> for Expression {
+    fn from(value: ast::Expression<'_, E>) -> Self {
         Self {
             expression_value: value.expression_value.into(),
             operation: value

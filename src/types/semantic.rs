@@ -6,8 +6,13 @@ use super::condition::{Condition, LogicCondition};
 use super::expression::{ExpressionOperations, ExpressionResult};
 use super::types::StructTypes;
 use super::{Constant, Function, FunctionParameter, FunctionStatement, LabelName, Value};
+use crate::semantic::State;
+use crate::types::block_state::BlockState;
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::fmt::Debug;
+use std::rc::Rc;
 
 /// Semantic Context trait contain instructions set functions
 /// for Global Stack context. It includes:
@@ -70,32 +75,56 @@ pub trait SemanticContext {
     fn function_arg(&mut self, value: Value, func_arg: FunctionParameter);
 }
 
+/// Extended Semantic Context trait contain instructions set functions
+/// for the Extended Stack context.
+pub trait ExtendedSemanticContext<I: SemanticContextInstruction> {
+    fn extended_expression(&mut self, expr: &I);
+}
+
+/// Semantic Context trait contains custom instruction implementation
+/// to flexibly extend context instructions.
+pub trait SemanticContextInstruction: Clone {
+    /// Custom instruction implementation.
+    /// Ast should be received from `GetAst` trait.
+    fn instruction(&self) -> Box<Self>;
+}
+
+/// Extended Expression for semantic analyzer.
+pub trait ExtendedExpression: Debug + Clone + PartialEq {
+    /// Custom expression. Ast should be received from `GetAst` trait.
+    fn expression<I: SemanticContextInstruction>(
+        &self,
+        state: &mut State<Self, I>,
+        block_state: &Rc<RefCell<BlockState<I>>>,
+    ) -> ExpressionResult;
+}
+
 /// # Semantic stack
 /// Semantic stack represent stack of Semantic Context results
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
-pub struct SemanticStack(Vec<SemanticStackContext>);
+pub struct SemanticStack<I: SemanticContextInstruction>(Vec<SemanticStackContext<I>>);
 
-impl SemanticStack {
+impl<I: SemanticContextInstruction> SemanticStack<I> {
     /// Init Semantic stack
     #[must_use]
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self(vec![])
     }
 
     /// Push Context data to the stack
-    pub fn push(&mut self, value: SemanticStackContext) {
+    pub fn push(&mut self, value: SemanticStackContext<I>) {
         self.0.push(value);
     }
 
     /// Get all context stack data as array data
     #[must_use]
-    pub fn get(self) -> Vec<SemanticStackContext> {
+    pub fn get(self) -> Vec<SemanticStackContext<I>> {
         self.0
     }
 }
 
-impl GlobalSemanticContext for SemanticStack {
+impl<I: SemanticContextInstruction> GlobalSemanticContext for SemanticStack<I> {
     /// Push Context to the stack as function declaration data.
     /// Function declaration instruction.
     ///
@@ -124,7 +153,7 @@ impl GlobalSemanticContext for SemanticStack {
     }
 }
 
-impl SemanticContext for SemanticStack {
+impl<I: SemanticContextInstruction> SemanticContext for SemanticStack<I> {
     /// Push Context to the stack as expression value data.
     ///
     /// ## Parameters
@@ -386,6 +415,15 @@ impl SemanticContext for SemanticStack {
     }
 }
 
+impl<I: SemanticContextInstruction> ExtendedSemanticContext<I> for SemanticStack<I> {
+    /// Extended Expression instruction.
+    /// AS argument trait, that contains instruction method that returns
+    /// instruction parameters.
+    fn extended_expression(&mut self, expr: &I) {
+        self.push(SemanticStackContext::ExtendedExpression(expr.instruction()));
+    }
+}
+
 /// # Semantic stack Context
 /// Context data of Semantic results. Contains type declarations
 /// for specific instructions.
@@ -395,7 +433,7 @@ impl SemanticContext for SemanticStack {
     derive(Serialize, Deserialize),
     serde(tag = "type", content = "content")
 )]
-pub enum SemanticStackContext {
+pub enum SemanticStackContext<I: SemanticContextInstruction> {
     ExpressionValue {
         expression: Value,
         register_number: u64,
@@ -478,4 +516,5 @@ pub enum SemanticStackContext {
         value: Value,
         func_arg: FunctionParameter,
     },
+    ExtendedExpression(Box<I>),
 }

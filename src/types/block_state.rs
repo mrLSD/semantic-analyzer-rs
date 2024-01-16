@@ -1,7 +1,7 @@
 //! # Block State types
 //! Block state Semantic types.
 
-use super::semantic::SemanticStack;
+use super::semantic::{ExtendedSemanticContext, SemanticContextInstruction, SemanticStack};
 use super::{Constant, Function, FunctionParameter, InnerValueName, LabelName, Value, ValueName};
 use crate::types::condition::{Condition, LogicCondition};
 use crate::types::expression::{ExpressionOperations, ExpressionResult};
@@ -31,7 +31,7 @@ use std::rc::Rc;
 /// - `parent` - represent parent states.  
 #[derive(Debug)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
-pub struct BlockState {
+pub struct BlockState<I: SemanticContextInstruction> {
     /// State values
     pub values: HashMap<ValueName, Value>,
     /// Used to keep all names in the block state (and parent) as unique
@@ -50,7 +50,7 @@ pub struct BlockState {
             deserialize_with = "rc_serializer::deserialize_option"
         )
     )]
-    pub parent: Option<Rc<RefCell<BlockState>>>,
+    pub parent: Option<Rc<RefCell<BlockState<I>>>>,
     /// children states
     #[cfg_attr(
         feature = "codec",
@@ -59,12 +59,12 @@ pub struct BlockState {
             deserialize_with = "rc_serializer::deserialize_vec"
         )
     )]
-    pub children: Vec<Rc<RefCell<BlockState>>>,
+    pub children: Vec<Rc<RefCell<BlockState<I>>>>,
     /// Semantic stack context for Block state
-    context: SemanticStack,
+    context: SemanticStack<I>,
 }
 
-impl BlockState {
+impl<I: SemanticContextInstruction> BlockState<I> {
     /// Init block state with optional `parent` state
     #[must_use]
     pub fn new(parent: Option<Rc<RefCell<Self>>>) -> Self {
@@ -95,7 +95,7 @@ impl BlockState {
     }
 
     #[must_use]
-    pub fn get_context(&self) -> SemanticStack {
+    pub fn get_context(&self) -> SemanticStack<I> {
         self.context.clone()
     }
 
@@ -222,7 +222,7 @@ impl BlockState {
     }
 }
 
-impl SemanticContext for BlockState {
+impl<I: SemanticContextInstruction> SemanticContext for BlockState<I> {
     fn expression_value(&mut self, expression: Value, register_number: u64) {
         self.context
             .expression_value(expression.clone(), register_number);
@@ -423,6 +423,15 @@ impl SemanticContext for BlockState {
         self.context.function_arg(value.clone(), func_arg.clone());
         if let Some(parent) = &self.parent {
             parent.borrow_mut().function_arg(value, func_arg);
+        }
+    }
+}
+
+impl<I: SemanticContextInstruction> ExtendedSemanticContext<I> for BlockState<I> {
+    fn extended_expression(&mut self, expr: &I) {
+        self.context.extended_expression(expr);
+        if let Some(parent) = &self.parent {
+            parent.borrow_mut().extended_expression(expr);
         }
     }
 }

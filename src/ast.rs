@@ -3,6 +3,7 @@
 //! represent full cycle and aspects of the programming language, and
 //! represent `Turing-complete` state machine.
 
+use crate::types::semantic::ExtendedExpression;
 use nom_locate::LocatedSpan;
 #[cfg(feature = "codec")]
 use serde::{
@@ -155,7 +156,7 @@ pub trait GetName {
 }
 
 /// `GetLocation` represent location of source data for AST element.
-/// Useful to locate specific source code location, espessialt for `Ident`.
+/// Useful to locate specific source code location, especially for `Ident`.
 pub trait GetLocation {
     fn location(&self) -> CodeLocation;
 }
@@ -224,9 +225,9 @@ impl GetLocation for FunctionName<'_> {
     }
 }
 
-impl<'a> ToString for FunctionName<'a> {
-    fn to_string(&self) -> String {
-        (*self.0.fragment()).to_string()
+impl<'a> std::fmt::Display for FunctionName<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.fragment())
     }
 }
 
@@ -243,9 +244,9 @@ impl<'a> ParameterName<'a> {
     }
 }
 
-impl ToString for ParameterName<'_> {
-    fn to_string(&self) -> String {
-        (*self.0.fragment()).to_string()
+impl std::fmt::Display for ParameterName<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.fragment())
     }
 }
 
@@ -519,7 +520,7 @@ pub struct FunctionParameter<'a> {
 /// function body.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
-pub struct FunctionStatement<'a> {
+pub struct FunctionStatement<'a, E: ExtendedExpression> {
     /// Function name
     #[cfg_attr(feature = "codec", serde(borrow))]
     pub name: FunctionName<'a>,
@@ -528,16 +529,16 @@ pub struct FunctionStatement<'a> {
     /// Function result type
     pub result_type: Type<'a>,
     /// Function body
-    pub body: Vec<BodyStatement<'a>>,
+    pub body: Vec<BodyStatement<'a, E>>,
 }
 
-impl GetLocation for FunctionStatement<'_> {
+impl<E: ExtendedExpression> GetLocation for FunctionStatement<'_, E> {
     fn location(&self) -> CodeLocation {
         self.name.location()
     }
 }
 
-impl GetName for FunctionStatement<'_> {
+impl<E: ExtendedExpression> GetName for FunctionStatement<'_, E> {
     fn name(&self) -> String {
         (*self.name.0.fragment()).to_string()
     }
@@ -608,18 +609,20 @@ impl PrimitiveValue {
     derive(Serialize, Deserialize),
     serde(tag = "type", content = "content")
 )]
-pub enum ExpressionValue<'a> {
+pub enum ExpressionValue<'a, E: ExtendedExpression> {
     /// Value name of expression
     #[cfg_attr(feature = "codec", serde(borrow))]
     ValueName(ValueName<'a>),
     /// Primitive value of expression (like numbers etc.)
     PrimitiveValue(PrimitiveValue),
     /// Function call (with parameters) of expression
-    FunctionCall(FunctionCall<'a>),
+    FunctionCall(FunctionCall<'a, E>),
     /// Value of expression based on `Struct` types.
     StructValue(ExpressionStructValue<'a>),
     /// Expression representation (sub branch)
-    Expression(Box<Expression<'a>>),
+    Expression(Box<Expression<'a, E>>),
+    /// Extended expression
+    ExtendedExpression(Box<E>),
 }
 
 /// `ExpressionOperations` expression operation element of AST.
@@ -679,15 +682,15 @@ impl ExpressionOperations {
 /// with expression operations.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
-pub struct Expression<'a> {
+pub struct Expression<'a, E: ExtendedExpression> {
     /// Expression value itself
     #[cfg_attr(feature = "codec", serde(borrow))]
-    pub expression_value: ExpressionValue<'a>,
+    pub expression_value: ExpressionValue<'a, E>,
     /// Optional expression operation with other expression value
-    pub operation: Option<(ExpressionOperations, Box<Expression<'a>>)>,
+    pub operation: Option<(ExpressionOperations, Box<Expression<'a, E>>)>,
 }
 
-impl GetLocation for Expression<'_> {
+impl<E: ExtendedExpression> GetLocation for Expression<'_, E> {
     fn location(&self) -> CodeLocation {
         // TODO: extend it
         CodeLocation::new(1, 0)
@@ -698,7 +701,7 @@ impl GetLocation for Expression<'_> {
 /// for `values` declarations.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize), serde(tag = "type"))]
-pub struct LetBinding<'a> {
+pub struct LetBinding<'a, E: ExtendedExpression> {
     /// Value name of let binding
     #[cfg_attr(feature = "codec", serde(borrow))]
     pub name: ValueName<'a>,
@@ -707,16 +710,16 @@ pub struct LetBinding<'a> {
     /// Optional type of value
     pub value_type: Option<Type<'a>>,
     /// Value expression to bind as result of let bending
-    pub value: Box<Expression<'a>>,
+    pub value: Box<Expression<'a, E>>,
 }
 
-impl GetLocation for LetBinding<'_> {
+impl<E: ExtendedExpression> GetLocation for LetBinding<'_, E> {
     fn location(&self) -> CodeLocation {
         self.name.location()
     }
 }
 
-impl GetName for LetBinding<'_> {
+impl<E: ExtendedExpression> GetName for LetBinding<'_, E> {
     fn name(&self) -> String {
         self.name.0.to_string()
     }
@@ -727,21 +730,21 @@ impl GetName for LetBinding<'_> {
 /// declared values.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
-pub struct Binding<'a> {
+pub struct Binding<'a, E: ExtendedExpression> {
     /// Binding value name
     #[cfg_attr(feature = "codec", serde(borrow))]
     pub name: ValueName<'a>,
     /// Value expression as result of binding
-    pub value: Box<Expression<'a>>,
+    pub value: Box<Expression<'a, E>>,
 }
 
-impl GetLocation for Binding<'_> {
+impl<E: ExtendedExpression> GetLocation for Binding<'_, E> {
     fn location(&self) -> CodeLocation {
         self.name.location()
     }
 }
 
-impl GetName for Binding<'_> {
+impl<E: ExtendedExpression> GetName for Binding<'_, E> {
     fn name(&self) -> String {
         self.name.0.to_string()
     }
@@ -751,21 +754,21 @@ impl GetName for Binding<'_> {
 /// Basic entity for function call representation.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
-pub struct FunctionCall<'a> {
+pub struct FunctionCall<'a, E: ExtendedExpression> {
     /// Function name of called function
     #[cfg_attr(feature = "codec", serde(borrow))]
     pub name: FunctionName<'a>,
     /// Function parameters, represented through expression
-    pub parameters: Vec<Expression<'a>>,
+    pub parameters: Vec<Expression<'a, E>>,
 }
 
-impl GetLocation for FunctionCall<'_> {
+impl<E: ExtendedExpression> GetLocation for FunctionCall<'_, E> {
     fn location(&self) -> CodeLocation {
         self.name.location()
     }
 }
 
-impl GetName for FunctionCall<'_> {
+impl<E: ExtendedExpression> GetName for FunctionCall<'_, E> {
     fn name(&self) -> String {
         (*self.name.0.fragment()).to_string()
     }
@@ -790,7 +793,7 @@ pub enum Condition {
 }
 
 /// `LogicCondition` declaration of logical condition operation.
-/// It can contains only: `and`, `or`. Used for `IfCondition` elemnt of AST.
+/// It can contains only: `and`, `or`. Used for `IfCondition` element of AST.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "codec",
@@ -807,14 +810,14 @@ pub enum LogicCondition {
 /// It contains condition between twe expressions.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
-pub struct ExpressionCondition<'a> {
+pub struct ExpressionCondition<'a, E: ExtendedExpression> {
     /// Left expression
     #[cfg_attr(feature = "codec", serde(borrow))]
-    pub left: Expression<'a>,
+    pub left: Expression<'a, E>,
     /// Condition between left and right expressions
     pub condition: Condition,
-    /// Righ expression
-    pub right: Expression<'a>,
+    /// Right expression
+    pub right: Expression<'a, E>,
 }
 
 /// # Logic expression condition
@@ -826,12 +829,12 @@ pub struct ExpressionCondition<'a> {
 /// expressions logic conditions.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
-pub struct ExpressionLogicCondition<'a> {
+pub struct ExpressionLogicCondition<'a, E: ExtendedExpression> {
     /// Left expression condition
     #[cfg_attr(feature = "codec", serde(borrow))]
-    pub left: ExpressionCondition<'a>,
+    pub left: ExpressionCondition<'a, E>,
     /// Optional right side contain logic operation to other `ExpressionLogicCondition`
-    pub right: Option<(LogicCondition, Box<ExpressionLogicCondition<'a>>)>,
+    pub right: Option<(LogicCondition, Box<ExpressionLogicCondition<'a, E>>)>,
 }
 
 /// `IfCondition` if-condition control flow element of AST.
@@ -844,12 +847,12 @@ pub struct ExpressionLogicCondition<'a> {
     derive(Serialize, Deserialize),
     serde(tag = "type", content = "content")
 )]
-pub enum IfCondition<'a> {
+pub enum IfCondition<'a, E: ExtendedExpression> {
     /// Single if condition based on expression
     #[cfg_attr(feature = "codec", serde(borrow))]
-    Single(Expression<'a>),
+    Single(Expression<'a, E>),
     /// Logic expression condition tree
-    Logic(ExpressionLogicCondition<'a>),
+    Logic(ExpressionLogicCondition<'a, E>),
 }
 
 /// `IfStatement` if statement AST element.
@@ -860,19 +863,19 @@ pub enum IfCondition<'a> {
 /// - Else-if-body statement - body of else-if-condition success
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
-pub struct IfStatement<'a> {
+pub struct IfStatement<'a, E: ExtendedExpression> {
     /// If-condition
     #[cfg_attr(feature = "codec", serde(borrow))]
-    pub condition: IfCondition<'a>,
+    pub condition: IfCondition<'a, E>,
     /// If-body statement - body of if-condition success
-    pub body: IfBodyStatements<'a>,
+    pub body: IfBodyStatements<'a, E>,
     /// If-else-body statement - body of else-condition success
-    pub else_statement: Option<IfBodyStatements<'a>>,
+    pub else_statement: Option<IfBodyStatements<'a, E>>,
     /// Else-if-body statement - body of else-if-condition success
-    pub else_if_statement: Option<Box<IfStatement<'a>>>,
+    pub else_if_statement: Option<Box<IfStatement<'a, E>>>,
 }
 
-impl GetLocation for IfStatement<'_> {
+impl<E: ExtendedExpression> GetLocation for IfStatement<'_, E> {
     fn location(&self) -> CodeLocation {
         // TODO
         CodeLocation::new(1, 0)
@@ -887,22 +890,22 @@ impl GetLocation for IfStatement<'_> {
     derive(Serialize, Deserialize),
     serde(tag = "type", content = "content")
 )]
-pub enum BodyStatement<'a> {
+pub enum BodyStatement<'a, E: ExtendedExpression> {
     /// Let-binding function declaration
     #[cfg_attr(feature = "codec", serde(borrow))]
-    LetBinding(LetBinding<'a>),
+    LetBinding(LetBinding<'a, E>),
     /// Binding function declaration
-    Binding(Binding<'a>),
+    Binding(Binding<'a, E>),
     /// Function call
-    FunctionCall(FunctionCall<'a>),
+    FunctionCall(FunctionCall<'a, E>),
     /// If-condition control flow statement
-    If(IfStatement<'a>),
+    If(IfStatement<'a, E>),
     /// Loop control flow statement
-    Loop(Vec<LoopBodyStatement<'a>>),
+    Loop(Vec<LoopBodyStatement<'a, E>>),
     /// Expression statement
-    Expression(Expression<'a>),
+    Expression(Expression<'a, E>),
     /// Return statement
-    Return(Expression<'a>),
+    Return(Expression<'a, E>),
 }
 
 /// `IfBodyStatement` statement of if-body elements tree of AST.
@@ -913,14 +916,14 @@ pub enum BodyStatement<'a> {
     derive(Serialize, Deserialize),
     serde(tag = "type", content = "content")
 )]
-pub enum IfBodyStatement<'a> {
+pub enum IfBodyStatement<'a, E: ExtendedExpression> {
     #[cfg_attr(feature = "codec", serde(borrow))]
-    LetBinding(LetBinding<'a>),
-    Binding(Binding<'a>),
-    FunctionCall(FunctionCall<'a>),
-    If(IfStatement<'a>),
-    Loop(Vec<LoopBodyStatement<'a>>),
-    Return(Expression<'a>),
+    LetBinding(LetBinding<'a, E>),
+    Binding(Binding<'a, E>),
+    FunctionCall(FunctionCall<'a, E>),
+    If(IfStatement<'a, E>),
+    Loop(Vec<LoopBodyStatement<'a, E>>),
+    Return(Expression<'a, E>),
 }
 
 /// `IfLoopBodyStatement` statement of loop-if-body elements tree of AST.
@@ -928,14 +931,14 @@ pub enum IfBodyStatement<'a> {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "codec", serde(tag = "type", content = "content"))]
-pub enum IfLoopBodyStatement<'a> {
+pub enum IfLoopBodyStatement<'a, E: ExtendedExpression> {
     #[cfg_attr(feature = "codec", serde(borrow))]
-    LetBinding(LetBinding<'a>),
-    Binding(Binding<'a>),
-    FunctionCall(FunctionCall<'a>),
-    If(IfStatement<'a>),
-    Loop(Vec<LoopBodyStatement<'a>>),
-    Return(Expression<'a>),
+    LetBinding(LetBinding<'a, E>),
+    Binding(Binding<'a, E>),
+    FunctionCall(FunctionCall<'a, E>),
+    If(IfStatement<'a, E>),
+    Loop(Vec<LoopBodyStatement<'a, E>>),
+    Return(Expression<'a, E>),
     Break,
     Continue,
 }
@@ -948,10 +951,10 @@ pub enum IfLoopBodyStatement<'a> {
     derive(Serialize, Deserialize),
     serde(tag = "type", content = "content")
 )]
-pub enum IfBodyStatements<'a> {
+pub enum IfBodyStatements<'a, E: ExtendedExpression> {
     #[cfg_attr(feature = "codec", serde(borrow))]
-    If(Vec<IfBodyStatement<'a>>),
-    Loop(Vec<IfLoopBodyStatement<'a>>),
+    If(Vec<IfBodyStatement<'a, E>>),
+    Loop(Vec<IfLoopBodyStatement<'a, E>>),
 }
 
 /// `LoopBodyStatement` statement of loop-body elements tree of AST.
@@ -962,14 +965,14 @@ pub enum IfBodyStatements<'a> {
     derive(Serialize, Deserialize),
     serde(tag = "type", content = "content")
 )]
-pub enum LoopBodyStatement<'a> {
+pub enum LoopBodyStatement<'a, E: ExtendedExpression> {
     #[cfg_attr(feature = "codec", serde(borrow))]
-    LetBinding(LetBinding<'a>),
-    Binding(Binding<'a>),
-    FunctionCall(FunctionCall<'a>),
-    If(IfStatement<'a>),
-    Loop(Vec<LoopBodyStatement<'a>>),
-    Return(Expression<'a>),
+    LetBinding(LetBinding<'a, E>),
+    Binding(Binding<'a, E>),
+    FunctionCall(FunctionCall<'a, E>),
+    If(IfStatement<'a, E>),
+    Loop(Vec<LoopBodyStatement<'a, E>>),
+    Return(Expression<'a, E>),
     Break,
     Continue,
 }
@@ -981,7 +984,7 @@ pub enum LoopBodyStatement<'a> {
     derive(Serialize, Deserialize),
     serde(tag = "type", content = "content")
 )]
-pub enum MainStatement<'a> {
+pub enum MainStatement<'a, E: ExtendedExpression> {
     /// Import declarations
     #[cfg_attr(feature = "codec", serde(borrow))]
     Import(ImportPath<'a>),
@@ -990,10 +993,10 @@ pub enum MainStatement<'a> {
     /// Type declaration
     Types(StructTypes<'a>),
     /// Function declaration and function body-statement
-    Function(FunctionStatement<'a>),
+    Function(FunctionStatement<'a, E>),
 }
 
 /// # Main
 /// Stack of `MainStatement` main AST elements. That gather
 /// tries of AST, to represent full sort of source code.
-pub type Main<'a> = Vec<MainStatement<'a>>;
+pub type Main<'a, E> = Vec<MainStatement<'a, E>>;
