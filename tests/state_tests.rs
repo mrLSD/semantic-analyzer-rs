@@ -20,7 +20,7 @@ mod utils;
 
 #[test]
 fn state_init() {
-    let st = State::<CustomExpression>::default();
+    let st = State::<CustomExpression, CustomExpression>::default();
     // For grcov
     format!("{st:?}");
     assert!(st.global.types.is_empty());
@@ -35,7 +35,7 @@ fn state_init() {
 fn state_block_state_count() {
     let bst1 = Rc::new(RefCell::new(BlockState::new(None)));
     let bst2 = Rc::new(RefCell::new(BlockState::new(Some(bst1.clone()))));
-    let mut st1 = State::<CustomExpression>::default();
+    let mut st1 = State::<CustomExpression, CustomExpression>::default();
     st1.context.push(bst1);
     st1.context.push(bst2);
     assert_eq!(st1.context.len(), 2);

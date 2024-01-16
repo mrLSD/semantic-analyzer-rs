@@ -81,29 +81,21 @@ pub trait ExtendedSemanticContext<I: SemanticContextInstruction> {
     fn extended_expression(&mut self, expr: &I);
 }
 
-/// Trait describe AST input receiving
-pub trait GetAst {
-    type Ast;
-    fn get_ast(&self) -> Self::Ast;
-}
-
 /// Semantic Context trait contains custom instruction implementation
 /// to flexibly extend context instructions.
-pub trait SemanticContextInstruction: GetAst + Clone {
+pub trait SemanticContextInstruction: Clone {
     /// Custom instruction implementation.
     /// Ast should be received from `GetAst` trait.
     fn instruction(&self) -> Box<Self>;
 }
 
 /// Extended Expression for semantic analyzer.
-pub trait ExtendedExpression:
-    GetAst + SemanticContextInstruction + Debug + Clone + PartialEq
-{
+pub trait ExtendedExpression: Debug + Clone + PartialEq {
     /// Custom expression. Ast should be received from `GetAst` trait.
-    fn expression(
+    fn expression<I: SemanticContextInstruction>(
         &self,
-        state: &mut State<Self>,
-        block_state: &Rc<RefCell<BlockState<Self>>>,
+        state: &mut State<Self, I>,
+        block_state: &Rc<RefCell<BlockState<I>>>,
     ) -> ExpressionResult;
 }
 
