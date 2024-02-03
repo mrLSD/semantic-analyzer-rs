@@ -5,7 +5,7 @@ use semantic_analyzer::types::condition::{Condition, LogicCondition};
 use semantic_analyzer::types::expression::{
     ExpressionOperations, ExpressionResult, ExpressionResultValue,
 };
-use semantic_analyzer::types::semantic::{ExtendedSemanticContext, SemanticContext};
+use semantic_analyzer::types::semantic::SemanticContext;
 use semantic_analyzer::types::{
     block_state::BlockState,
     semantic::SemanticStack,
@@ -239,7 +239,7 @@ fn block_state_last_register_inc() {
 }
 
 #[test]
-fn zblock_state_instructions_with_parent() {
+fn block_state_instructions_with_parent() {
     let parent_bst = Rc::new(RefCell::new(BlockState::<CustomExpression>::new(None)));
     let mut bst = BlockState::new(Some(parent_bst.clone()));
     let val = Value {
@@ -292,9 +292,6 @@ fn zblock_state_instructions_with_parent() {
     };
     bst.function_arg(val, func_arg);
 
-    let custom_expr = CustomExpression;
-    bst.extended_expression(&custom_expr);
-
     let parent_ctx = parent_bst.borrow().get_context().get();
-    assert_eq!(parent_ctx.len(), 18);
+    assert_eq!(parent_ctx.len(), 17);
 }

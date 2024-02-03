@@ -1,7 +1,7 @@
 //! # Block State types
 //! Block state Semantic types.
 
-use super::semantic::{ExtendedSemanticContext, SemanticContextInstruction, SemanticStack};
+use super::semantic::{SemanticContextInstruction, SemanticStack};
 use super::{Constant, Function, FunctionParameter, InnerValueName, LabelName, Value, ValueName};
 use crate::types::condition::{Condition, LogicCondition};
 use crate::types::expression::{ExpressionOperations, ExpressionResult};
@@ -423,15 +423,6 @@ impl<I: SemanticContextInstruction> SemanticContext for BlockState<I> {
         self.context.function_arg(value.clone(), func_arg.clone());
         if let Some(parent) = &self.parent {
             parent.borrow_mut().function_arg(value, func_arg);
-        }
-    }
-}
-
-impl<I: SemanticContextInstruction> ExtendedSemanticContext<I> for BlockState<I> {
-    fn extended_expression(&mut self, expr: &I) {
-        self.context.extended_expression(expr);
-        if let Some(parent) = &self.parent {
-            parent.borrow_mut().extended_expression(expr);
         }
     }
 }

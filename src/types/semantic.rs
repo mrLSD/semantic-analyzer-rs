@@ -75,12 +75,6 @@ pub trait SemanticContext {
     fn function_arg(&mut self, value: Value, func_arg: FunctionParameter);
 }
 
-/// Extended Semantic Context trait contain instructions set functions
-/// for the Extended Stack context.
-pub trait ExtendedSemanticContext<I: SemanticContextInstruction> {
-    fn extended_expression(&mut self, expr: &I);
-}
-
 /// Semantic Context trait contains custom instruction implementation
 /// to flexibly extend context instructions.
 pub trait SemanticContextInstruction: Clone {
@@ -412,15 +406,6 @@ impl<I: SemanticContextInstruction> SemanticContext for SemanticStack<I> {
     /// - `func_arg` - function parameter data
     fn function_arg(&mut self, value: Value, func_arg: FunctionParameter) {
         self.push(SemanticStackContext::FunctionArg { value, func_arg });
-    }
-}
-
-impl<I: SemanticContextInstruction> ExtendedSemanticContext<I> for SemanticStack<I> {
-    /// Extended Expression instruction.
-    /// AS argument trait, that contains instruction method that returns
-    /// instruction parameters.
-    fn extended_expression(&mut self, expr: &I) {
-        self.push(SemanticStackContext::ExtendedExpression(expr.instruction()));
     }
 }
 
