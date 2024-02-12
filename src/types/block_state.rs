@@ -1,7 +1,7 @@
 //! # Block State types
 //! Block state Semantic types.
 
-use super::semantic::{SemanticContextInstruction, SemanticStack};
+use super::semantic::{SemanticContextInstruction, SemanticStack, SemanticStackContext};
 use super::{Constant, Function, FunctionParameter, InnerValueName, LabelName, Value, ValueName};
 use crate::types::condition::{Condition, LogicCondition};
 use crate::types::expression::{ExpressionOperations, ExpressionResult};
@@ -97,6 +97,10 @@ impl<I: SemanticContextInstruction> BlockState<I> {
     #[must_use]
     pub fn get_context(&self) -> SemanticStack<I> {
         self.context.clone()
+    }
+
+    pub fn set_context(&mut self, data: SemanticStackContext<I>) {
+        self.context.push(data);
     }
 
     /// Set `last_register_number` for current and parent states

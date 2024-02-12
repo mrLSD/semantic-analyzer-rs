@@ -27,11 +27,7 @@ impl ExtendedExpression for CustomExpression {
     }
 }
 
-impl SemanticContextInstruction for CustomExpression {
-    fn instruction(&self) -> Box<Self> {
-        Box::new(Self)
-    }
-}
+impl SemanticContextInstruction for CustomExpression {}
 
 pub struct SemanticTest {
     pub state: State<CustomExpression, CustomExpression>,

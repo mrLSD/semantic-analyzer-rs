@@ -17,7 +17,7 @@ use crate::types::expression::{
 };
 use crate::types::semantic::{
     ExtendedExpression, GlobalSemanticContext, SemanticContext, SemanticContextInstruction,
-    SemanticStack,
+    SemanticStack, SemanticStackContext,
 };
 use crate::types::types::{Type, TypeName};
 use crate::types::{

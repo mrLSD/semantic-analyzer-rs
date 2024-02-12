@@ -77,11 +77,7 @@ pub trait SemanticContext {
 
 /// Semantic Context trait contains custom instruction implementation
 /// to flexibly extend context instructions.
-pub trait SemanticContextInstruction: Clone {
-    /// Custom instruction implementation.
-    /// Ast should be received from `GetAst` trait.
-    fn instruction(&self) -> Box<Self>;
-}
+pub trait SemanticContextInstruction: Debug + Clone {}
 
 /// Extended Expression for semantic analyzer.
 pub trait ExtendedExpression: Debug + Clone + PartialEq {
@@ -502,4 +498,5 @@ pub enum SemanticStackContext<I: SemanticContextInstruction> {
         func_arg: FunctionParameter,
     },
     ExtendedExpression(Box<I>),
+    Test(Box<dyn SemanticContextInstruction>),
 }

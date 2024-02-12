@@ -19,6 +19,7 @@ use semantic_analyzer::types::{
     ValueName,
 };
 use std::cell::RefCell;
+use std::fmt::Debug;
 use std::rc::Rc;
 
 mod utils;
@@ -426,7 +427,7 @@ fn expression_value_name_exists() {
         state[0],
         SemanticStackContext::ExpressionValue {
             expression: value,
-            register_number: 1
+            register_number: 1,
         }
     );
     assert!(t.is_empty_error());
@@ -462,7 +463,7 @@ fn expression_const_exists() {
         state[0],
         SemanticStackContext::ExpressionConst {
             expression: value,
-            register_number: 1
+            register_number: 1,
         }
     );
     assert!(t.is_empty_error());
@@ -803,7 +804,7 @@ fn expression_struct_value() {
         SemanticStackContext::ExpressionStructValue {
             expression: value,
             index: 0,
-            register_number: 1
+            register_number: 1,
         }
     );
 }
@@ -852,7 +853,7 @@ fn expression_func_call() {
         res,
         ExpressionResult {
             expr_value: ExpressionResultValue::Register(2),
-            expr_type: Type::Primitive(PrimitiveTypes::Ptr)
+            expr_type: Type::Primitive(PrimitiveTypes::Ptr),
         }
     );
     let state = block_state.borrow().get_context().clone().get();
@@ -863,10 +864,10 @@ fn expression_func_call() {
             call: Function {
                 inner_name: fn_name.into(),
                 inner_type: Type::Primitive(PrimitiveTypes::Ptr),
-                parameters: vec![]
+                parameters: vec![],
             },
             params: vec![],
-            register_number: 1
+            register_number: 1,
         }
     );
 }
@@ -889,7 +890,7 @@ fn expression_sub_expression() {
         res,
         ExpressionResult {
             expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U32(10)),
-            expr_type: Type::Primitive(PrimitiveTypes::U32)
+            expr_type: Type::Primitive(PrimitiveTypes::U32),
         }
     );
     let state = block_state.borrow().get_context().clone().get();
@@ -914,7 +915,7 @@ fn expression_operation() {
         res,
         ExpressionResult {
             expr_type: Type::Primitive(PrimitiveTypes::Char),
-            expr_value: ExpressionResultValue::Register(1)
+            expr_value: ExpressionResultValue::Register(1),
         }
     );
     let state = block_state.borrow().get_context().clone().get();
@@ -925,13 +926,13 @@ fn expression_operation() {
             operation: ExpressionOperations::Plus,
             left_value: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Char),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Char('a'))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Char('a')),
             },
             right_value: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Char),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Char('b'))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Char('b')),
             },
-            register_number: 1
+            register_number: 1,
         }
     );
 }
@@ -1264,18 +1265,21 @@ fn custom_expression() {
         GoOut(u32),
     }
 
-    #[derive(Clone, Debug, PartialEq)]
+    #[derive(Clone, Debug, PartialEq, Copy)]
     #[allow(dead_code)]
     pub enum CustomExpressionInstruction {
-        GoIn { index: u32, value: u32 },
-        GoOut { result: u32 },
+        GoIn {
+            index: u32,
+            value: u64,
+            register_number: u64,
+        },
+        GoOut {
+            value: u64,
+            register_number: u64,
+        },
     }
 
-    impl SemanticContextInstruction for CustomExpressionInstruction {
-        fn instruction(&self) -> Box<Self> {
-            Box::new(self.clone())
-        }
-    }
+    impl SemanticContextInstruction for CustomExpressionInstruction {}
 
     impl ExtendedExpression for AstCustomExpression {
         fn expression<I: SemanticContextInstruction>(
@@ -1284,12 +1288,16 @@ fn custom_expression() {
             block_state: &Rc<RefCell<BlockState<I>>>,
         ) -> ExpressionResult {
             block_state.borrow_mut().inc_register();
-            let reg = block_state.borrow().last_register_number;
-            let _instr = CustomExpressionInstruction::GoOut { result: 10 };
-            //block_state.borrow_mut().extended_expression(&instr);
+            let register_number = block_state.borrow().last_register_number;
+            let custom_instr = CustomExpressionInstruction::GoIn {
+                index: 0,
+                value: 10,
+                register_number,
+            };
+            //let instr = custom_instr;
             ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::U32),
-                expr_value: ExpressionResultValue::Register(reg),
+                expr_value: ExpressionResultValue::Register(register_number),
             }
         }
     }
@@ -1320,7 +1328,7 @@ fn custom_expression() {
         res,
         ExpressionResult {
             expr_type: Type::Primitive(PrimitiveTypes::U32),
-            expr_value: ExpressionResultValue::Register(3)
+            expr_value: ExpressionResultValue::Register(3),
         }
     );
     let state = block_state.borrow().get_context().clone().get();
