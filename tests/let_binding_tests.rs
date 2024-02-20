@@ -1,4 +1,4 @@
-use crate::utils::{CustomExpression, SemanticTest};
+use crate::utils::{CustomExpression, CustomExpressionInstruction, SemanticTest};
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{CodeLocation, GetLocation, GetName, Ident};
 use semantic_analyzer::types::block_state::BlockState;
@@ -15,9 +15,10 @@ mod utils;
 #[test]
 fn let_binding_transform() {
     let expr_ast = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
-            ast::PrimitiveValue::U64(3),
-        ),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(ast::PrimitiveValue::U64(3)),
         operation: None,
     };
     let let_binding_ast = ast::LetBinding {

@@ -7,6 +7,7 @@
 //! - Error types
 
 #![allow(clippy::module_inception)]
+
 /// Block state types
 pub mod block_state;
 /// Condition types
@@ -25,7 +26,7 @@ use self::expression::{Expression, ExpressionOperations};
 use self::types::Type;
 use crate::ast;
 use crate::ast::GetName;
-use crate::types::semantic::ExtendedExpression;
+use crate::types::semantic::{ExtendedExpression, SemanticContextInstruction};
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
 
@@ -114,6 +115,7 @@ impl From<String> for FunctionName {
         Self(value)
     }
 }
+
 impl From<ast::FunctionName<'_>> for FunctionName {
     fn from(value: ast::FunctionName<'_>) -> Self {
         Self(value.to_string())
@@ -310,8 +312,10 @@ pub struct FunctionStatement {
     pub body: Vec<BodyStatement>,
 }
 
-impl<E: ExtendedExpression> From<ast::FunctionStatement<'_, E>> for FunctionStatement {
-    fn from(value: ast::FunctionStatement<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::FunctionStatement<'_, I, E>>
+    for FunctionStatement
+{
+    fn from(value: ast::FunctionStatement<'_, I, E>) -> Self {
         Self {
             name: value.name.into(),
             parameters: value.parameters.iter().map(|v| v.clone().into()).collect(),
@@ -340,8 +344,10 @@ pub enum BodyStatement {
     Return(Expression),
 }
 
-impl<E: ExtendedExpression> From<ast::BodyStatement<'_, E>> for BodyStatement {
-    fn from(value: ast::BodyStatement<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::BodyStatement<'_, I, E>>
+    for BodyStatement
+{
+    fn from(value: ast::BodyStatement<'_, I, E>) -> Self {
         match value {
             ast::BodyStatement::LetBinding(v) => Self::LetBinding(v.into()),
             ast::BodyStatement::Binding(v) => Self::Binding(v.into()),
@@ -375,8 +381,10 @@ impl ToString for LetBinding {
     }
 }
 
-impl<E: ExtendedExpression> From<ast::LetBinding<'_, E>> for LetBinding {
-    fn from(value: ast::LetBinding<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::LetBinding<'_, I, E>>
+    for LetBinding
+{
+    fn from(value: ast::LetBinding<'_, I, E>) -> Self {
         Self {
             name: value.name.into(),
             mutable: value.mutable,
@@ -473,8 +481,10 @@ impl ToString for FunctionCall {
     }
 }
 
-impl<E: ExtendedExpression> From<ast::FunctionCall<'_, E>> for FunctionCall {
-    fn from(value: ast::FunctionCall<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::FunctionCall<'_, I, E>>
+    for FunctionCall
+{
+    fn from(value: ast::FunctionCall<'_, I, E>) -> Self {
         Self {
             name: value.name.into(),
             parameters: value.parameters.iter().map(|v| v.clone().into()).collect(),
@@ -498,8 +508,10 @@ impl ToString for Binding {
     }
 }
 
-impl<E: ExtendedExpression> From<ast::Binding<'_, E>> for Binding {
-    fn from(value: ast::Binding<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::Binding<'_, I, E>>
+    for Binding
+{
+    fn from(value: ast::Binding<'_, I, E>) -> Self {
         Self {
             name: value.name.into(),
             value: Box::new(value.value.as_ref().clone().into()),

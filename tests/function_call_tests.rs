@@ -1,4 +1,4 @@
-use crate::utils::{CustomExpression, SemanticTest};
+use crate::utils::{CustomExpression, CustomExpressionInstruction, SemanticTest};
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{CodeLocation, GetLocation, GetName, Ident};
 use semantic_analyzer::types::block_state::BlockState;
@@ -13,7 +13,10 @@ mod utils;
 #[test]
 fn func_call_transform() {
     let fn_name = ast::FunctionName::new(Ident::new("fn1"));
-    let fn_call = ast::FunctionCall::<CustomExpression> {
+    let fn_call = ast::FunctionCall::<
+        CustomExpressionInstruction,
+        CustomExpression<CustomExpressionInstruction>,
+    > {
         name: fn_name.clone(),
         parameters: vec![],
     };
@@ -25,9 +28,10 @@ fn func_call_transform() {
     assert!(fn_call_into.parameters.is_empty());
 
     let param1 = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
-            ast::PrimitiveValue::Ptr,
-        ),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(ast::PrimitiveValue::Ptr),
         operation: None,
     };
     let fn_call2 = ast::FunctionCall {
@@ -71,12 +75,12 @@ fn func_call_wrong_type() {
         name: ast::ParameterName::new(Ident::new("x")),
         parameter_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
     };
-    let fn_statement = ast::FunctionStatement {
-        name: fn_name.clone(),
-        parameters: vec![fn_decl_param1],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::I16),
-        body: vec![],
-    };
+    let fn_statement = ast::FunctionStatement::new(
+        fn_name.clone(),
+        vec![fn_decl_param1],
+        ast::Type::Primitive(ast::PrimitiveTypes::I16),
+        vec![],
+    );
     t.state.function_declaration(&fn_statement);
     assert!(t.is_empty_error());
 
@@ -107,12 +111,12 @@ fn func_call_declared_func() {
         name: ast::ParameterName::new(Ident::new("x")),
         parameter_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
     };
-    let fn_statement = ast::FunctionStatement {
-        name: fn_name.clone(),
-        parameters: vec![fn_decl_param1],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::I32),
-        body: vec![],
-    };
+    let fn_statement = ast::FunctionStatement::new(
+        fn_name.clone(),
+        vec![fn_decl_param1],
+        ast::Type::Primitive(ast::PrimitiveTypes::I32),
+        vec![],
+    );
     t.state.function_declaration(&fn_statement);
     assert!(t.is_empty_error());
 

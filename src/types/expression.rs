@@ -4,7 +4,7 @@
 use super::types::Type;
 use super::{FunctionCall, PrimitiveValue, ValueName};
 use crate::ast;
-use crate::types::semantic::ExtendedExpression;
+use crate::types::semantic::{ExtendedExpression, SemanticContextInstruction};
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
 
@@ -78,9 +78,12 @@ impl ToString for ExpressionValue {
     }
 }
 
-impl<E: ExtendedExpression> From<ast::ExpressionValue<'_, E>> for ExpressionValue {
-    fn from(value: ast::ExpressionValue<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::ExpressionValue<'_, I, E>>
+    for ExpressionValue
+{
+    fn from(value: ast::ExpressionValue<'_, I, E>) -> Self {
         match value {
+            ast::ExpressionValue::_Marker(..) => unreachable!(),
             ast::ExpressionValue::ValueName(v) => Self::ValueName(v.into()),
             ast::ExpressionValue::PrimitiveValue(v) => Self::PrimitiveValue(v.into()),
             ast::ExpressionValue::StructValue(v) => Self::StructValue(v.into()),
@@ -188,8 +191,10 @@ impl ToString for Expression {
     }
 }
 
-impl<E: ExtendedExpression> From<ast::Expression<'_, E>> for Expression {
-    fn from(value: ast::Expression<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::Expression<'_, I, E>>
+    for Expression
+{
+    fn from(value: ast::Expression<'_, I, E>) -> Self {
         Self {
             expression_value: value.expression_value.into(),
             operation: value

@@ -16,12 +16,12 @@ fn function_transform_ast() {
 fn function_declaration_without_body() {
     let mut t = SemanticTest::new();
     let fn_name = ast::FunctionName::new(Ident::new("fn1"));
-    let fn_statement = ast::FunctionStatement {
-        name: fn_name.clone(),
-        parameters: vec![],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::I8),
-        body: vec![],
-    };
+    let fn_statement = ast::FunctionStatement::new(
+        fn_name.clone(),
+        vec![],
+        ast::Type::Primitive(ast::PrimitiveTypes::I8),
+        vec![],
+    );
     t.state.function_declaration(&fn_statement);
     assert!(t.is_empty_error());
     assert!(t.state.global.functions.contains_key(&fn_name.into()));
@@ -53,15 +53,15 @@ fn function_declaration_wrong_type() {
         attributes: vec![],
     };
 
-    let fn_statement = ast::FunctionStatement {
-        name: fn_name.clone(),
-        parameters: vec![ast::FunctionParameter {
+    let fn_statement = ast::FunctionStatement::new(
+        fn_name.clone(),
+        vec![ast::FunctionParameter {
             name: ast::ParameterName::new(Ident::new("x")),
             parameter_type: ast::Type::Primitive(ast::PrimitiveTypes::I64),
         }],
-        result_type: ast::Type::Struct(type_decl.clone()),
-        body: vec![],
-    };
+        ast::Type::Struct(type_decl.clone()),
+        vec![],
+    );
     t.state.function_declaration(&fn_statement);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
@@ -78,14 +78,15 @@ fn function_declaration_wrong_type() {
     let state = t.state.global.context.clone().get();
     assert_eq!(state.len(), 0);
 
-    let fn_statement2 = ast::FunctionStatement {
-        parameters: vec![ast::FunctionParameter {
+    let fn_statement2 = ast::FunctionStatement::new(
+        fn_statement.name,
+        vec![ast::FunctionParameter {
             name: ast::ParameterName::new(Ident::new("x")),
             parameter_type: ast::Type::Struct(type_decl.clone()),
         }],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::I64),
-        ..fn_statement
-    };
+        ast::Type::Primitive(ast::PrimitiveTypes::I64),
+        fn_statement.body,
+    );
     t.state.function_declaration(&fn_statement2);
     assert!(t.check_errors_len(2), "Errors: {:?}", t.state.errors.len());
     assert!(t.check_error_index(1, StateErrorKind::TypeNotFound));

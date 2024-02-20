@@ -1,4 +1,4 @@
-use crate::utils::{CustomExpression, SemanticTest};
+use crate::utils::{CustomExpression, CustomExpressionInstruction, SemanticTest};
 use semantic_analyzer::ast::{self, GetName, Ident};
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::expression::ExpressionOperations;
@@ -79,11 +79,11 @@ fn main_run() {
         expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
         operation: None,
     });
-    let fn1 = ast::FunctionStatement {
-        name: ast::FunctionName::new(Ident::new("fn1")),
-        parameters: vec![],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
-        body: vec![
+    let fn1 = ast::FunctionStatement::new(
+        ast::FunctionName::new(Ident::new("fn1")),
+        vec![],
+        ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+        vec![
             body_let_binding,
             body_binding,
             body_fn_call,
@@ -91,22 +91,24 @@ fn main_run() {
             body_loop,
             body_return.clone(),
         ],
-    };
+    );
     let fn_stm = ast::MainStatement::Function(fn1.clone());
 
     let body_expr_return = ast::BodyStatement::Expression(ast::Expression {
         expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(23)),
         operation: None,
     });
-    let fn2 = ast::FunctionStatement {
-        name: ast::FunctionName::new(Ident::new("fn2")),
-        parameters: vec![],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::U16),
-        body: vec![body_expr_return],
-    };
+    let fn2 = ast::FunctionStatement::new(
+        ast::FunctionName::new(Ident::new("fn2")),
+        vec![],
+        ast::Type::Primitive(ast::PrimitiveTypes::U16),
+        vec![body_expr_return],
+    );
     let fn2_stm = ast::MainStatement::Function(fn2.clone());
-    let main_stm: ast::Main<CustomExpression> =
-        vec![import_stm, constant_stm, ty_stm, fn_stm, fn2_stm];
+    let main_stm: ast::Main<
+        CustomExpressionInstruction,
+        CustomExpression<CustomExpressionInstruction>,
+    > = vec![import_stm, constant_stm, ty_stm, fn_stm, fn2_stm];
     // For grcov
     format!("{main_stm:#?}");
     t.state.run(&main_stm);
@@ -174,7 +176,7 @@ fn main_run() {
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
             },
             label_if_begin: String::from("if_begin").into(),
-            label_if_end: String::from("if_end").into()
+            label_if_end: String::from("if_end").into(),
         }
     );
     assert_eq!(
@@ -192,7 +194,7 @@ fn main_run() {
                 parameters: vec![],
             },
             params: vec![],
-            register_number: 2
+            register_number: 2,
         }
     );
     assert_eq!(
@@ -231,7 +233,7 @@ fn main_run() {
                 parameters: vec![],
             },
             params: vec![],
-            register_number: 3
+            register_number: 3,
         }
     );
     assert_eq!(
@@ -286,7 +288,7 @@ fn main_run() {
                 inner_type: Type::Primitive(PrimitiveTypes::Bool),
                 mutable: true,
                 alloca: false,
-                malloc: false
+                malloc: false,
             },
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Bool),
@@ -302,7 +304,7 @@ fn main_run() {
                 inner_type: Type::Primitive(PrimitiveTypes::Bool),
                 mutable: true,
                 alloca: false,
-                malloc: false
+                malloc: false,
             },
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Bool),
@@ -319,7 +321,7 @@ fn main_run() {
                 parameters: vec![],
             },
             params: vec![],
-            register_number: 1
+            register_number: 1,
         }
     );
     assert_eq!(st_ctx1[3], st_ch_ctx1[0]);
@@ -354,14 +356,17 @@ fn double_return() {
         expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
         operation: None,
     });
-    let fn1 = ast::FunctionStatement {
-        name: ast::FunctionName::new(Ident::new("fn1")),
-        parameters: vec![],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
-        body: vec![body_return, body_expr],
-    };
+    let fn1 = ast::FunctionStatement::new(
+        ast::FunctionName::new(Ident::new("fn1")),
+        vec![],
+        ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+        vec![body_return, body_expr],
+    );
     let fn_stm = ast::MainStatement::Function(fn1);
-    let main_stm: ast::Main<CustomExpression> = vec![fn_stm];
+    let main_stm: ast::Main<
+        CustomExpressionInstruction,
+        CustomExpression<CustomExpressionInstruction>,
+    > = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.check_errors_len(2), "Errors: {:?}", t.state.errors.len());
     assert!(t.check_error_index(0, StateErrorKind::ForbiddenCodeAfterReturnDeprecated));
@@ -375,14 +380,17 @@ fn wrong_return_type() {
         expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::I8(10)),
         operation: None,
     });
-    let fn1 = ast::FunctionStatement {
-        name: ast::FunctionName::new(Ident::new("fn1")),
-        parameters: vec![],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
-        body: vec![body_return],
-    };
+    let fn1 = ast::FunctionStatement::new(
+        ast::FunctionName::new(Ident::new("fn1")),
+        vec![],
+        ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+        vec![body_return],
+    );
     let fn_stm = ast::MainStatement::Function(fn1);
-    let main_stm: ast::Main<CustomExpression> = vec![fn_stm];
+    let main_stm: ast::Main<
+        CustomExpressionInstruction,
+        CustomExpression<CustomExpressionInstruction>,
+    > = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
@@ -399,14 +407,17 @@ fn expression_as_return() {
         expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
         operation: None,
     });
-    let fn1 = ast::FunctionStatement {
-        name: ast::FunctionName::new(Ident::new("fn1")),
-        parameters: vec![],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
-        body: vec![body_expr],
-    };
+    let fn1 = ast::FunctionStatement::new(
+        ast::FunctionName::new(Ident::new("fn1")),
+        vec![],
+        ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+        vec![body_expr],
+    );
     let fn_stm = ast::MainStatement::Function(fn1.clone());
-    let main_stm: ast::Main<CustomExpression> = vec![fn_stm];
+    let main_stm: ast::Main<
+        CustomExpressionInstruction,
+        CustomExpression<CustomExpressionInstruction>,
+    > = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.is_empty_error());
 
@@ -461,14 +472,17 @@ fn if_return_from_function() {
         else_statement: None,
         else_if_statement: None,
     });
-    let fn1 = ast::FunctionStatement {
-        name: ast::FunctionName::new(Ident::new("fn1")),
-        parameters: vec![],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::I8),
-        body: vec![body_if, body_expr_return],
-    };
+    let fn1 = ast::FunctionStatement::new(
+        ast::FunctionName::new(Ident::new("fn1")),
+        vec![],
+        ast::Type::Primitive(ast::PrimitiveTypes::I8),
+        vec![body_if, body_expr_return],
+    );
     let fn_stm = ast::MainStatement::Function(fn1.clone());
-    let main_stm: ast::Main<CustomExpression> = vec![fn_stm];
+    let main_stm: ast::Main<
+        CustomExpressionInstruction,
+        CustomExpression<CustomExpressionInstruction>,
+    > = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.is_empty_error());
 
@@ -494,7 +508,7 @@ fn if_return_from_function() {
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
             },
             label_if_begin: String::from("if_begin").into(),
-            label_if_end: String::from("if_end").into()
+            label_if_end: String::from("if_end").into(),
         }
     );
     assert_eq!(
@@ -576,14 +590,17 @@ fn function_args_and_let_binding() {
         name: ast::ParameterName::new(Ident::new("x")),
         parameter_type: ast::Type::Primitive(ast::PrimitiveTypes::U64),
     };
-    let fn1 = ast::FunctionStatement {
-        name: ast::FunctionName::new(Ident::new("fn1")),
-        parameters: vec![fn_param1.clone()],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::U64),
-        body: vec![body_let_binding, body_expr_return],
-    };
+    let fn1 = ast::FunctionStatement::new(
+        ast::FunctionName::new(Ident::new("fn1")),
+        vec![fn_param1.clone()],
+        ast::Type::Primitive(ast::PrimitiveTypes::U64),
+        vec![body_let_binding, body_expr_return],
+    );
     let fn_stm = ast::MainStatement::Function(fn1.clone());
-    let main_stm: ast::Main<CustomExpression> = vec![fn_stm];
+    let main_stm: ast::Main<
+        CustomExpressionInstruction,
+        CustomExpression<CustomExpressionInstruction>,
+    > = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.is_empty_error());
 
@@ -612,14 +629,14 @@ fn function_args_and_let_binding() {
         stm_ctx[0],
         SemanticStackContext::FunctionArg {
             value: value_x.clone(),
-            func_arg: fn_param1.into()
+            func_arg: fn_param1.into(),
         }
     );
     assert_eq!(
         stm_ctx[1],
         SemanticStackContext::ExpressionValue {
             expression: value_x,
-            register_number: 1
+            register_number: 1,
         }
     );
     assert_eq!(
@@ -628,13 +645,13 @@ fn function_args_and_let_binding() {
             operation: ExpressionOperations::Plus,
             left_value: ExpressionResult {
                 expr_type: ty.clone(),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(23))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(23)),
             },
             right_value: ExpressionResult {
                 expr_type: ty.clone(),
-                expr_value: ExpressionResultValue::Register(1)
+                expr_value: ExpressionResultValue::Register(1),
             },
-            register_number: 2
+            register_number: 2,
         }
     );
     assert_eq!(
@@ -651,7 +668,7 @@ fn function_args_and_let_binding() {
         stm_ctx[4],
         SemanticStackContext::ExpressionValue {
             expression: value_y,
-            register_number: 3
+            register_number: 3,
         }
     );
     assert_eq!(
@@ -698,14 +715,17 @@ fn function_args_duplication() {
         parameter_type: ast::Type::Primitive(ast::PrimitiveTypes::U64),
     };
     let fn_param2 = fn_param1.clone();
-    let fn1 = ast::FunctionStatement {
-        name: ast::FunctionName::new(Ident::new("fn1")),
-        parameters: vec![fn_param1.clone(), fn_param2.clone()],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::U64),
-        body: vec![body_expr_return],
-    };
+    let fn1 = ast::FunctionStatement::new(
+        ast::FunctionName::new(Ident::new("fn1")),
+        vec![fn_param1.clone(), fn_param2.clone()],
+        ast::Type::Primitive(ast::PrimitiveTypes::U64),
+        vec![body_expr_return],
+    );
     let fn_stm = ast::MainStatement::Function(fn1.clone());
-    let main_stm: ast::Main<CustomExpression> = vec![fn_stm];
+    let main_stm: ast::Main<
+        CustomExpressionInstruction,
+        CustomExpression<CustomExpressionInstruction>,
+    > = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.check_errors_len(1));
     assert!(t.check_error(StateErrorKind::FunctionArgumentNameDuplicated));

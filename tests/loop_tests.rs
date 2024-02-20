@@ -1,4 +1,4 @@
-use crate::utils::{CustomExpression, SemanticTest};
+use crate::utils::{CustomExpression, CustomExpressionInstruction, SemanticTest};
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::Ident;
 use semantic_analyzer::types::block_state::BlockState;
@@ -20,9 +20,10 @@ fn loop_transform() {
         mutable: false,
         value_type: None,
         value: Box::new(ast::Expression {
-            expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
-                ast::PrimitiveValue::Bool(true),
-            ),
+            expression_value: ast::ExpressionValue::<
+                CustomExpressionInstruction,
+                CustomExpression<CustomExpressionInstruction>,
+            >::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
             operation: None,
         }),
     };
@@ -76,11 +77,19 @@ fn loop_transform() {
             LoopBodyStatement::Return(val) => assert_eq!(val, return_statement.clone().into()),
             LoopBodyStatement::Break => assert_eq!(
                 LoopBodyStatement::Break,
-                ast::LoopBodyStatement::<CustomExpression>::Break.into()
+                ast::LoopBodyStatement::<
+                    CustomExpressionInstruction,
+                    CustomExpression<CustomExpressionInstruction>,
+                >::Break
+                    .into()
             ),
             LoopBodyStatement::Continue => assert_eq!(
                 LoopBodyStatement::Continue,
-                ast::LoopBodyStatement::<CustomExpression>::Continue.into()
+                ast::LoopBodyStatement::<
+                    CustomExpressionInstruction,
+                    CustomExpression<CustomExpressionInstruction>,
+                >::Continue
+                    .into()
             ),
         }
     }
@@ -91,15 +100,15 @@ fn loop_statements() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
 
-    let fn2 = ast::FunctionStatement {
-        name: ast::FunctionName::new(Ident::new("fn2")),
-        parameters: vec![],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::U16),
-        body: vec![ast::BodyStatement::Expression(ast::Expression {
+    let fn2 = ast::FunctionStatement::new(
+        ast::FunctionName::new(Ident::new("fn2")),
+        vec![],
+        ast::Type::Primitive(ast::PrimitiveTypes::U16),
+        vec![ast::BodyStatement::Expression(ast::Expression {
             expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(23)),
             operation: None,
         })],
-    };
+    );
     t.state.function_declaration(&fn2);
 
     let loop_body_let_binding = ast::LoopBodyStatement::LetBinding(ast::LetBinding {
@@ -179,7 +188,7 @@ fn loop_statements() {
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
             },
             label_if_begin: String::from("if_begin").into(),
-            label_if_end: String::from("if_end").into()
+            label_if_end: String::from("if_end").into(),
         }
     );
     assert_eq!(
@@ -197,7 +206,7 @@ fn loop_statements() {
                 parameters: vec![],
             },
             params: vec![],
-            register_number: 2
+            register_number: 2,
         }
     );
     assert_eq!(
@@ -240,7 +249,7 @@ fn loop_statements() {
                 parameters: vec![],
             },
             params: vec![],
-            register_number: 3
+            register_number: 3,
         }
     );
     assert_eq!(
@@ -279,7 +288,7 @@ fn loop_statements() {
                 inner_type: Type::Primitive(PrimitiveTypes::Bool),
                 mutable: true,
                 alloca: false,
-                malloc: false
+                malloc: false,
             },
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Bool),
@@ -295,7 +304,7 @@ fn loop_statements() {
                 inner_type: Type::Primitive(PrimitiveTypes::Bool),
                 mutable: true,
                 alloca: false,
-                malloc: false
+                malloc: false,
             },
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Bool),
@@ -483,7 +492,7 @@ fn loop_statements_with_return_invocation() {
                 inner_type: Type::Primitive(PrimitiveTypes::Bool),
                 mutable: true,
                 alloca: false,
-                malloc: false
+                malloc: false,
             },
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Bool),

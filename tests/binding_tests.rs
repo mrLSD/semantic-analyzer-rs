@@ -1,4 +1,4 @@
-use crate::utils::{CustomExpression, SemanticTest};
+use crate::utils::{CustomExpression, CustomExpressionInstruction, SemanticTest};
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{CodeLocation, GetLocation, GetName, Ident, ValueName};
 use semantic_analyzer::types::block_state::BlockState;
@@ -15,9 +15,10 @@ mod utils;
 #[test]
 fn binding_transform() {
     let expr_ast = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
-            ast::PrimitiveValue::U64(3),
-        ),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(ast::PrimitiveValue::U64(3)),
         operation: None,
     };
     let binding_ast = ast::Binding {
@@ -39,9 +40,10 @@ fn binding_wrong_expression() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
     let expr = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::ValueName(ast::ValueName::new(
-            Ident::new("x"),
-        )),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::ValueName(ast::ValueName::new(Ident::new("x"))),
         operation: None,
     };
     let binding = ast::Binding {
@@ -62,9 +64,10 @@ fn binding_value_not_exist() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
     let expr = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
-            ast::PrimitiveValue::I16(23),
-        ),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(ast::PrimitiveValue::I16(23)),
         operation: None,
     };
     let binding = ast::Binding {
@@ -85,9 +88,10 @@ fn binding_value_not_mutable() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
     let expr = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
-            ast::PrimitiveValue::U64(30),
-        ),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(ast::PrimitiveValue::U64(30)),
         operation: None,
     };
     let let_binding = ast::LetBinding {
@@ -115,7 +119,7 @@ fn binding_value_not_mutable() {
             let_decl: val.clone(),
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::U64),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(30))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(30)),
             },
         }
     );
@@ -142,9 +146,10 @@ fn binding_value_found() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
     let expr = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
-            ast::PrimitiveValue::U64(30),
-        ),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(ast::PrimitiveValue::U64(30)),
         operation: None,
     };
     let let_binding = ast::LetBinding {
@@ -172,7 +177,7 @@ fn binding_value_found() {
             let_decl: val.clone(),
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::U64),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(30))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(30)),
             },
         }
     );
@@ -182,9 +187,10 @@ fn binding_value_found() {
         &val
     );
     let new_expr = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
-            ast::PrimitiveValue::U64(100),
-        ),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(ast::PrimitiveValue::U64(100)),
         operation: None,
     };
     let binding = ast::Binding {
@@ -201,7 +207,7 @@ fn binding_value_found() {
             let_decl: val.clone(),
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::U64),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(30))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(30)),
             },
         }
     );
@@ -211,7 +217,7 @@ fn binding_value_found() {
             val: val.clone(),
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::U64),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(100))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(100)),
             },
         }
     );
