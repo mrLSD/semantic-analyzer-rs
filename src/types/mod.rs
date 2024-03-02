@@ -29,6 +29,7 @@ use crate::ast::GetName;
 use crate::types::semantic::{ExtendedExpression, SemanticContextInstruction};
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 /// Value name type
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
@@ -53,9 +54,9 @@ impl From<&str> for ValueName {
     }
 }
 
-impl ToString for ValueName {
-    fn to_string(&self) -> String {
-        self.0.clone()
+impl Display for ValueName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.clone())
     }
 }
 
@@ -82,9 +83,9 @@ impl From<&str> for InnerValueName {
     }
 }
 
-impl ToString for InnerValueName {
-    fn to_string(&self) -> String {
-        self.0.clone()
+impl Display for InnerValueName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.clone())
     }
 }
 
@@ -99,9 +100,9 @@ impl From<String> for LabelName {
     }
 }
 
-impl ToString for LabelName {
-    fn to_string(&self) -> String {
-        self.0.clone()
+impl Display for LabelName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.clone())
     }
 }
 
@@ -122,9 +123,9 @@ impl From<ast::FunctionName<'_>> for FunctionName {
     }
 }
 
-impl ToString for FunctionName {
-    fn to_string(&self) -> String {
-        self.0.clone()
+impl Display for FunctionName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.clone())
     }
 }
 
@@ -145,9 +146,9 @@ impl From<String> for ConstantName {
     }
 }
 
-impl ToString for ConstantName {
-    fn to_string(&self) -> String {
-        self.0.clone()
+impl Display for ConstantName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.clone())
     }
 }
 
@@ -252,7 +253,7 @@ pub struct Function {
     pub inner_name: FunctionName,
     /// Inner (return) type
     pub inner_type: Type,
-    /// Function parameters typesz
+    /// Function parameters types
     pub parameters: Vec<Type>,
 }
 
@@ -286,9 +287,9 @@ impl From<ast::FunctionParameter<'_>> for FunctionParameter {
     }
 }
 
-impl ToString for FunctionParameter {
-    fn to_string(&self) -> String {
-        self.name.0.clone()
+impl Display for FunctionParameter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name.0.clone())
     }
 }
 
@@ -375,9 +376,9 @@ pub struct LetBinding {
     pub value: Box<Expression>,
 }
 
-impl ToString for LetBinding {
-    fn to_string(&self) -> String {
-        self.name.to_string()
+impl Display for LetBinding {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }
 
@@ -442,9 +443,9 @@ impl From<ast::PrimitiveValue> for PrimitiveValue {
     }
 }
 
-impl ToString for PrimitiveValue {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for PrimitiveValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
             Self::U8(val) => val.clone().to_string(),
             Self::U16(val) => val.clone().to_string(),
             Self::U32(val) => val.clone().to_string(),
@@ -460,7 +461,8 @@ impl ToString for PrimitiveValue {
             Self::Char(c) => format!("{c}"),
             Self::Ptr => "ptr".to_string(),
             Self::None => "None".to_string(),
-        }
+        };
+        write!(f, "{str}")
     }
 }
 
@@ -475,9 +477,9 @@ pub struct FunctionCall {
     pub parameters: Vec<Expression>,
 }
 
-impl ToString for FunctionCall {
-    fn to_string(&self) -> String {
-        self.name.to_string()
+impl Display for FunctionCall {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }
 
@@ -502,9 +504,9 @@ pub struct Binding {
     pub value: Box<Expression>,
 }
 
-impl ToString for Binding {
-    fn to_string(&self) -> String {
-        self.name.to_string()
+impl Display for Binding {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }
 

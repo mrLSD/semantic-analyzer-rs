@@ -24,7 +24,7 @@ pub struct Ident<'a>(LocatedSpan<&'a str>);
 /// Ident methods mirroring `LocatedSpan`
 impl<'a> Ident<'a> {
     #[must_use]
-    pub fn new(ident: &'a str) -> Ident<'a> {
+    pub fn new(ident: &'a str) -> Self {
         Self(LocatedSpan::new(ident))
     }
 
@@ -51,7 +51,7 @@ impl<'a> std::fmt::Display for Ident<'a> {
 }
 
 impl<'a> From<&'a str> for Ident<'a> {
-    fn from(value: &'a str) -> Ident<'a> {
+    fn from(value: &'a str) -> Self {
         Ident::new(value)
     }
 }

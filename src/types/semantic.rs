@@ -105,6 +105,12 @@ pub trait ExtendedExpression<I: SemanticContextInstruction>: Debug + Clone + Par
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct SemanticStack<I: SemanticContextInstruction>(Vec<SemanticStackContext<I>>);
 
+impl<I: SemanticContextInstruction> Default for SemanticStack<I> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<I: SemanticContextInstruction> SemanticStack<I> {
     /// Init Semantic stack
     #[must_use]

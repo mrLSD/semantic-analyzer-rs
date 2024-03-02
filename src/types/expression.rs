@@ -7,6 +7,7 @@ use crate::ast;
 use crate::types::semantic::{ExtendedExpression, SemanticContextInstruction};
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 /// # Expression result
 /// Contains analyzing results of expression:
@@ -65,16 +66,17 @@ pub enum ExpressionValue {
     ExtendedExpression(ExtendedExpressionValue),
 }
 
-impl ToString for ExpressionValue {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for ExpressionValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
             Self::ValueName(val) => val.clone().to_string(),
             Self::PrimitiveValue(val) => val.clone().to_string(),
             Self::StructValue(st_val) => st_val.clone().to_string(),
             Self::FunctionCall(fn_call) => fn_call.clone().to_string(),
             Self::Expression(val) => val.to_string(),
             Self::ExtendedExpression(val) => val.clone().0,
-        }
+        };
+        write!(f, "{str}")
     }
 }
 
@@ -109,9 +111,9 @@ pub struct ExpressionStructValue {
     pub attribute: ValueName,
 }
 
-impl ToString for ExpressionStructValue {
-    fn to_string(&self) -> String {
-        self.name.to_string()
+impl Display for ExpressionStructValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }
 
@@ -185,9 +187,9 @@ pub struct Expression {
     pub operation: Option<(ExpressionOperations, Box<Expression>)>,
 }
 
-impl ToString for Expression {
-    fn to_string(&self) -> String {
-        self.expression_value.to_string()
+impl Display for Expression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.expression_value)
     }
 }
 
