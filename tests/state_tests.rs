@@ -251,7 +251,7 @@ fn block_state_last_register_inc() {
 }
 
 #[test]
-fn zblock_state_instructions_with_parent() {
+fn block_state_instructions_with_parent() {
     let parent_bst = Rc::new(RefCell::new(
         BlockState::<CustomExpressionInstruction>::new(None),
     ));

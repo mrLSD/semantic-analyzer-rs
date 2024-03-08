@@ -1409,22 +1409,33 @@ fn custom_expression() {
     );
     let bs = block_state.borrow().get_context().clone().get();
     assert_eq!(bs.len(), 3);
-    println!("{bs:#?}");
-    /*
+
     assert_eq!(
-        state[0],
+        bs[0],
+        SemanticStackContext::ExtendedExpression(Box::new(CustomExpressionInstruction::GoOut {
+            result: 30
+        }))
+    );
+    assert_eq!(
+        bs[1],
+        SemanticStackContext::ExtendedExpression(Box::new(CustomExpressionInstruction::GoIn {
+            index: 10,
+            value: 20,
+        }))
+    );
+    assert_eq!(
+        bs[2],
         SemanticStackContext::ExpressionOperation {
             operation: ExpressionOperations::Plus,
             left_value: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::U32),
-                expr_value: ExpressionResultValue::Register(1)
+                expr_value: ExpressionResultValue::Register(1),
             },
             right_value: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::U32),
-                expr_value: ExpressionResultValue::Register(2)
+                expr_value: ExpressionResultValue::Register(2),
             },
-            register_number: 3
+            register_number: 3,
         }
     );
-    */
 }
