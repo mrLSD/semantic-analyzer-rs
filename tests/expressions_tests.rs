@@ -1332,17 +1332,13 @@ fn custom_expression() {
     }
 
     #[derive(Clone, Debug, PartialEq)]
-    #[allow(dead_code)]
+    #[cfg_attr(feature = "codec", derive(serde::Serialize, serde::Deserialize))]
     pub enum CustomExpressionInstruction {
         GoIn { index: u32, value: u32 },
         GoOut { result: u32 },
     }
 
-    impl SemanticContextInstruction for CustomExpressionInstruction {
-        fn instruction(&self) -> Box<Self> {
-            Box::new(self.clone())
-        }
-    }
+    impl SemanticContextInstruction for CustomExpressionInstruction {}
 
     impl ExtendedExpression<CustomExpressionInstruction>
         for CustomExpression<CustomExpressionInstruction>
@@ -1438,4 +1434,12 @@ fn custom_expression() {
             register_number: 3,
         }
     );
+
+    #[cfg(feature = "codec")]
+    {
+        let json = serde_json::to_string(&bs).unwrap();
+        let bs_decoded: Vec<SemanticStackContext<CustomExpressionInstruction>> =
+            serde_json::from_str(&json).unwrap();
+        assert_eq!(bs, bs_decoded);
+    }
 }

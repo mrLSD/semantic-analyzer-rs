@@ -34,11 +34,7 @@ impl<I: SemanticContextInstruction> ExtendedExpression<I> for CustomExpression<I
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct CustomExpressionInstruction;
 
-impl SemanticContextInstruction for CustomExpressionInstruction {
-    fn instruction(&self) -> Box<Self> {
-        Box::new(Self)
-    }
-}
+impl SemanticContextInstruction for CustomExpressionInstruction {}
 
 pub struct SemanticTest<I: SemanticContextInstruction> {
     pub state: State<CustomExpression<I>, I>,

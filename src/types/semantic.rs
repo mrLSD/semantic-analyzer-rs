@@ -82,12 +82,9 @@ pub trait ExtendedSemanticContext<I: SemanticContextInstruction> {
 }
 
 /// Semantic Context trait contains custom instruction implementation
-/// to flexibly extend context instructions.
-pub trait SemanticContextInstruction: Debug + Clone + PartialEq {
-    /// Custom instruction implementation.
-    /// Ast should be received from `GetAst` trait.
-    fn instruction(&self) -> Box<Self>;
-}
+/// to flexibly extend context instructions. It represents ivs derided
+/// traits: `Debug` and `Serialize` + `Deserialize`
+pub trait SemanticContextInstruction: Debug + Clone + PartialEq {}
 
 /// Extended Expression for semantic analyzer.
 pub trait ExtendedExpression<I: SemanticContextInstruction>: Debug + Clone + PartialEq {
@@ -426,7 +423,9 @@ impl<I: SemanticContextInstruction> ExtendedSemanticContext<I> for SemanticStack
     /// AS argument trait, that contains instruction method that returns
     /// instruction parameters.
     fn extended_expression(&mut self, expr: &I) {
-        self.push(SemanticStackContext::ExtendedExpression(expr.instruction()));
+        self.push(SemanticStackContext::ExtendedExpression(Box::new(
+            expr.clone(),
+        )));
     }
 }
 
