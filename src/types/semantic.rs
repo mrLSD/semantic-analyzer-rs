@@ -82,17 +82,14 @@ pub trait ExtendedSemanticContext<I: SemanticContextInstruction> {
 }
 
 /// Semantic Context trait contains custom instruction implementation
-/// to flexibly extend context instructions.
-pub trait SemanticContextInstruction: Clone {
-    /// Custom instruction implementation.
-    /// Ast should be received from `GetAst` trait.
-    fn instruction(&self) -> Box<Self>;
-}
+/// to flexibly extend context instructions. It represents ivs derided
+/// traits: `Debug` and `Serialize` + `Deserialize`
+pub trait SemanticContextInstruction: Debug + Clone + PartialEq {}
 
 /// Extended Expression for semantic analyzer.
-pub trait ExtendedExpression: Debug + Clone + PartialEq {
+pub trait ExtendedExpression<I: SemanticContextInstruction>: Debug + Clone + PartialEq {
     /// Custom expression. Ast should be received from `GetAst` trait.
-    fn expression<I: SemanticContextInstruction>(
+    fn expression(
         &self,
         state: &mut State<Self, I>,
         block_state: &Rc<RefCell<BlockState<I>>>,
@@ -104,6 +101,12 @@ pub trait ExtendedExpression: Debug + Clone + PartialEq {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct SemanticStack<I: SemanticContextInstruction>(Vec<SemanticStackContext<I>>);
+
+impl<I: SemanticContextInstruction> Default for SemanticStack<I> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl<I: SemanticContextInstruction> SemanticStack<I> {
     /// Init Semantic stack
@@ -420,7 +423,9 @@ impl<I: SemanticContextInstruction> ExtendedSemanticContext<I> for SemanticStack
     /// AS argument trait, that contains instruction method that returns
     /// instruction parameters.
     fn extended_expression(&mut self, expr: &I) {
-        self.push(SemanticStackContext::ExtendedExpression(expr.instruction()));
+        self.push(SemanticStackContext::ExtendedExpression(Box::new(
+            expr.clone(),
+        )));
     }
 }
 

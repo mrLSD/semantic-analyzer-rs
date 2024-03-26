@@ -4,9 +4,10 @@
 use super::types::Type;
 use super::{FunctionCall, PrimitiveValue, ValueName};
 use crate::ast;
-use crate::types::semantic::ExtendedExpression;
+use crate::types::semantic::{ExtendedExpression, SemanticContextInstruction};
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 /// # Expression result
 /// Contains analyzing results of expression:
@@ -65,22 +66,26 @@ pub enum ExpressionValue {
     ExtendedExpression(ExtendedExpressionValue),
 }
 
-impl ToString for ExpressionValue {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for ExpressionValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
             Self::ValueName(val) => val.clone().to_string(),
             Self::PrimitiveValue(val) => val.clone().to_string(),
             Self::StructValue(st_val) => st_val.clone().to_string(),
             Self::FunctionCall(fn_call) => fn_call.clone().to_string(),
             Self::Expression(val) => val.to_string(),
             Self::ExtendedExpression(val) => val.clone().0,
-        }
+        };
+        write!(f, "{str}")
     }
 }
 
-impl<E: ExtendedExpression> From<ast::ExpressionValue<'_, E>> for ExpressionValue {
-    fn from(value: ast::ExpressionValue<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::ExpressionValue<'_, I, E>>
+    for ExpressionValue
+{
+    fn from(value: ast::ExpressionValue<'_, I, E>) -> Self {
         match value {
+            ast::ExpressionValue::_Marker(..) => unreachable!(),
             ast::ExpressionValue::ValueName(v) => Self::ValueName(v.into()),
             ast::ExpressionValue::PrimitiveValue(v) => Self::PrimitiveValue(v.into()),
             ast::ExpressionValue::StructValue(v) => Self::StructValue(v.into()),
@@ -106,9 +111,9 @@ pub struct ExpressionStructValue {
     pub attribute: ValueName,
 }
 
-impl ToString for ExpressionStructValue {
-    fn to_string(&self) -> String {
-        self.name.to_string()
+impl Display for ExpressionStructValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }
 
@@ -182,14 +187,16 @@ pub struct Expression {
     pub operation: Option<(ExpressionOperations, Box<Expression>)>,
 }
 
-impl ToString for Expression {
-    fn to_string(&self) -> String {
-        self.expression_value.to_string()
+impl Display for Expression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.expression_value)
     }
 }
 
-impl<E: ExtendedExpression> From<ast::Expression<'_, E>> for Expression {
-    fn from(value: ast::Expression<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::Expression<'_, I, E>>
+    for Expression
+{
+    fn from(value: ast::Expression<'_, I, E>) -> Self {
         Self {
             expression_value: value.expression_value.into(),
             operation: value

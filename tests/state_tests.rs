@@ -1,4 +1,4 @@
-use crate::utils::CustomExpression;
+use crate::utils::{CustomExpression, CustomExpressionInstruction};
 use semantic_analyzer::ast::{self, Ident};
 use semantic_analyzer::semantic::State;
 use semantic_analyzer::types::condition::{Condition, LogicCondition};
@@ -20,7 +20,7 @@ mod utils;
 
 #[test]
 fn state_init() {
-    let st = State::<CustomExpression, CustomExpression>::default();
+    let st = State::<CustomExpression<CustomExpressionInstruction>, CustomExpressionInstruction>::default();
     // For grcov
     format!("{st:?}");
     assert!(st.global.types.is_empty());
@@ -35,16 +35,16 @@ fn state_init() {
 fn state_block_state_count() {
     let bst1 = Rc::new(RefCell::new(BlockState::new(None)));
     let bst2 = Rc::new(RefCell::new(BlockState::new(Some(bst1.clone()))));
-    let mut st1 = State::<CustomExpression, CustomExpression>::default();
+    let mut st1 = State::<CustomExpression<CustomExpressionInstruction>, CustomExpressionInstruction>::default();
     st1.context.push(bst1);
     st1.context.push(bst2);
     assert_eq!(st1.context.len(), 2);
-    let fs = ast::FunctionStatement {
-        name: ast::FunctionName::new(Ident::new("fn1")),
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
-        parameters: vec![],
-        body: vec![],
-    };
+    let fs = ast::FunctionStatement::new(
+        ast::FunctionName::new(Ident::new("fn1")),
+        vec![],
+        ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+        vec![],
+    );
     st1.function_body(&fs);
     // Should contain error
     assert_eq!(st1.errors.len(), 1);
@@ -53,7 +53,7 @@ fn state_block_state_count() {
 
 #[test]
 fn block_state_fields() {
-    let mut bst: BlockState<CustomExpression> = BlockState::new(None);
+    let mut bst: BlockState<CustomExpressionInstruction> = BlockState::new(None);
     assert!(bst.values.is_empty());
     assert!(bst.inner_values_name.is_empty());
     assert!(bst.labels.is_empty());
@@ -64,10 +64,12 @@ fn block_state_fields() {
     bst.set_child(Rc::new(RefCell::new(BlockState::new(None))));
     assert_eq!(bst.children.len(), 1);
 
-    let bst1 = Rc::new(RefCell::new(BlockState::<CustomExpression>::new(None)));
-    let bst2 = Rc::new(RefCell::new(BlockState::<CustomExpression>::new(Some(
-        bst1.clone(),
-    ))));
+    let bst1 = Rc::new(RefCell::new(
+        BlockState::<CustomExpressionInstruction>::new(None),
+    ));
+    let bst2 = Rc::new(RefCell::new(
+        BlockState::<CustomExpressionInstruction>::new(Some(bst1.clone())),
+    ));
     bst1.borrow_mut().set_child(bst1.clone());
     bst2.borrow_mut().set_return();
     assert!(bst1.borrow().manual_return);
@@ -87,7 +89,9 @@ fn inner_value_name_transform() {
 
 #[test]
 fn block_state_inner_value_name() {
-    let bst1 = Rc::new(RefCell::new(BlockState::<CustomExpression>::new(None)));
+    let bst1 = Rc::new(RefCell::new(
+        BlockState::<CustomExpressionInstruction>::new(None),
+    ));
     let bst2 = Rc::new(RefCell::new(BlockState::new(Some(bst1.clone()))));
     bst1.borrow_mut().set_child(bst1.clone());
     assert!(bst2.borrow().parent.is_some());
@@ -157,7 +161,9 @@ fn block_state_inner_value_name() {
 
 #[test]
 fn block_state_label_name() {
-    let bst1 = Rc::new(RefCell::new(BlockState::<CustomExpression>::new(None)));
+    let bst1 = Rc::new(RefCell::new(
+        BlockState::<CustomExpressionInstruction>::new(None),
+    ));
     let bst2 = Rc::new(RefCell::new(BlockState::new(Some(bst1.clone()))));
     bst1.borrow_mut().set_child(bst1.clone());
 
@@ -189,11 +195,15 @@ fn block_state_label_name() {
 
 #[test]
 fn block_state_value() {
-    let bst1 = Rc::new(RefCell::new(BlockState::<CustomExpression>::new(None)));
-    let bst2 = Rc::new(RefCell::new(BlockState::<CustomExpression>::new(Some(
-        bst1.clone(),
-    ))));
-    let bst3 = Rc::new(RefCell::new(BlockState::<CustomExpression>::new(None)));
+    let bst1 = Rc::new(RefCell::new(
+        BlockState::<CustomExpressionInstruction>::new(None),
+    ));
+    let bst2 = Rc::new(RefCell::new(
+        BlockState::<CustomExpressionInstruction>::new(Some(bst1.clone())),
+    ));
+    let bst3 = Rc::new(RefCell::new(
+        BlockState::<CustomExpressionInstruction>::new(None),
+    ));
     bst1.borrow_mut().set_child(bst1.clone());
 
     // Insert Value
@@ -219,11 +229,13 @@ fn block_state_value() {
 
 #[test]
 fn block_state_last_register_inc() {
-    let bst1 = Rc::new(RefCell::new(BlockState::<CustomExpression>::new(None)));
-    let bst2 = Rc::new(RefCell::new(BlockState::<CustomExpression>::new(Some(
-        bst1.clone(),
-    ))));
-    let mut bst3: BlockState<CustomExpression> = BlockState::new(None);
+    let bst1 = Rc::new(RefCell::new(
+        BlockState::<CustomExpressionInstruction>::new(None),
+    ));
+    let bst2 = Rc::new(RefCell::new(
+        BlockState::<CustomExpressionInstruction>::new(Some(bst1.clone())),
+    ));
+    let mut bst3: BlockState<CustomExpressionInstruction> = BlockState::new(None);
 
     assert_eq!(bst1.borrow().last_register_number, 0);
     assert_eq!(bst2.borrow().last_register_number, 0);
@@ -239,8 +251,10 @@ fn block_state_last_register_inc() {
 }
 
 #[test]
-fn zblock_state_instructions_with_parent() {
-    let parent_bst = Rc::new(RefCell::new(BlockState::<CustomExpression>::new(None)));
+fn block_state_instructions_with_parent() {
+    let parent_bst = Rc::new(RefCell::new(
+        BlockState::<CustomExpressionInstruction>::new(None),
+    ));
     let mut bst = BlockState::new(Some(parent_bst.clone()));
     let val = Value {
         inner_name: String::from("x").into(),
@@ -292,8 +306,8 @@ fn zblock_state_instructions_with_parent() {
     };
     bst.function_arg(val, func_arg);
 
-    let custom_expr = CustomExpression;
-    bst.extended_expression(&custom_expr);
+    let custom_instr = CustomExpressionInstruction;
+    bst.extended_expression(&custom_instr);
 
     let parent_ctx = parent_bst.borrow().get_context().get();
     assert_eq!(parent_ctx.len(), 18);

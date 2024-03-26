@@ -1,15 +1,12 @@
-use crate::utils::{CustomExpression, SemanticTest};
+use crate::utils::{CustomExpression, CustomExpressionInstruction, SemanticTest};
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{
     CodeLocation, GetLocation, GetName, Ident, MAX_PRIORITY_LEVEL_FOR_EXPRESSIONS,
 };
-use semantic_analyzer::semantic::State;
 use semantic_analyzer::types::expression::{
     Expression, ExpressionOperations, ExpressionResult, ExpressionStructValue, ExpressionValue,
 };
-use semantic_analyzer::types::semantic::{
-    ExtendedExpression, SemanticContextInstruction, SemanticStackContext,
-};
+use semantic_analyzer::types::semantic::{ExtendedSemanticContext, SemanticStackContext};
 use semantic_analyzer::types::{
     block_state::BlockState,
     error::StateErrorKind,
@@ -19,6 +16,7 @@ use semantic_analyzer::types::{
     ValueName,
 };
 use std::cell::RefCell;
+use std::marker::PhantomData;
 use std::rc::Rc;
 
 mod utils;
@@ -30,7 +28,7 @@ fn set_result_type(
     reg_right: bool,
     right: u64,
     register_number: u64,
-) -> SemanticStackContext<CustomExpression> {
+) -> SemanticStackContext<CustomExpressionInstruction> {
     let left_val = if reg_left {
         ExpressionResultValue::Register(left)
     } else {
@@ -59,7 +57,10 @@ fn set_result_type(
 fn expression_ast_transform() {
     let value_name = ast::ValueName::new(Ident::new("x"));
     let expr = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::ValueName(value_name.clone()),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::ValueName(value_name.clone()),
         operation: None,
     };
     assert_eq!(expr.location(), CodeLocation::new(1, 0));
@@ -89,7 +90,10 @@ fn expression_ast_transform_primitive_value_i8() {
     assert_eq!(PrimitiveValue::I8(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -107,7 +111,10 @@ fn expression_ast_transform_primitive_value_i16() {
     assert_eq!(PrimitiveValue::I16(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -125,7 +132,10 @@ fn expression_ast_transform_primitive_value_i32() {
     assert_eq!(PrimitiveValue::I32(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -143,7 +153,10 @@ fn expression_ast_transform_primitive_value_i64() {
     assert_eq!(PrimitiveValue::I64(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -161,7 +174,10 @@ fn expression_ast_transform_primitive_value_u8() {
     assert_eq!(PrimitiveValue::U8(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -179,7 +195,10 @@ fn expression_ast_transform_primitive_value_u16() {
     assert_eq!(PrimitiveValue::U16(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -197,7 +216,10 @@ fn expression_ast_transform_primitive_value_u32() {
     assert_eq!(PrimitiveValue::U32(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -215,7 +237,10 @@ fn expression_ast_transform_primitive_value_u64() {
     assert_eq!(PrimitiveValue::U64(3), expr_val);
     assert_eq!(expr_val.to_string(), "3");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -233,7 +258,10 @@ fn expression_ast_transform_primitive_value_f32() {
     assert_eq!(PrimitiveValue::F32(3.1), expr_val);
     assert_eq!(expr_val.to_string(), "3.1");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -251,7 +279,10 @@ fn expression_ast_transform_primitive_value_f64() {
     assert_eq!(PrimitiveValue::F64(3.1), expr_val);
     assert_eq!(expr_val.to_string(), "3.1");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -269,7 +300,10 @@ fn expression_ast_transform_primitive_value_bool() {
     assert_eq!(PrimitiveValue::Bool(true), expr_val);
     assert_eq!(expr_val.to_string(), "true");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -287,7 +321,10 @@ fn expression_ast_transform_primitive_value_string() {
     assert_eq!(PrimitiveValue::String("str".to_string()), expr_val);
     assert_eq!(expr_val.to_string(), "str");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -305,7 +342,10 @@ fn expression_ast_transform_primitive_value_char() {
     assert_eq!(PrimitiveValue::Char('a'), expr_val);
     assert_eq!(expr_val.to_string(), "a");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -323,7 +363,10 @@ fn expression_ast_transform_primitive_value_ptr() {
     assert_eq!(PrimitiveValue::Ptr, expr_val);
     assert_eq!(expr_val.to_string(), "ptr");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -341,7 +384,10 @@ fn expression_ast_transform_primitive_value_none() {
     assert_eq!(PrimitiveValue::None, expr_val);
     assert_eq!(expr_val.to_string(), "None");
     let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     }
     .into();
@@ -362,7 +408,10 @@ fn expression_ast_transform_primitive_struct_value() {
 fn expression_ast_transform_expression() {
     let val = ast::PrimitiveValue::Ptr;
     let sub_expr = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(val),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
         operation: None,
     };
     let expr: Expression = ast::Expression {
@@ -426,7 +475,7 @@ fn expression_value_name_exists() {
         state[0],
         SemanticStackContext::ExpressionValue {
             expression: value,
-            register_number: 1
+            register_number: 1,
         }
     );
     assert!(t.is_empty_error());
@@ -462,7 +511,7 @@ fn expression_const_exists() {
         state[0],
         SemanticStackContext::ExpressionConst {
             expression: value,
-            register_number: 1
+            register_number: 1,
         }
     );
     assert!(t.is_empty_error());
@@ -803,7 +852,7 @@ fn expression_struct_value() {
         SemanticStackContext::ExpressionStructValue {
             expression: value,
             index: 0,
-            register_number: 1
+            register_number: 1,
         }
     );
 }
@@ -837,12 +886,12 @@ fn expression_func_call() {
     t.clean_errors();
 
     // Declare function
-    let fn_statement = ast::FunctionStatement {
-        name: fn_name.clone(),
-        parameters: vec![],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::Ptr),
-        body: vec![],
-    };
+    let fn_statement = ast::FunctionStatement::new(
+        fn_name.clone(),
+        vec![],
+        ast::Type::Primitive(ast::PrimitiveTypes::Ptr),
+        vec![],
+    );
     t.state.function_declaration(&fn_statement);
     assert!(t.is_empty_error());
 
@@ -852,7 +901,7 @@ fn expression_func_call() {
         res,
         ExpressionResult {
             expr_value: ExpressionResultValue::Register(2),
-            expr_type: Type::Primitive(PrimitiveTypes::Ptr)
+            expr_type: Type::Primitive(PrimitiveTypes::Ptr),
         }
     );
     let state = block_state.borrow().get_context().clone().get();
@@ -863,10 +912,10 @@ fn expression_func_call() {
             call: Function {
                 inner_name: fn_name.into(),
                 inner_type: Type::Primitive(PrimitiveTypes::Ptr),
-                parameters: vec![]
+                parameters: vec![],
             },
             params: vec![],
-            register_number: 1
+            register_number: 1,
         }
     );
 }
@@ -889,7 +938,7 @@ fn expression_sub_expression() {
         res,
         ExpressionResult {
             expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U32(10)),
-            expr_type: Type::Primitive(PrimitiveTypes::U32)
+            expr_type: Type::Primitive(PrimitiveTypes::U32),
         }
     );
     let state = block_state.borrow().get_context().clone().get();
@@ -914,7 +963,7 @@ fn expression_operation() {
         res,
         ExpressionResult {
             expr_type: Type::Primitive(PrimitiveTypes::Char),
-            expr_value: ExpressionResultValue::Register(1)
+            expr_value: ExpressionResultValue::Register(1),
         }
     );
     let state = block_state.borrow().get_context().clone().get();
@@ -925,13 +974,13 @@ fn expression_operation() {
             operation: ExpressionOperations::Plus,
             left_value: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Char),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Char('a'))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Char('a')),
             },
             right_value: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Char),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Char('b'))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Char('b')),
             },
-            register_number: 1
+            register_number: 1,
         }
     );
 }
@@ -1258,6 +1307,9 @@ fn expression_multiple_operation_simple4() {
 
 #[test]
 fn custom_expression() {
+    use semantic_analyzer::semantic::State;
+    use semantic_analyzer::types::semantic::{ExtendedExpression, SemanticContextInstruction};
+
     #[derive(Clone, Debug, PartialEq)]
     pub enum AstCustomExpression {
         GoIn(u32, u32),
@@ -1265,28 +1317,46 @@ fn custom_expression() {
     }
 
     #[derive(Clone, Debug, PartialEq)]
-    #[allow(dead_code)]
+    pub struct CustomExpression<I: SemanticContextInstruction> {
+        ast: AstCustomExpression,
+        _marker: PhantomData<I>,
+    }
+
+    impl<I: SemanticContextInstruction> CustomExpression<I> {
+        fn new(ast: AstCustomExpression) -> Self {
+            Self {
+                ast,
+                _marker: PhantomData,
+            }
+        }
+    }
+
+    #[derive(Clone, Debug, PartialEq)]
+    #[cfg_attr(feature = "codec", derive(serde::Serialize, serde::Deserialize))]
     pub enum CustomExpressionInstruction {
         GoIn { index: u32, value: u32 },
         GoOut { result: u32 },
     }
 
-    impl SemanticContextInstruction for CustomExpressionInstruction {
-        fn instruction(&self) -> Box<Self> {
-            Box::new(self.clone())
-        }
-    }
+    impl SemanticContextInstruction for CustomExpressionInstruction {}
 
-    impl ExtendedExpression for AstCustomExpression {
-        fn expression<I: SemanticContextInstruction>(
+    impl ExtendedExpression<CustomExpressionInstruction>
+        for CustomExpression<CustomExpressionInstruction>
+    {
+        fn expression(
             &self,
-            _state: &mut State<Self, I>,
-            block_state: &Rc<RefCell<BlockState<I>>>,
+            _state: &mut State<Self, CustomExpressionInstruction>,
+            block_state: &Rc<RefCell<BlockState<CustomExpressionInstruction>>>,
         ) -> ExpressionResult {
             block_state.borrow_mut().inc_register();
             let reg = block_state.borrow().last_register_number;
-            let _instr = CustomExpressionInstruction::GoOut { result: 10 };
-            //block_state.borrow_mut().extended_expression(&instr);
+            let instr = match self.ast {
+                AstCustomExpression::GoIn(x, y) => {
+                    CustomExpressionInstruction::GoIn { index: x, value: y }
+                }
+                AstCustomExpression::GoOut(x) => CustomExpressionInstruction::GoOut { result: x },
+            };
+            block_state.borrow_mut().extended_expression(&instr);
             ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::U32),
                 expr_value: ExpressionResultValue::Register(reg),
@@ -1294,20 +1364,30 @@ fn custom_expression() {
         }
     }
 
-    let block_state = Rc::new(RefCell::new(BlockState::new(None)));
-    let mut state: State<AstCustomExpression, CustomExpressionInstruction> = State::default();
-    let next_expr = ast::Expression {
+    let block_state = Rc::new(RefCell::new(
+        BlockState::<CustomExpressionInstruction>::new(None),
+    ));
+    let mut state: State<
+        CustomExpression<CustomExpressionInstruction>,
+        CustomExpressionInstruction,
+    > = State::default();
+
+    let next_expr = ast::Expression::<
+        CustomExpressionInstruction,
+        CustomExpression<CustomExpressionInstruction>,
+    > {
         expression_value: ast::ExpressionValue::ExtendedExpression(Box::new(
-            AstCustomExpression::GoIn(10, 20),
+            CustomExpression::new(AstCustomExpression::GoIn(10, 20)),
         )),
         operation: None,
     };
     let expr = ast::Expression {
         expression_value: ast::ExpressionValue::ExtendedExpression(Box::new(
-            AstCustomExpression::GoOut(30),
+            CustomExpression::new(AstCustomExpression::GoOut(30)),
         )),
         operation: Some((ast::ExpressionOperations::Plus, Box::new(next_expr))),
     };
+
     let expr_into: Expression = expr.clone().into();
     // For grcov
     format!("{:#?}", expr_into);
@@ -1320,44 +1400,46 @@ fn custom_expression() {
         res,
         ExpressionResult {
             expr_type: Type::Primitive(PrimitiveTypes::U32),
-            expr_value: ExpressionResultValue::Register(3)
+            expr_value: ExpressionResultValue::Register(3),
         }
     );
-    let state = block_state.borrow().get_context().clone().get();
-    assert_eq!(state.len(), 1);
-    println!("{state:#?}");
-    /*
+    let bs = block_state.borrow().get_context().clone().get();
+    assert_eq!(bs.len(), 3);
+
     assert_eq!(
-        state[0],
+        bs[0],
+        SemanticStackContext::ExtendedExpression(Box::new(CustomExpressionInstruction::GoOut {
+            result: 30
+        }))
+    );
+    assert_eq!(
+        bs[1],
+        SemanticStackContext::ExtendedExpression(Box::new(CustomExpressionInstruction::GoIn {
+            index: 10,
+            value: 20,
+        }))
+    );
+    assert_eq!(
+        bs[2],
         SemanticStackContext::ExpressionOperation {
             operation: ExpressionOperations::Plus,
             left_value: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::U32),
-                expr_value: ExpressionResultValue::Register(1)
+                expr_value: ExpressionResultValue::Register(1),
             },
             right_value: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::U32),
-                expr_value: ExpressionResultValue::Register(2)
+                expr_value: ExpressionResultValue::Register(2),
             },
-            register_number: 3
+            register_number: 3,
         }
     );
 
-       assert_eq!(
-           state[0],
-           SemanticStackContext::ExpressionOperation {
-               operation: ExpressionOperations::Plus,
-               left_value: ExpressionResult {
-                   expr_type: Type::Primitive(PrimitiveTypes::U32),
-                   expr_value: ExpressionResultValue::Register(1)
-               },
-               right_value: ExpressionResult {
-                   expr_type: Type::Primitive(PrimitiveTypes::U32),
-                   expr_value: ExpressionResultValue::Register(2)
-               },
-               register_number: 3
-           }
-       );
-
-    */
+    #[cfg(feature = "codec")]
+    {
+        let json = serde_json::to_string(&bs).unwrap();
+        let bs_decoded: Vec<SemanticStackContext<CustomExpressionInstruction>> =
+            serde_json::from_str(&json).unwrap();
+        assert_eq!(bs, bs_decoded);
+    }
 }

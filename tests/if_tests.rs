@@ -1,4 +1,4 @@
-use crate::utils::{CustomExpression, SemanticTest};
+use crate::utils::{CustomExpression, CustomExpressionInstruction, SemanticTest};
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{CodeLocation, GetLocation, Ident};
 use semantic_analyzer::types::block_state::BlockState;
@@ -19,9 +19,10 @@ mod utils;
 #[test]
 fn if_single_transform() {
     let if_condition_expr = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
-            ast::PrimitiveValue::F32(1.2),
-        ),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(ast::PrimitiveValue::F32(1.2)),
         operation: None,
     };
     let if_condition = ast::IfCondition::Single(if_condition_expr.clone());
@@ -89,7 +90,7 @@ fn if_single_transform() {
             if_fn_call_into.clone(),
             if_if_statement2_into.clone(),
             loop_statement_into.clone(),
-            return_statement_into.clone()
+            return_statement_into.clone(),
         ])
     );
     assert_eq!(
@@ -100,7 +101,7 @@ fn if_single_transform() {
             if_fn_call_into,
             if_if_statement2_into,
             loop_statement_into,
-            return_statement_into
+            return_statement_into,
         ])
     );
     let if_compare1 = *if_statement1_into.clone().else_if_statement.unwrap();
@@ -117,9 +118,10 @@ fn if_single_transform() {
 #[test]
 fn if_logic_transform() {
     let if_condition_expr = ast::Expression {
-        expression_value: ast::ExpressionValue::<CustomExpression>::PrimitiveValue(
-            ast::PrimitiveValue::F32(1.2),
-        ),
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(ast::PrimitiveValue::F32(1.2)),
         operation: None,
     };
     let if_condition_expr_into: Expression = if_condition_expr.clone().into();
@@ -374,8 +376,8 @@ fn if_condition_calculation_simple() {
         ctx[0],
         SemanticStackContext::IfConditionExpression {
             expr_result: ExpressionResult {
-                expr_type: Type::Primitive(PrimitiveTypes::I8,),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3,),),
+                expr_type: Type::Primitive(PrimitiveTypes::I8),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3)),
             },
             label_if_begin: label_if_begin.clone(),
             label_if_end,
@@ -385,8 +387,8 @@ fn if_condition_calculation_simple() {
         ctx[1],
         SemanticStackContext::IfConditionExpression {
             expr_result: ExpressionResult {
-                expr_type: Type::Primitive(PrimitiveTypes::I8,),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3,),),
+                expr_type: Type::Primitive(PrimitiveTypes::I8),
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3)),
             },
             label_if_begin,
             label_if_end: label_if_else,
@@ -487,11 +489,11 @@ fn if_condition_calculation_logic() {
         SemanticStackContext::ConditionExpression {
             left_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::I8),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3)),
             },
             right_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::I8),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(6))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(6)),
             },
             condition: Condition::Eq,
             register_number: 1,
@@ -502,7 +504,7 @@ fn if_condition_calculation_logic() {
         SemanticStackContext::IfConditionLogic {
             label_if_begin: label_if_begin.clone(),
             label_if_end: label_if_end.clone(),
-            result_register: 1
+            result_register: 1,
         }
     );
     assert_eq!(
@@ -510,11 +512,11 @@ fn if_condition_calculation_logic() {
         SemanticStackContext::ConditionExpression {
             left_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::I8),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3)),
             },
             right_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::I8),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(6))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(6)),
             },
             condition: Condition::Eq,
             register_number: 2,
@@ -525,7 +527,7 @@ fn if_condition_calculation_logic() {
         SemanticStackContext::IfConditionLogic {
             label_if_begin: label_if_begin.clone(),
             label_if_end: label_if_else,
-            result_register: 2
+            result_register: 2,
         }
     );
     assert_eq!(
@@ -533,11 +535,11 @@ fn if_condition_calculation_logic() {
         SemanticStackContext::ConditionExpression {
             left_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::I8),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3)),
             },
             right_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::I8),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(6))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(6)),
             },
             condition: Condition::Eq,
             register_number: 3,
@@ -548,11 +550,11 @@ fn if_condition_calculation_logic() {
         SemanticStackContext::ConditionExpression {
             left_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::I8),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(3)),
             },
             right_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::I8),
-                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(6))
+                expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::I8(6)),
             },
             condition: Condition::Eq,
             register_number: 4,
@@ -564,7 +566,7 @@ fn if_condition_calculation_logic() {
             logic_condition: LogicCondition::Or,
             left_register_result: 3,
             right_register_result: 4,
-            register_number: 5
+            register_number: 5,
         }
     );
     assert_eq!(
@@ -572,7 +574,7 @@ fn if_condition_calculation_logic() {
         SemanticStackContext::IfConditionLogic {
             label_if_begin,
             label_if_end,
-            result_register: 5
+            result_register: 5,
         }
     );
     assert_eq!(ctx.len(), 8);
@@ -683,12 +685,12 @@ fn if_condition_primitive_type_only_check() {
     t.state.types(&type_decl.clone());
 
     let fn_name = ast::FunctionName::new(Ident::new("fn1"));
-    let fn_statement = ast::FunctionStatement {
-        name: fn_name.clone(),
-        parameters: vec![],
-        result_type: ast::Type::Struct(type_decl),
-        body: vec![],
-    };
+    let fn_statement = ast::FunctionStatement::new(
+        fn_name.clone(),
+        vec![],
+        ast::Type::Struct(type_decl),
+        vec![],
+    );
     t.state.function_declaration(&fn_statement);
 
     // Left expression return error - function not found
@@ -810,7 +812,7 @@ fn else_if_statement() {
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(1)),
             },
             label_if_begin: String::from("if_begin").into(),
-            label_if_end: String::from("if_else").into()
+            label_if_end: String::from("if_else").into(),
         }
     );
     assert_eq!(ctx1[0], main_ctx[0]);
@@ -856,7 +858,7 @@ fn else_if_statement() {
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(2)),
             },
             label_if_begin: String::from("if_begin.0").into(),
-            label_if_end: String::from("if_else.0").into()
+            label_if_end: String::from("if_else.0").into(),
         }
     );
     assert_eq!(ctx2[0], main_ctx[4]);
@@ -908,15 +910,15 @@ fn if_body_statements() {
         operation: None,
     };
 
-    let fn2 = ast::FunctionStatement {
-        name: ast::FunctionName::new(Ident::new("fn2")),
-        parameters: vec![],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::U16),
-        body: vec![ast::BodyStatement::Expression(ast::Expression {
+    let fn2 = ast::FunctionStatement::new(
+        ast::FunctionName::new(Ident::new("fn2")),
+        vec![],
+        ast::Type::Primitive(ast::PrimitiveTypes::U16),
+        vec![ast::BodyStatement::Expression(ast::Expression {
             expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(23)),
             operation: None,
         })],
-    };
+    );
     t.state.function_declaration(&fn2);
 
     let if_body_let_binding = ast::IfBodyStatement::LetBinding(ast::LetBinding {
@@ -1014,7 +1016,7 @@ fn if_body_statements() {
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
             },
             label_if_begin: String::from("if_begin.0").into(),
-            label_if_end: String::from("if_end").into()
+            label_if_end: String::from("if_end").into(),
         }
     );
     assert_eq!(
@@ -1032,7 +1034,7 @@ fn if_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
-            register_number: 2
+            register_number: 2,
         }
     );
     assert_eq!(
@@ -1070,7 +1072,7 @@ fn if_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
-            register_number: 3
+            register_number: 3,
         }
     );
     assert_eq!(
@@ -1097,7 +1099,7 @@ fn if_body_statements() {
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(1)),
             },
             label_if_begin: String::from("if_begin").into(),
-            label_if_end: String::from("if_end").into()
+            label_if_end: String::from("if_end").into(),
         }
     );
     assert_eq!(
@@ -1114,7 +1116,7 @@ fn if_body_statements() {
                 inner_type: Type::Primitive(PrimitiveTypes::Bool),
                 mutable: true,
                 alloca: false,
-                malloc: false
+                malloc: false,
             },
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Bool),
@@ -1130,7 +1132,7 @@ fn if_body_statements() {
                 inner_type: Type::Primitive(PrimitiveTypes::Bool),
                 mutable: true,
                 alloca: false,
-                malloc: false
+                malloc: false,
             },
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Bool),
@@ -1147,7 +1149,7 @@ fn if_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
-            register_number: 1
+            register_number: 1,
         }
     );
     assert_eq!(stm_ctx[5], ctx1[0]);
@@ -1185,25 +1187,25 @@ fn if_loop_body_statements() {
         operation: None,
     };
 
-    let fn2 = ast::FunctionStatement {
-        name: ast::FunctionName::new(Ident::new("fn2")),
-        parameters: vec![],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::U16),
-        body: vec![ast::BodyStatement::Expression(ast::Expression {
+    let fn2 = ast::FunctionStatement::new(
+        ast::FunctionName::new(Ident::new("fn2")),
+        vec![],
+        ast::Type::Primitive(ast::PrimitiveTypes::U16),
+        vec![ast::BodyStatement::Expression(ast::Expression {
             expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U16(23)),
             operation: None,
         })],
-    };
+    );
     t.state.function_declaration(&fn2);
-    let fn3 = ast::FunctionStatement {
-        name: ast::FunctionName::new(Ident::new("fn3")),
-        parameters: vec![],
-        result_type: ast::Type::Primitive(ast::PrimitiveTypes::I16),
-        body: vec![ast::BodyStatement::Expression(ast::Expression {
+    let fn3 = ast::FunctionStatement::new(
+        ast::FunctionName::new(Ident::new("fn3")),
+        vec![],
+        ast::Type::Primitive(ast::PrimitiveTypes::I16),
+        vec![ast::BodyStatement::Expression(ast::Expression {
             expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::I16(32)),
             operation: None,
         })],
-    };
+    );
     t.state.function_declaration(&fn3);
 
     let if_body_let_binding = ast::IfLoopBodyStatement::LetBinding(ast::LetBinding {
@@ -1302,7 +1304,7 @@ fn if_loop_body_statements() {
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::Bool(true)),
             },
             label_if_begin: String::from("if_begin.0").into(),
-            label_if_end: String::from("if_end").into()
+            label_if_end: String::from("if_end").into(),
         }
     );
     assert_eq!(
@@ -1320,7 +1322,7 @@ fn if_loop_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
-            register_number: 2
+            register_number: 2,
         }
     );
     assert_eq!(
@@ -1357,7 +1359,7 @@ fn if_loop_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
-            register_number: 3
+            register_number: 3,
         }
     );
     assert_eq!(
@@ -1384,7 +1386,7 @@ fn if_loop_body_statements() {
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(1)),
             },
             label_if_begin: String::from("if_begin").into(),
-            label_if_end: String::from("if_end").into()
+            label_if_end: String::from("if_end").into(),
         }
     );
     assert_eq!(
@@ -1401,7 +1403,7 @@ fn if_loop_body_statements() {
                 inner_type: Type::Primitive(PrimitiveTypes::Bool),
                 mutable: true,
                 alloca: false,
-                malloc: false
+                malloc: false,
             },
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Bool),
@@ -1417,7 +1419,7 @@ fn if_loop_body_statements() {
                 inner_type: Type::Primitive(PrimitiveTypes::Bool),
                 mutable: true,
                 alloca: false,
-                malloc: false
+                malloc: false,
             },
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::Bool),
@@ -1434,7 +1436,7 @@ fn if_loop_body_statements() {
                 parameters: vec![],
             },
             params: vec![],
-            register_number: 1
+            register_number: 1,
         }
     );
     assert_eq!(stm_ctx[5], ctx1[0]);

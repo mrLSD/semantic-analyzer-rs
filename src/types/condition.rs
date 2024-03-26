@@ -4,7 +4,7 @@
 use super::expression::Expression;
 use super::{Binding, FunctionCall, LetBinding};
 use crate::ast;
-use crate::types::semantic::ExtendedExpression;
+use crate::types::semantic::{ExtendedExpression, SemanticContextInstruction};
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
 
@@ -71,8 +71,10 @@ pub struct ExpressionCondition {
     pub right: Expression,
 }
 
-impl<E: ExtendedExpression> From<ast::ExpressionCondition<'_, E>> for ExpressionCondition {
-    fn from(value: ast::ExpressionCondition<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>>
+    From<ast::ExpressionCondition<'_, I, E>> for ExpressionCondition
+{
+    fn from(value: ast::ExpressionCondition<'_, I, E>) -> Self {
         Self {
             left: value.left.into(),
             condition: value.condition.into(),
@@ -93,10 +95,10 @@ pub struct ExpressionLogicCondition {
     pub right: Option<(LogicCondition, Box<ExpressionLogicCondition>)>,
 }
 
-impl<E: ExtendedExpression> From<ast::ExpressionLogicCondition<'_, E>>
-    for ExpressionLogicCondition
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>>
+    From<ast::ExpressionLogicCondition<'_, I, E>> for ExpressionLogicCondition
 {
-    fn from(value: ast::ExpressionLogicCondition<'_, E>) -> Self {
+    fn from(value: ast::ExpressionLogicCondition<'_, I, E>) -> Self {
         Self {
             left: value.left.into(),
             right: value
@@ -120,8 +122,10 @@ pub enum IfCondition {
     Logic(ExpressionLogicCondition),
 }
 
-impl<E: ExtendedExpression> From<ast::IfCondition<'_, E>> for IfCondition {
-    fn from(value: ast::IfCondition<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::IfCondition<'_, I, E>>
+    for IfCondition
+{
+    fn from(value: ast::IfCondition<'_, I, E>) -> Self {
         match value {
             ast::IfCondition::Single(v) => Self::Single(v.into()),
             ast::IfCondition::Logic(v) => Self::Logic(v.into()),
@@ -144,8 +148,10 @@ pub struct IfStatement {
     pub else_if_statement: Option<Box<IfStatement>>,
 }
 
-impl<E: ExtendedExpression> From<ast::IfStatement<'_, E>> for IfStatement {
-    fn from(value: ast::IfStatement<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::IfStatement<'_, I, E>>
+    for IfStatement
+{
+    fn from(value: ast::IfStatement<'_, I, E>) -> Self {
         Self {
             condition: value.condition.into(),
             body: value.body.into(),
@@ -171,8 +177,10 @@ pub enum IfBodyStatements {
     Loop(Vec<IfLoopBodyStatement>),
 }
 
-impl<E: ExtendedExpression> From<ast::IfBodyStatements<'_, E>> for IfBodyStatements {
-    fn from(value: ast::IfBodyStatements<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::IfBodyStatements<'_, I, E>>
+    for IfBodyStatements
+{
+    fn from(value: ast::IfBodyStatements<'_, I, E>) -> Self {
         match value {
             ast::IfBodyStatements::If(v) => Self::If(v.iter().map(|v| v.clone().into()).collect()),
             ast::IfBodyStatements::Loop(v) => {
@@ -200,8 +208,10 @@ pub enum LoopBodyStatement {
     Continue,
 }
 
-impl<E: ExtendedExpression> From<ast::LoopBodyStatement<'_, E>> for LoopBodyStatement {
-    fn from(value: ast::LoopBodyStatement<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::LoopBodyStatement<'_, I, E>>
+    for LoopBodyStatement
+{
+    fn from(value: ast::LoopBodyStatement<'_, I, E>) -> Self {
         match value {
             ast::LoopBodyStatement::LetBinding(v) => Self::LetBinding(v.into()),
             ast::LoopBodyStatement::Binding(v) => Self::Binding(v.into()),
@@ -233,8 +243,10 @@ pub enum IfBodyStatement {
     Return(Expression),
 }
 
-impl<E: ExtendedExpression> From<ast::IfBodyStatement<'_, E>> for IfBodyStatement {
-    fn from(value: ast::IfBodyStatement<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::IfBodyStatement<'_, I, E>>
+    for IfBodyStatement
+{
+    fn from(value: ast::IfBodyStatement<'_, I, E>) -> Self {
         match value {
             ast::IfBodyStatement::LetBinding(v) => Self::LetBinding(v.into()),
             ast::IfBodyStatement::Binding(v) => Self::Binding(v.into()),
@@ -267,8 +279,10 @@ pub enum IfLoopBodyStatement {
     Continue,
 }
 
-impl<E: ExtendedExpression> From<ast::IfLoopBodyStatement<'_, E>> for IfLoopBodyStatement {
-    fn from(value: ast::IfLoopBodyStatement<'_, E>) -> Self {
+impl<I: SemanticContextInstruction, E: ExtendedExpression<I>>
+    From<ast::IfLoopBodyStatement<'_, I, E>> for IfLoopBodyStatement
+{
+    fn from(value: ast::IfLoopBodyStatement<'_, I, E>) -> Self {
         match value {
             ast::IfLoopBodyStatement::LetBinding(v) => Self::LetBinding(v.into()),
             ast::IfLoopBodyStatement::Binding(v) => Self::Binding(v.into()),

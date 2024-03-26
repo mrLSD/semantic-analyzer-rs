@@ -11,10 +11,10 @@
 Semantic analyzer is an open source semantic analyzer for programming languages 
 that makes it easy to build your own efficient compilers with extensibility in mind.
 
-## 🌀 What is the library for and what tasks does it solve
+## 🌀 What the library is for and what tasks it solves
 
 Creating a compilers for a programming language is process that involves several key 
-stages. Most commonly it is:
+stages. Most commonly they are:
 
 ▶️ **Lexical Analysis (Lexer)**: This stage involves breaking down the input stream 
 of characters into a series of tokens. Tokens are the atomic elements of the programming language, such as identifiers, keywords, operators, etc.
@@ -32,7 +32,7 @@ This can include dead code elimination, expression simplification, etc.
 ▶️ **Code Generation**: This is the final stage where the compiler transforms the optimized intermediate representation (IR) into 
 machine code specific to the target architecture.
 
-This library represent **Semantic Analysis** stage.
+This library represents **Semantic Analysis** stage.
 
 ### 🌻 Features
 
@@ -122,7 +122,7 @@ The ability to implement custom instructions for these custom expressions in the
 ## 🛋️ Examples
 
 - 🔎 There is the example implementation separate project [💾 Toy Codegen](https://github.com/mrLSD/toy-codegen).
-The project uses the `SemanticStack` results and converts them into **Code Generation** logic. Which clearly shows the 
+The project uses the `SemanticStack` results and converts them into **Code Generation** logic which clearly shows the 
 possibilities of using the results of the `semantic-analyzer-rs` `SemanticStackContext` results. LLVM is used as a 
 backend, [inkwell](https://github.com/TheDan64/inkwell) as a library for LLVM codegen, and compiled into an executable 
 program. The source of data is the AST structure itself.
@@ -136,7 +136,7 @@ Available library rust features:
   nuance is that any library that implements `Serde` can act as a 
   serializer `codec`. For example formats: `json`, `toml`, `yaml`, 
   `binary`, and many others that can use `serde` library.
-  The main entities, which apply the `codec` feature is:
+  The main entities, which apply the `codec` feature are:
   - [x] `AST` ↪️ AST data source can be presented with serialized source.
     This is especially useful for designing and testing `Codegen`, AST data 
     transfer pipeline, and also for use as a data generation source for 

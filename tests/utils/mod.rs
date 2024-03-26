@@ -8,14 +8,17 @@ use semantic_analyzer::types::PrimitiveValue;
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
+use std::marker::PhantomData;
 use std::rc::Rc;
 
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
-pub struct CustomExpression;
+pub struct CustomExpression<I: SemanticContextInstruction> {
+    _marker: PhantomData<I>,
+}
 
-impl ExtendedExpression for CustomExpression {
-    fn expression<I: SemanticContextInstruction>(
+impl<I: SemanticContextInstruction> ExtendedExpression<I> for CustomExpression<I> {
+    fn expression(
         &self,
         _state: &mut State<Self, I>,
         _block_state: &Rc<RefCell<BlockState<I>>>,
@@ -27,23 +30,23 @@ impl ExtendedExpression for CustomExpression {
     }
 }
 
-impl SemanticContextInstruction for CustomExpression {
-    fn instruction(&self) -> Box<Self> {
-        Box::new(Self)
-    }
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
+pub struct CustomExpressionInstruction;
+
+impl SemanticContextInstruction for CustomExpressionInstruction {}
+
+pub struct SemanticTest<I: SemanticContextInstruction> {
+    pub state: State<CustomExpression<I>, I>,
 }
 
-pub struct SemanticTest {
-    pub state: State<CustomExpression, CustomExpression>,
-}
-
-impl Default for SemanticTest {
+impl Default for SemanticTest<CustomExpressionInstruction> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl SemanticTest {
+impl SemanticTest<CustomExpressionInstruction> {
     pub fn new() -> Self {
         Self {
             state: State::new(),

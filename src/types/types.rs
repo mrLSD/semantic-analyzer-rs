@@ -6,6 +6,7 @@ use crate::ast::{self, GetName};
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt::Display;
 
 /// `TypeAttributes` type attributes trait.
 /// Used for types declarations.
@@ -39,9 +40,9 @@ impl From<String> for TypeName {
     }
 }
 
-impl ToString for TypeName {
-    fn to_string(&self) -> String {
-        self.0.clone()
+impl Display for TypeName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.clone())
     }
 }
 
@@ -79,15 +80,16 @@ impl Type {
     }
 }
 
-impl ToString for Type {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
             Self::Primitive(primitive) => primitive.to_string(),
             Self::Struct(struct_type) => struct_type.name.clone(),
             Self::Array(array_type, size) => {
                 format!("[{:?};{:?}]", array_type.to_string(), size)
             }
-        }
+        };
+        write!(f, "{str}",)
     }
 }
 
@@ -160,8 +162,8 @@ pub enum PrimitiveTypes {
     None,
 }
 
-impl ToString for PrimitiveTypes {
-    fn to_string(&self) -> String {
+impl Display for PrimitiveTypes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
             Self::U8 => "u8",
             Self::U16 => "u16",
@@ -179,7 +181,7 @@ impl ToString for PrimitiveTypes {
             Self::Ptr => "ptr",
             Self::None => "()",
         };
-        s.to_string()
+        write!(f, "{s}")
     }
 }
 

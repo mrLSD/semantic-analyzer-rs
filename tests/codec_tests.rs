@@ -3,7 +3,7 @@ mod utils;
 #[cfg(test)]
 #[cfg(feature = "codec")]
 mod test {
-    use crate::utils::{CustomExpression, SemanticTest};
+    use crate::utils::{CustomExpression, CustomExpressionInstruction, SemanticTest};
     use semantic_analyzer::ast::{self, CodeLocation, Ident};
     use semantic_analyzer::types::block_state::BlockState;
     use semantic_analyzer::types::condition::{
@@ -150,11 +150,11 @@ mod test {
             expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::Bool(true)),
             operation: None,
         });
-        let fn1 = ast::FunctionStatement {
-            name: ast::FunctionName::new(Ident::new("fn1")),
-            parameters: vec![],
-            result_type: ast::Type::Primitive(ast::PrimitiveTypes::Bool),
-            body: vec![
+        let fn1 = ast::FunctionStatement::new(
+            ast::FunctionName::new(Ident::new("fn1")),
+            vec![],
+            ast::Type::Primitive(ast::PrimitiveTypes::Bool),
+            vec![
                 body_let_binding.clone(),
                 body_binding,
                 body_fn_call,
@@ -162,28 +162,33 @@ mod test {
                 body_loop,
                 body_return.clone(),
             ],
-        };
+        );
         let fn1_stm = ast::MainStatement::Function(fn1);
 
         let body_expr_return = ast::BodyStatement::Expression(ast::Expression {
             expression_value: ast::ExpressionValue::PrimitiveValue(ast::PrimitiveValue::U32(23)),
             operation: None,
         });
-        let fn2 = ast::FunctionStatement {
-            name: ast::FunctionName::new(Ident::new("fn2")),
-            parameters: vec![ast::FunctionParameter {
+        let fn2 = ast::FunctionStatement::new(
+            ast::FunctionName::new(Ident::new("fn2")),
+            vec![ast::FunctionParameter {
                 name: ast::ParameterName::new(Ident::new("x")),
                 parameter_type: ast::Type::Primitive(ast::PrimitiveTypes::U32),
             }],
-            result_type: ast::Type::Primitive(ast::PrimitiveTypes::U32),
-            body: vec![body_expr_return],
-        };
+            ast::Type::Primitive(ast::PrimitiveTypes::U32),
+            vec![body_expr_return],
+        );
         let fn2_stm = ast::MainStatement::Function(fn2.clone());
 
-        let main_stm: ast::Main<CustomExpression> =
-            vec![import_stm, constant_stm, ty_stm, fn1_stm, fn2_stm];
+        let main_stm: ast::Main<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        > = vec![import_stm, constant_stm, ty_stm, fn1_stm, fn2_stm];
         let json = serde_json::to_string(&main_stm).unwrap();
-        let ser_ast: ast::Main<CustomExpression> = serde_json::from_str(&json).unwrap();
+        let ser_ast: ast::Main<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        > = serde_json::from_str(&json).unwrap();
         assert_eq!(main_stm, ser_ast);
 
         t.state.run(&main_stm);
@@ -239,7 +244,10 @@ mod test {
         let to_val = serde_json::from_str(&to_json).unwrap();
         assert_eq!(est, to_val);
 
-        let lbs = ast::LoopBodyStatement::<CustomExpression>::Continue;
+        let lbs = ast::LoopBodyStatement::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::Continue;
         let to_json = serde_json::to_string(&lbs).unwrap();
         let to_val = serde_json::from_str(&to_json).unwrap();
         assert_eq!(lbs, to_val);
@@ -269,10 +277,11 @@ mod test {
         let to_val = serde_json::from_str(&to_json).unwrap();
         assert_eq!(v, to_val);
 
-        let parent_bs: BlockState<CustomExpression> = BlockState::new(None);
+        let parent_bs: BlockState<CustomExpressionInstruction> = BlockState::new(None);
         let bs = BlockState::new(Some(Rc::new(RefCell::new(parent_bs))));
         let to_json = serde_json::to_string(&bs).unwrap();
-        let _to_val: BlockState<CustomExpression> = serde_json::from_str(&to_json).unwrap();
+        let _to_val: BlockState<CustomExpressionInstruction> =
+            serde_json::from_str(&to_json).unwrap();
 
         let lcond = LogicCondition::Or;
         let to_json = serde_json::to_string(&lcond).unwrap();
