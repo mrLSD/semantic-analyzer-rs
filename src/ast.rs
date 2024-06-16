@@ -535,7 +535,7 @@ pub struct FunctionStatement<'a, I: SemanticContextInstruction, E: ExtendedExpre
 
 impl<'a, I: SemanticContextInstruction, E: ExtendedExpression<I>> FunctionStatement<'a, I, E> {
     #[must_use]
-    pub fn new(
+    pub const fn new(
         name: FunctionName<'a>,
         parameters: Vec<FunctionParameter<'a>>,
         result_type: Type<'a>,
