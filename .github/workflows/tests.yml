@@ -15,7 +15,7 @@ jobs:
         os:
           - ubuntu-latest
         rust:
-          - nightly
+          - stable
 
     steps:
       - uses: actions/checkout@v4
