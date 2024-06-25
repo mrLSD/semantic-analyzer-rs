@@ -311,27 +311,6 @@ fn expression_ast_transform_primitive_value_bool() {
 }
 
 #[test]
-fn expression_ast_transform_primitive_value_string() {
-    let val = ast::PrimitiveValue::String("str".to_string());
-    assert_eq!(
-        val.get_type(),
-        ast::Type::Primitive(ast::PrimitiveTypes::String)
-    );
-    let expr_val: PrimitiveValue = val.clone().into();
-    assert_eq!(PrimitiveValue::String("str".to_string()), expr_val);
-    assert_eq!(expr_val.to_string(), "str");
-    let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<
-            CustomExpressionInstruction,
-            CustomExpression<CustomExpressionInstruction>,
-        >::PrimitiveValue(val),
-        operation: None,
-    }
-    .into();
-    assert_eq!(expr.to_string(), "str");
-}
-
-#[test]
 fn expression_ast_transform_primitive_value_char() {
     let val = ast::PrimitiveValue::Char('a');
     assert_eq!(

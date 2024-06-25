@@ -75,7 +75,7 @@ fn types_ast_transform() {
     };
     let ty13 = ast::StructType {
         attr_name: Ident::new("attr13"),
-        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::String),
+        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::U64),
     };
     let ty14 = ast::StructType {
         attr_name: Ident::new("attr14"),
@@ -322,7 +322,7 @@ fn types_declaration() {
     };
     let ty2 = ast::StructType {
         attr_name: Ident::new("attr2"),
-        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::String),
+        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::U8),
     };
     let type_decl2 = ast::StructTypes {
         name: Ident::new("type2"),

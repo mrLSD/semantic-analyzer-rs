@@ -89,7 +89,7 @@ impl Display for Type {
                 format!("[{:?};{:?}]", array_type.to_string(), size)
             }
         };
-        write!(f, "{str}",)
+        write!(f, "{str}")
     }
 }
 
@@ -157,7 +157,6 @@ pub enum PrimitiveTypes {
     F64,
     Bool,
     Char,
-    String,
     Ptr,
     None,
 }
@@ -177,7 +176,6 @@ impl Display for PrimitiveTypes {
             Self::F64 => "f64",
             Self::Bool => "bool",
             Self::Char => "char",
-            Self::String => "str",
             Self::Ptr => "ptr",
             Self::None => "()",
         };
@@ -200,7 +198,6 @@ impl From<ast::PrimitiveTypes> for PrimitiveTypes {
             ast::PrimitiveTypes::F64 => Self::F64,
             ast::PrimitiveTypes::Bool => Self::Bool,
             ast::PrimitiveTypes::Char => Self::Char,
-            ast::PrimitiveTypes::String => Self::String,
             ast::PrimitiveTypes::Ptr => Self::Ptr,
             ast::PrimitiveTypes::None => Self::None,
         }
