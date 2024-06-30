@@ -329,7 +329,6 @@ pub enum PrimitiveTypes {
     F64,
     Bool,
     Char,
-    String,
     Ptr,
     None,
 }
@@ -349,7 +348,6 @@ impl GetName for PrimitiveTypes {
             Self::F64 => "f64".to_string(),
             Self::Bool => "bool".to_string(),
             Self::Char => "char".to_string(),
-            Self::String => "str".to_string(),
             Self::Ptr => "ptr".to_string(),
             Self::None => "()".to_string(),
         }
@@ -537,7 +535,7 @@ pub struct FunctionStatement<'a, I: SemanticContextInstruction, E: ExtendedExpre
 
 impl<'a, I: SemanticContextInstruction, E: ExtendedExpression<I>> FunctionStatement<'a, I, E> {
     #[must_use]
-    pub fn new(
+    pub const fn new(
         name: FunctionName<'a>,
         parameters: Vec<FunctionParameter<'a>>,
         result_type: Type<'a>,
@@ -590,7 +588,6 @@ pub enum PrimitiveValue {
     F32(f32),
     F64(f64),
     Bool(bool),
-    String(String),
     Char(char),
     Ptr,
     None,
@@ -612,7 +609,6 @@ impl PrimitiveValue {
             Self::F64(_) => Type::Primitive(PrimitiveTypes::F64),
             Self::Char(_) => Type::Primitive(PrimitiveTypes::Char),
             Self::Bool(_) => Type::Primitive(PrimitiveTypes::Bool),
-            Self::String(_) => Type::Primitive(PrimitiveTypes::String),
             Self::Ptr => Type::Primitive(PrimitiveTypes::Ptr),
             Self::None => Type::Primitive(PrimitiveTypes::None),
         }

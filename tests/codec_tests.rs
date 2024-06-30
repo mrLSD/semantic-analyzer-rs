@@ -226,11 +226,6 @@ mod test {
         let to_val = serde_json::from_str(&to_json).unwrap();
         assert_eq!(pv, to_val);
 
-        let pv = ast::PrimitiveValue::String("test".to_string());
-        let to_json = serde_json::to_string(&pv).unwrap();
-        let to_val = serde_json::from_str(&to_json).unwrap();
-        assert_eq!(pv, to_val);
-
         let cl = ast::CodeLocation::new(10, 20);
         let to_json = serde_json::to_string(&cl).unwrap();
         let to_val = serde_json::from_str(&to_json).unwrap();
