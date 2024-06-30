@@ -227,11 +227,11 @@ fn types_ast_transform() {
     assert_eq!(attr12.attr_index, 11);
 
     let attr13 = type_into2.attributes.get(&("attr13".into())).unwrap();
-    assert_eq!(ty13.attr_type.name(), "str");
+    assert_eq!(ty13.attr_type.name(), "u64");
     let ty13: StructAttributeType = ty13.into();
     assert_eq!(attr13.attr_name, ty13.attr_name);
     assert_eq!(attr13.attr_type, ty13.attr_type);
-    assert_eq!(attr13.attr_type.to_string(), "str");
+    assert_eq!(attr13.attr_type.to_string(), "u64");
     assert_eq!(attr13.attr_index, 12);
 
     let attr14 = type_into2.attributes.get(&("attr14".into())).unwrap();

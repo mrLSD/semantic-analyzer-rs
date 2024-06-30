@@ -30,6 +30,6 @@ jobs:
       - name: Format
         run: cargo fmt --all -- --check
       - name: Clippy no-default-features
-        run: cargo clippy --all --all-targets --no-default-features -- -D warnings
+        run: cargo +nightly clippy --all --all-targets --no-default-features -- -D warnings
       - name: Clippy
-        run: cargo clippy --all --all-targets --all-features -- -D warnings
+        run: cargo +nightly clippy --all --all-targets --all-features -- -D warnings
