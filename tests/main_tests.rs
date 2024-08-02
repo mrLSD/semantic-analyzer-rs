@@ -110,7 +110,7 @@ fn main_run() {
         CustomExpression<CustomExpressionInstruction>,
     > = vec![import_stm, constant_stm, ty_stm, fn_stm, fn2_stm];
     // For grcov
-    format!("{main_stm:#?}");
+    let _ = format!("{main_stm:#?}");
     t.state.run(&main_stm);
     assert!(t.is_empty_error());
 

@@ -112,7 +112,7 @@ fn if_single_transform() {
     assert_eq!(if_compare1, if_compare2);
     assert_eq!(if_statement1.location(), CodeLocation::new(1, 0));
     // For grcov
-    format!("{if_statement1:?}");
+    let _ = format!("{if_statement1:?}");
 }
 
 #[test]
@@ -252,7 +252,7 @@ fn if_logic_transform() {
         else_if_statement: None,
     };
     // For grcov
-    format!("{if_statement3:?}");
+    let _ = format!("{if_statement3:?}");
     let expr_logic_cond_into: ExpressionLogicCondition = expr_logic_cond.into();
     assert_eq!(
         expr_logic_cond_into.left,

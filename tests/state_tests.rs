@@ -22,7 +22,7 @@ mod utils;
 fn state_init() {
     let st = State::<CustomExpression<CustomExpressionInstruction>, CustomExpressionInstruction>::default();
     // For grcov
-    format!("{st:?}");
+    let _ = format!("{st:?}");
     assert!(st.global.types.is_empty());
     assert!(st.global.constants.is_empty());
     assert!(st.global.functions.is_empty());
@@ -247,7 +247,7 @@ fn block_state_last_register_inc() {
     bst3.inc_register();
     assert_eq!(bst3.last_register_number, 1);
     // For grcov
-    format!("{bst3:?}");
+    let _ = format!("{bst3:?}");
 }
 
 #[test]
