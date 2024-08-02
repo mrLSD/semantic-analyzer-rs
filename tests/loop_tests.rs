@@ -63,11 +63,11 @@ fn loop_transform() {
         ast::LoopBodyStatement::Continue,
     ];
     // For grcov
-    format!("{loop_stmts:#?}");
+    let _ = format!("{loop_stmts:#?}");
     for loop_stmt in loop_stmts {
         let loop_stmt_into: LoopBodyStatement = loop_stmt.into();
         // For grcov
-        format!("{loop_stmt_into:#?}");
+        let _ = format!("{loop_stmt_into:#?}");
         match loop_stmt_into {
             LoopBodyStatement::LetBinding(val) => assert_eq!(val, let_binding.clone().into()),
             LoopBodyStatement::Binding(val) => assert_eq!(val, binding.clone().into()),

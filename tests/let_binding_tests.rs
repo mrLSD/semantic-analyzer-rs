@@ -39,7 +39,7 @@ fn let_binding_transform() {
     );
     assert_eq!(let_binding.value, Box::new(expr_ast.into()));
     // For grcov
-    format!("{:?}", let_binding_ast.clone());
+    let _ = format!("{:?}", let_binding_ast.clone());
 }
 
 #[test]
