@@ -32,7 +32,7 @@ fn binding_transform() {
     assert_eq!(binding.clone().to_string(), "x");
     assert_eq!(binding.value, Box::new(expr_ast.into()));
     // For grcov
-    format!("{:?}", binding_ast.clone());
+    let _ = format!("{:?}", binding_ast.clone());
 }
 
 #[test]

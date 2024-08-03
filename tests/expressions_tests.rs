@@ -70,7 +70,7 @@ fn expression_ast_transform() {
     assert_eq!(value_name_into.to_string(), "x");
     let expr_into: Expression = expr.into();
     // For grcov
-    format!("{expr_into:?}");
+    let _ = format!("{expr_into:?}");
     assert_eq!(expr_into.expression_value.to_string(), "x");
     assert_eq!(expr_into.to_string(), "x");
     let value_name_into2: ValueName = String::from("x1").into();
@@ -290,6 +290,28 @@ fn expression_ast_transform_primitive_value_f64() {
 }
 
 #[test]
+fn expression_ast_transform_primitive_value_string() {
+    let test_res = "test".to_string();
+    let val = ast::PrimitiveValue::String(test_res.clone());
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::String)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::String(test_res.clone()), expr_val);
+    assert_eq!(expr_val.to_string(), test_res);
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), test_res);
+}
+
+#[test]
 fn expression_ast_transform_primitive_value_bool() {
     let val = ast::PrimitiveValue::Bool(true);
     assert_eq!(
@@ -398,7 +420,7 @@ fn expression_ast_transform_expression() {
         operation: None,
     }
     .into();
-    format!("{expr:#?}");
+    let _ = format!("{expr:#?}");
     assert_eq!(expr.to_string(), "ptr");
 }
 
@@ -428,7 +450,7 @@ fn expression_value_name_not_found() {
 fn expression_value_name_exists() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
-    let value_name = ast::ValueName::new(ast::Ident::new("x"));
+    let value_name = ast::ValueName::new(Ident::new("x"));
     let expr = ast::Expression {
         expression_value: ast::ExpressionValue::ValueName(value_name.clone()),
         operation: None,
@@ -464,7 +486,7 @@ fn expression_value_name_exists() {
 fn expression_const_exists() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
-    let src = ast::Ident::new("x");
+    let src = Ident::new("x");
     let const_name = ast::ValueName::new(src);
     let expr = ast::Expression {
         expression_value: ast::ExpressionValue::ValueName(const_name.clone()),
@@ -785,7 +807,7 @@ fn expression_struct_value() {
     let expression_st_value_into: ExpressionValue = expression_st_value.clone().into();
     assert_eq!(expression_st_value_into.to_string(), "x");
     // For grcov
-    format!("{expression_st_value_into:?}");
+    let _ = format!("{expression_st_value_into:?}");
     let expr = ast::Expression {
         expression_value: expression_st_value,
         operation: None,
@@ -849,7 +871,7 @@ fn expression_func_call() {
     let expr_value_into: ExpressionValue = ast_fn_call.clone().into();
     assert_eq!(expr_value_into.to_string(), "fn1");
     // For grcov
-    format!("{expr_value_into:?}");
+    let _ = format!("{expr_value_into:?}");
     let expr = ast::Expression {
         expression_value: ast_fn_call,
         operation: None,
@@ -1369,9 +1391,9 @@ fn custom_expression() {
 
     let expr_into: Expression = expr.clone().into();
     // For grcov
-    format!("{:#?}", expr_into);
+    let _ = format!("{:#?}", expr_into);
     // For grcov
-    format!("{:#?}", expr_into.to_string());
+    let _ = format!("{:#?}", expr_into.to_string());
     let res = state.expression(&expr, &block_state).unwrap();
     assert!(state.errors.is_empty());
 
