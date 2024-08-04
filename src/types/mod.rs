@@ -434,6 +434,7 @@ impl From<ast::PrimitiveValue> for PrimitiveValue {
             ast::PrimitiveValue::I64(v) => Self::I64(v),
             ast::PrimitiveValue::F32(v) => Self::F32(v),
             ast::PrimitiveValue::F64(v) => Self::F64(v),
+            ast::PrimitiveValue::String(v) => Self::String(v),
             ast::PrimitiveValue::Bool(v) => Self::Bool(v),
             ast::PrimitiveValue::Char(v) => Self::Char(v),
             ast::PrimitiveValue::Ptr => Self::Ptr,

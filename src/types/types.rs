@@ -155,6 +155,7 @@ pub enum PrimitiveTypes {
     I64,
     F32,
     F64,
+    String,
     Bool,
     Char,
     Ptr,
@@ -174,6 +175,7 @@ impl Display for PrimitiveTypes {
             Self::I64 => "i64",
             Self::F32 => "f32",
             Self::F64 => "f64",
+            Self::String => "string",
             Self::Bool => "bool",
             Self::Char => "char",
             Self::Ptr => "ptr",
@@ -196,6 +198,7 @@ impl From<ast::PrimitiveTypes> for PrimitiveTypes {
             ast::PrimitiveTypes::I64 => Self::I64,
             ast::PrimitiveTypes::F32 => Self::F32,
             ast::PrimitiveTypes::F64 => Self::F64,
+            ast::PrimitiveTypes::String => Self::String,
             ast::PrimitiveTypes::Bool => Self::Bool,
             ast::PrimitiveTypes::Char => Self::Char,
             ast::PrimitiveTypes::Ptr => Self::Ptr,
@@ -262,7 +265,7 @@ impl From<ast::StructTypes<'_>> for StructTypes {
 pub struct StructAttributeType {
     /// Attribute name for struct type
     pub attr_name: ValueName,
-    /// Attribute index representation for for struct type
+    /// Attribute index representation for struct type
     pub attr_index: u32,
     /// Attribute type for struct type
     pub attr_type: Type,

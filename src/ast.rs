@@ -82,7 +82,7 @@ impl<'de: 'a, 'a> Deserialize<'de> for Ident<'a> {
     {
         // grcov-excl-start
         struct IdentVisitor<'a> {
-            marker: std::marker::PhantomData<fn() -> Ident<'a>>,
+            marker: PhantomData<fn() -> Ident<'a>>,
         }
 
         impl<'de: 'a, 'a> Visitor<'de> for IdentVisitor<'a> {
@@ -146,7 +146,7 @@ impl<'de: 'a, 'a> Deserialize<'de> for Ident<'a> {
             "Ident",
             FIELDS,
             IdentVisitor {
-                marker: std::marker::PhantomData,
+                marker: PhantomData,
             },
         )
     }
@@ -327,6 +327,7 @@ pub enum PrimitiveTypes {
     I64,
     F32,
     F64,
+    String,
     Bool,
     Char,
     Ptr,
@@ -346,6 +347,7 @@ impl GetName for PrimitiveTypes {
             Self::I64 => "i64".to_string(),
             Self::F32 => "f32".to_string(),
             Self::F64 => "f64".to_string(),
+            Self::String => "string".to_string(),
             Self::Bool => "bool".to_string(),
             Self::Char => "char".to_string(),
             Self::Ptr => "ptr".to_string(),
@@ -587,6 +589,7 @@ pub enum PrimitiveValue {
     I64(i64),
     F32(f32),
     F64(f64),
+    String(String),
     Bool(bool),
     Char(char),
     Ptr,
@@ -607,6 +610,7 @@ impl PrimitiveValue {
             Self::I64(_) => Type::Primitive(PrimitiveTypes::I64),
             Self::F32(_) => Type::Primitive(PrimitiveTypes::F32),
             Self::F64(_) => Type::Primitive(PrimitiveTypes::F64),
+            Self::String(_) => Type::Primitive(PrimitiveTypes::String),
             Self::Char(_) => Type::Primitive(PrimitiveTypes::Char),
             Self::Bool(_) => Type::Primitive(PrimitiveTypes::Bool),
             Self::Ptr => Type::Primitive(PrimitiveTypes::Ptr),
@@ -623,7 +627,7 @@ impl PrimitiveValue {
 ///   example, it's numbers: 10, 3.2 and other primitive values)
 /// - `FunctionCall` - function call (with parameters) of expression
 /// - `StructValue` - value of expression based on `Struct` types.
-/// - `Expression` - expression representation (sub branch)
+/// - `Expression` - expression representation (sub-branch)
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(
     feature = "codec",
@@ -640,7 +644,7 @@ pub enum ExpressionValue<'a, I: SemanticContextInstruction, E: ExtendedExpressio
     FunctionCall(FunctionCall<'a, I, E>),
     /// Value of expression based on `Struct` types.
     StructValue(ExpressionStructValue<'a>),
-    /// Expression representation (sub branch)
+    /// Expression representation (sub-branch)
     Expression(Box<Expression<'a, I, E>>),
     /// Extended expression
     ExtendedExpression(Box<E>),

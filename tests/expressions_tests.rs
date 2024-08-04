@@ -290,6 +290,28 @@ fn expression_ast_transform_primitive_value_f64() {
 }
 
 #[test]
+fn expression_ast_transform_primitive_value_string() {
+    let test_res = "test".to_string();
+    let val = ast::PrimitiveValue::String(test_res.clone());
+    assert_eq!(
+        val.get_type(),
+        ast::Type::Primitive(ast::PrimitiveTypes::String)
+    );
+    let expr_val: PrimitiveValue = val.clone().into();
+    assert_eq!(PrimitiveValue::String(test_res.clone()), expr_val);
+    assert_eq!(expr_val.to_string(), test_res);
+    let expr: Expression = ast::Expression {
+        expression_value: ast::ExpressionValue::<
+            CustomExpressionInstruction,
+            CustomExpression<CustomExpressionInstruction>,
+        >::PrimitiveValue(val),
+        operation: None,
+    }
+    .into();
+    assert_eq!(expr.to_string(), test_res);
+}
+
+#[test]
 fn expression_ast_transform_primitive_value_bool() {
     let val = ast::PrimitiveValue::Bool(true);
     assert_eq!(
@@ -428,7 +450,7 @@ fn expression_value_name_not_found() {
 fn expression_value_name_exists() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
-    let value_name = ast::ValueName::new(ast::Ident::new("x"));
+    let value_name = ast::ValueName::new(Ident::new("x"));
     let expr = ast::Expression {
         expression_value: ast::ExpressionValue::ValueName(value_name.clone()),
         operation: None,
@@ -464,7 +486,7 @@ fn expression_value_name_exists() {
 fn expression_const_exists() {
     let block_state = Rc::new(RefCell::new(BlockState::new(None)));
     let mut t = SemanticTest::new();
-    let src = ast::Ident::new("x");
+    let src = Ident::new("x");
     let const_name = ast::ValueName::new(src);
     let expr = ast::Expression {
         expression_value: ast::ExpressionValue::ValueName(const_name.clone()),
