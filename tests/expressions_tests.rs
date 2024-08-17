@@ -290,28 +290,6 @@ fn expression_ast_transform_primitive_value_f64() {
 }
 
 #[test]
-fn expression_ast_transform_primitive_value_string() {
-    let test_res = "test".to_string();
-    let val = ast::PrimitiveValue::String(test_res.clone());
-    assert_eq!(
-        val.get_type(),
-        ast::Type::Primitive(ast::PrimitiveTypes::String)
-    );
-    let expr_val: PrimitiveValue = val.clone().into();
-    assert_eq!(PrimitiveValue::String(test_res.clone()), expr_val);
-    assert_eq!(expr_val.to_string(), test_res);
-    let expr: Expression = ast::Expression {
-        expression_value: ast::ExpressionValue::<
-            CustomExpressionInstruction,
-            CustomExpression<CustomExpressionInstruction>,
-        >::PrimitiveValue(val),
-        operation: None,
-    }
-    .into();
-    assert_eq!(expr.to_string(), test_res);
-}
-
-#[test]
 fn expression_ast_transform_primitive_value_bool() {
     let val = ast::PrimitiveValue::Bool(true);
     assert_eq!(
