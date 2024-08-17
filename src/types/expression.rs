@@ -85,7 +85,8 @@ impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::Expressi
 {
     fn from(value: ast::ExpressionValue<'_, I, E>) -> Self {
         match value {
-            ast::ExpressionValue::_Marker(..) => unreachable!(),
+            #[allow(unreachable_patterns)]
+            ast::ExpressionValue::_marker(..) => unreachable!(),
             ast::ExpressionValue::ValueName(v) => Self::ValueName(v.into()),
             ast::ExpressionValue::PrimitiveValue(v) => Self::PrimitiveValue(v.into()),
             ast::ExpressionValue::StructValue(v) => Self::StructValue(v.into()),

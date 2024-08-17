@@ -1240,7 +1240,7 @@ where
         // If expression return error immediately return error
         // because next analyzer should use success result.
         let right_value = match &right_expression.expression_value {
-            ast::ExpressionValue::_Marker(..) => unreachable!(),
+            ast::ExpressionValue::_marker(..) => unreachable!(),
             // Check is expression Value entity
             ast::ExpressionValue::ValueName(value) => {
                 // Get value from block state

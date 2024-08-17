@@ -92,10 +92,6 @@ fn types_ast_transform() {
             attributes: vec![],
         }),
     };
-    let ty18 = ast::StructType {
-        attr_name: Ident::new("attr18"),
-        attr_type: ast::Type::Primitive(ast::PrimitiveTypes::String),
-    };
     let type_ast = ast::StructTypes {
         name: Ident::new("type2"),
         attributes: vec![
@@ -115,12 +111,11 @@ fn types_ast_transform() {
             ty15.clone(),
             ty16.clone(),
             ty17.clone(),
-            ty18.clone(),
         ],
     };
     let type_into2: StructTypes = type_ast.clone().into();
     assert_eq!(type_into2.name, "type2");
-    assert_eq!(type_into2.attributes.len(), 17);
+    assert_eq!(type_into2.attributes.len(), 16);
 
     // Index=0 the same, so we can check directly
     assert_eq!(ty1.attr_type.name(), "u8");
@@ -257,14 +252,6 @@ fn types_ast_transform() {
     assert_eq!(attr17.attr_type, ty17.attr_type);
     assert_eq!(attr17.attr_type.to_string(), "type5");
     assert_eq!(attr17.attr_index, 15);
-
-    let attr18 = type_into2.attributes.get(&("attr18".into())).unwrap();
-    assert_eq!(ty18.attr_type.name(), "string");
-    let ty18: StructAttributeType = ty18.into();
-    assert_eq!(attr18.attr_name, ty18.attr_name);
-    assert_eq!(attr18.attr_type, ty18.attr_type);
-    assert_eq!(attr18.attr_type.to_string(), "string");
-    assert_eq!(attr18.attr_index, 16);
 
     //=======================
     // Common type tests

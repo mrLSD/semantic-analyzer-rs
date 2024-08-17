@@ -327,7 +327,6 @@ pub enum PrimitiveTypes {
     I64,
     F32,
     F64,
-    String,
     Bool,
     Char,
     Ptr,
@@ -347,7 +346,6 @@ impl GetName for PrimitiveTypes {
             Self::I64 => "i64".to_string(),
             Self::F32 => "f32".to_string(),
             Self::F64 => "f64".to_string(),
-            Self::String => "string".to_string(),
             Self::Bool => "bool".to_string(),
             Self::Char => "char".to_string(),
             Self::Ptr => "ptr".to_string(),
@@ -589,7 +587,6 @@ pub enum PrimitiveValue {
     I64(i64),
     F32(f32),
     F64(f64),
-    String(String),
     Bool(bool),
     Char(char),
     Ptr,
@@ -610,7 +607,6 @@ impl PrimitiveValue {
             Self::I64(_) => Type::Primitive(PrimitiveTypes::I64),
             Self::F32(_) => Type::Primitive(PrimitiveTypes::F32),
             Self::F64(_) => Type::Primitive(PrimitiveTypes::F64),
-            Self::String(_) => Type::Primitive(PrimitiveTypes::String),
             Self::Char(_) => Type::Primitive(PrimitiveTypes::Char),
             Self::Bool(_) => Type::Primitive(PrimitiveTypes::Bool),
             Self::Ptr => Type::Primitive(PrimitiveTypes::Ptr),
@@ -649,7 +645,8 @@ pub enum ExpressionValue<'a, I: SemanticContextInstruction, E: ExtendedExpressio
     /// Extended expression
     ExtendedExpression(Box<E>),
     #[cfg_attr(feature = "codec", serde(skip))]
-    _Marker(Infallible, PhantomData<I>),
+    #[allow(non_camel_case_types)]
+    _marker(Infallible, PhantomData<I>),
 }
 
 /// `ExpressionOperations` expression operation element of AST.
