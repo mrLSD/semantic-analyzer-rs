@@ -645,7 +645,8 @@ pub enum ExpressionValue<'a, I: SemanticContextInstruction, E: ExtendedExpressio
     /// Extended expression
     ExtendedExpression(Box<E>),
     #[cfg_attr(feature = "codec", serde(skip))]
-    _Marker(Infallible, PhantomData<I>),
+    #[allow(non_camel_case_types)]
+    _marker(Infallible, PhantomData<I>),
 }
 
 /// `ExpressionOperations` expression operation element of AST.

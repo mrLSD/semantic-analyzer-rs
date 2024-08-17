@@ -13,11 +13,6 @@ repository = "https://github.com/mrLSD/semantic-analyzer-rs"
 [lib]
 doctest = false
 
-# It requieres MSRV: 1.74
-# [lints.clippy]
-# pedantic = "deny"
-# nursery = "deny"
-
 [dependencies]
 nom_locate = "4.2"
 serde = { version = "1", features = ["derive"], optional = true }

@@ -1,4 +1,4 @@
-#![deny(clippy::pedantic, clippy::nursery)]
+#![deny(clippy::pedantic, clippy::nursery, clippy::as_conversions)]
 #![allow(clippy::module_name_repetitions, clippy::doc_lazy_continuation)]
 //! # Semantic Analyzer
 //! The semantic analyzer consists of the following basic elements:
