@@ -44,7 +44,7 @@ impl<'a> Ident<'a> {
     }
 }
 
-impl<'a> std::fmt::Display for Ident<'a> {
+impl std::fmt::Display for Ident<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.fragment())
     }
@@ -58,7 +58,7 @@ impl<'a> From<&'a str> for Ident<'a> {
 
 /// Ident Serializer
 #[cfg(feature = "codec")]
-impl<'a> Serialize for Ident<'a> {
+impl Serialize for Ident<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -227,7 +227,7 @@ impl GetLocation for FunctionName<'_> {
     }
 }
 
-impl<'a> std::fmt::Display for FunctionName<'a> {
+impl std::fmt::Display for FunctionName<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0.fragment())
     }
@@ -406,7 +406,7 @@ impl GetLocation for StructTypes<'_> {
     }
 }
 
-impl<'a> GetName for StructTypes<'a> {
+impl GetName for StructTypes<'_> {
     fn name(&self) -> String {
         (*self.name.fragment()).to_string()
     }
@@ -430,7 +430,7 @@ pub enum Type<'a> {
     Array(Box<Self>, u32),
 }
 
-impl<'a> GetName for Type<'a> {
+impl GetName for Type<'_> {
     fn name(&self) -> String {
         match self {
             Self::Primitive(primitive) => primitive.name(),

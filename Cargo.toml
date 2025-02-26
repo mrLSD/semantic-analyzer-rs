@@ -1,6 +1,6 @@
 [package]
 name = "semantic-analyzer"
-version = "0.4.5"
+version = "0.4.6"
 authors = ["Evgeny Ukhanov <mrlsd@ya.ru>"]
 description = "Semantic analyzer library for compilers written in Rust for semantic analysis of programming languages AST"
 keywords = ["compiler", "semantic-analisis", "semantic-alalyzer", "compiler-design", "semantic"]
@@ -14,7 +14,7 @@ repository = "https://github.com/mrLSD/semantic-analyzer-rs"
 doctest = false
 
 [dependencies]
-nom_locate = "4.2"
+nom_locate = "5.0"
 serde = { version = "1", features = ["derive"], optional = true }
 
 [dev-dependencies]
