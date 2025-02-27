@@ -748,7 +748,7 @@ where
                         if_body_state.borrow_mut().jump_function_return(res);
                         if_body_state.borrow_mut().set_return();
                         return_is_called = true;
-                    };
+                    }
                 }
             }
         }

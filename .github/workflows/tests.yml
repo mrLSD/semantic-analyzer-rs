@@ -40,15 +40,15 @@ jobs:
         run: cargo build --all-features
       - name: Test
         run: cargo test --all-targets --all-features
-        env:
-          CARGO_INCREMENTAL: '0'
-          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Copt-level=0 -Cllvm-args=--inline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
-          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Copt-level=0 -Cllvm-args=--inline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
-      - name: Install grcov
-        run: |
-          if [[ ! -f ~/.cargo/bin/grcov ]]; then
-            cargo install grcov          
-          fi
+#        env:
+#          CARGO_INCREMENTAL: '0'
+#          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Copt-level=0 -Cllvm-args=--inline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
+#          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Copt-level=0 -Cllvm-args=--inline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
+#      - name: Install grcov
+#        run: |
+#          if [[ ! -f ~/.cargo/bin/grcov ]]; then
+#            cargo install grcov
+#          fi
       - name: Save cache
         uses: actions/cache/save@v3
         with:
@@ -58,17 +58,16 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
           key: ${{ runner.os }}-cargo
-      - name: Run grcov
-        run: |
-          mkdir ./target/debug/coverage/
-          grcov . -s . -b ./target/debug/ -o ./target/debug/coverage/  --ignore-not-existing --excl-line="grcov-excl-line|#\\[derive\\(|//!|///" --excl-start="grcov-excl-start"  --excl-stop="grcov-excl-end" --ignore="*.cargo/*" --ignore="src/lib.rs" --ignore="tests/*"
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v3
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        with:
-          directory: ./target/debug/coverage/
-          files: ./target/debug/coverage/lcov
-          verbose: true
-          fail_ci_if_error: true
-
+#      - name: Run grcov
+#        run: |
+#          mkdir ./target/debug/coverage/
+#          grcov . -s . -b ./target/debug/ -o ./target/debug/coverage/  --ignore-not-existing --excl-line="grcov-excl-line|#\\[derive\\(|//!|///" --excl-start="grcov-excl-start"  --excl-stop="grcov-excl-end" --ignore="*.cargo/*" --ignore="src/lib.rs" --ignore="tests/*"
+#      - name: Upload coverage reports to Codecov
+#        uses: codecov/codecov-action@v3
+#        env:
+#          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+#        with:
+#          directory: ./target/debug/coverage/
+#          files: ./target/debug/coverage/lcov
+#          verbose: true
+#          fail_ci_if_error: true

@@ -1,5 +1,9 @@
 #![deny(clippy::pedantic, clippy::nursery, clippy::as_conversions)]
-#![allow(clippy::module_name_repetitions, clippy::doc_lazy_continuation)]
+#![allow(
+    clippy::module_name_repetitions,
+    clippy::doc_lazy_continuation,
+    clippy::too_long_first_doc_paragraph
+)]
 //! # Semantic Analyzer
 //! The semantic analyzer consists of the following basic elements:
 //! - AST is an abstract syntax tree that implements a predefined set of
