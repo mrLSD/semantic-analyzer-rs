@@ -37,7 +37,7 @@ fn function_declaration_without_body() {
     t.state.function_declaration(&fn_statement);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::FunctionAlreadyExist),
+        t.check_error(&StateErrorKind::FunctionAlreadyExist),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -65,7 +65,7 @@ fn function_declaration_wrong_type() {
     t.state.function_declaration(&fn_statement);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::TypeNotFound),
+        t.check_error(&StateErrorKind::TypeNotFound),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -90,7 +90,7 @@ fn function_declaration_wrong_type() {
     );
     t.state.function_declaration(&fn_statement2);
     assert!(t.check_errors_len(2), "Errors: {:?}", t.state.errors.len());
-    assert!(t.check_error_index(1, StateErrorKind::TypeNotFound));
+    assert!(t.check_error_index(1, &StateErrorKind::TypeNotFound));
     t.clean_errors();
 
     t.state.types(&type_decl);

@@ -11,7 +11,7 @@ use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct CustomExpression<I: SemanticContextInstruction> {
     _marker: PhantomData<I>,
@@ -30,7 +30,7 @@ impl<I: SemanticContextInstruction> ExtendedExpression<I> for CustomExpression<I
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "codec", derive(Serialize, Deserialize))]
 pub struct CustomExpressionInstruction;
 
@@ -60,7 +60,7 @@ impl SemanticTest<CustomExpressionInstruction> {
 
     #[allow(dead_code)]
     pub fn clean_errors(&mut self) {
-        self.state.errors = vec![]
+        self.state.errors = vec![];
     }
 
     #[allow(dead_code)]
@@ -69,12 +69,12 @@ impl SemanticTest<CustomExpressionInstruction> {
     }
 
     #[allow(dead_code)]
-    pub fn check_error(&self, err_kind: StateErrorKind) -> bool {
-        self.state.errors.first().unwrap().kind == err_kind
+    pub fn check_error(&self, err_kind: &StateErrorKind) -> bool {
+        &self.state.errors.first().unwrap().kind == err_kind
     }
 
     #[allow(dead_code)]
-    pub fn check_error_index(&self, index: usize, err_kind: StateErrorKind) -> bool {
-        self.state.errors.get(index).unwrap().kind == err_kind
+    pub fn check_error_index(&self, index: usize, err_kind: &StateErrorKind) -> bool {
+        &self.state.errors.get(index).unwrap().kind == err_kind
     }
 }

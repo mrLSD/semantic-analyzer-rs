@@ -217,7 +217,7 @@ fn block_state_value() {
         malloc: false,
     };
     bst1.borrow_mut().values.insert(vn1.clone(), val.clone());
-    assert_eq!(bst1.borrow().get_value_name(&vn1).unwrap(), val.clone());
+    assert_eq!(bst1.borrow().get_value_name(&vn1).unwrap(), val);
     assert_eq!(bst2.borrow().get_value_name(&vn1).unwrap(), val);
     assert!(bst3.borrow().get_value_name(&vn1).is_none());
 

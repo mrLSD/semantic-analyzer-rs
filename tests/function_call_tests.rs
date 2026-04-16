@@ -60,7 +60,7 @@ fn func_call_not_declared_func() {
     assert!(res.is_none());
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::FunctionNotFound),
+        t.check_error(&StateErrorKind::FunctionNotFound),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -96,7 +96,7 @@ fn func_call_wrong_type() {
     assert_eq!(res, Type::Primitive(PrimitiveTypes::I16));
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::FunctionParameterTypeWrong),
+        t.check_error(&StateErrorKind::FunctionParameterTypeWrong),
         "Errors: {:?}",
         t.state.errors[0]
     );

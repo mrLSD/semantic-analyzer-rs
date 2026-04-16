@@ -31,7 +31,7 @@ fn let_binding_transform() {
     assert_eq!(let_binding_ast.clone().name(), "x");
 
     let let_binding: LetBinding = let_binding_ast.clone().into();
-    assert_eq!(let_binding.clone().to_string(), "x");
+    assert_eq!(let_binding.to_string(), "x");
     assert!(let_binding.mutable);
     assert_eq!(
         let_binding.value_type,
@@ -59,7 +59,7 @@ fn let_binding_wrong_expression() {
     t.state.let_binding(&let_binding, &block_state);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ValueNotFound),
+        t.check_error(&StateErrorKind::ValueNotFound),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -82,7 +82,7 @@ fn let_binding_wrong_type() {
     t.state.let_binding(&let_binding, &block_state);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::WrongLetType),
+        t.check_error(&StateErrorKind::WrongLetType),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -104,7 +104,7 @@ fn let_binding_value_not_found() {
     };
     t.state.let_binding(&let_binding, &block_state);
     assert!(t.is_empty_error());
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 1);
     let inner_name: InnerValueName = "x.0".into();
     let val = Value {
@@ -141,7 +141,7 @@ fn let_binding_value_found() {
     };
     let inner_name: InnerValueName = "x.0".into();
     let val = Value {
-        inner_name: inner_name.clone(),
+        inner_name,
         inner_type: Type::Primitive(PrimitiveTypes::U64),
         mutable: true,
         alloca: false,
@@ -159,12 +159,12 @@ fn let_binding_value_found() {
     };
     t.state.let_binding(&let_binding, &block_state);
     assert!(t.is_empty_error());
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 1);
 
     let val2 = Value {
         inner_name: "x.1".into(),
-        ..val.clone()
+        ..val
     };
     assert_eq!(
         state[0],

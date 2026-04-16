@@ -178,7 +178,7 @@ fn loop_statements() {
     assert!(ch_ctx1.borrow().parent.is_some());
     assert!(ch_ctx1.borrow().children.is_empty());
 
-    let ctx1 = ch_ctx1.borrow().get_context().clone().get();
+    let ctx1 = ch_ctx1.borrow().get_context().get();
     assert_eq!(ctx1.len(), 5);
     assert_eq!(
         ctx1[0],
@@ -226,7 +226,7 @@ fn loop_statements() {
     assert!(ch_ctx2.borrow().parent.is_some());
     assert!(ch_ctx2.borrow().children.is_empty());
 
-    let ctx2 = ch_ctx2.borrow().get_context().clone().get();
+    let ctx2 = ch_ctx2.borrow().get_context().get();
     assert_eq!(ctx2.len(), 5);
     assert_eq!(
         ctx2[0],
@@ -265,7 +265,7 @@ fn loop_statements() {
         }
     );
 
-    let stm_ctx = ctx.borrow().get_context().clone().get();
+    let stm_ctx = ctx.borrow().get_context().get();
     assert_eq!(stm_ctx.len(), 17);
     assert_eq!(stm_ctx, main_ctx);
     assert_eq!(
@@ -373,7 +373,7 @@ fn loop_statements_instructions_after_return() {
     t.state.loop_statement(&loop_stmt, &block_state);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
+        t.check_error(&StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -401,7 +401,7 @@ fn loop_statements_instructions_after_break() {
     t.state.loop_statement(&loop_stmt, &block_state);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ForbiddenCodeAfterBreakDeprecated),
+        t.check_error(&StateErrorKind::ForbiddenCodeAfterBreakDeprecated),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -429,7 +429,7 @@ fn loop_statements_instructions_after_continue() {
     t.state.loop_statement(&loop_stmt, &block_state);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ForbiddenCodeAfterContinueDeprecated),
+        t.check_error(&StateErrorKind::ForbiddenCodeAfterContinueDeprecated),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -469,7 +469,7 @@ fn loop_statements_with_return_invocation() {
     assert!(ctx.borrow().parent.is_some());
     assert!(ctx.borrow().children.is_empty());
 
-    let stm_ctx = ctx.borrow().get_context().clone().get();
+    let stm_ctx = ctx.borrow().get_context().get();
     assert_eq!(stm_ctx.len(), 4);
     assert_eq!(stm_ctx, main_ctx);
     assert_eq!(
