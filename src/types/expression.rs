@@ -185,7 +185,7 @@ pub struct Expression {
     /// Expression value
     pub expression_value: ExpressionValue,
     /// Optional expression operation under other `Expression`
-    pub operation: Option<(ExpressionOperations, Box<Expression>)>,
+    pub operation: Option<(ExpressionOperations, Box<Self>)>,
 }
 
 impl Display for Expression {

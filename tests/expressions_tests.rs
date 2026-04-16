@@ -8,12 +8,12 @@ use semantic_analyzer::types::expression::{
 };
 use semantic_analyzer::types::semantic::{ExtendedSemanticContext, SemanticStackContext};
 use semantic_analyzer::types::{
+    Constant, ConstantExpression, ConstantName, ConstantValue, Function, PrimitiveValue, Value,
+    ValueName,
     block_state::BlockState,
     error::StateErrorKind,
     expression::ExpressionResultValue,
     types::{PrimitiveTypes, Type},
-    Constant, ConstantExpression, ConstantName, ConstantValue, Function, PrimitiveValue, Value,
-    ValueName,
 };
 use std::cell::RefCell;
 use std::marker::PhantomData;

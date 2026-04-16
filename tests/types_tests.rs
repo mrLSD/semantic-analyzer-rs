@@ -1,11 +1,11 @@
 use crate::utils::SemanticTest;
 use semantic_analyzer::ast::{self, GetLocation, GetName, Ident};
+use semantic_analyzer::types::ValueName;
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::semantic::SemanticStackContext;
 use semantic_analyzer::types::types::{
     PrimitiveTypes, StructAttributeType, StructTypes, Type, TypeAttributes,
 };
-use semantic_analyzer::types::ValueName;
 
 mod utils;
 

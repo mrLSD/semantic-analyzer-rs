@@ -176,10 +176,12 @@ fn let_binding_value_found() {
             },
         }
     );
-    assert!(block_state
-        .borrow()
-        .inner_values_name
-        .contains(&val2.inner_name));
+    assert!(
+        block_state
+            .borrow()
+            .inner_values_name
+            .contains(&val2.inner_name)
+    );
     assert_eq!(
         block_state.borrow().values.get(&("x".into())).unwrap(),
         &val2

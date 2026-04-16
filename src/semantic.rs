@@ -21,8 +21,8 @@ use crate::types::semantic::{
 };
 use crate::types::types::{Type, TypeName};
 use crate::types::{
-    error, Binding, Constant, ConstantName, Function, FunctionCall, FunctionName,
-    FunctionParameter, FunctionStatement, InnerValueName, LabelName, LetBinding, Value,
+    Binding, Constant, ConstantName, Function, FunctionCall, FunctionName, FunctionParameter,
+    FunctionStatement, InnerValueName, LabelName, LetBinding, Value, error,
 };
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
@@ -470,15 +470,15 @@ where
         };
         let let_data: LetBinding = data.clone().into();
 
-        if let Some(ty) = &let_data.value_type {
-            if &expr_result.expr_type != ty {
-                self.add_error(error::StateErrorResult::new(
-                    error::StateErrorKind::WrongLetType,
-                    let_data.to_string(),
-                    data.location(),
-                ));
-                return;
-            }
+        if let Some(ty) = &let_data.value_type
+            && &expr_result.expr_type != ty
+        {
+            self.add_error(error::StateErrorResult::new(
+                error::StateErrorKind::WrongLetType,
+                let_data.to_string(),
+                data.location(),
+            ));
+            return;
         }
         let let_ty = expr_result.expr_type.clone();
 
@@ -952,14 +952,11 @@ where
             .borrow_mut()
             .get_and_set_next_label(&"if_else".to_string().into());
         // Set if-end label from previous context
-        let label_if_end = label_end.clone().map_or_else(
-            || {
-                if_body_state
-                    .borrow_mut()
-                    .get_and_set_next_label(&"if_end".to_string().into())
-            },
-            |label| label,
-        );
+        let label_if_end = label_end.clone().unwrap_or_else(|| {
+            if_body_state
+                .borrow_mut()
+                .get_and_set_next_label(&"if_end".to_string().into())
+        });
         // To set if-end as single return point check is it previously set
         let is_set_label_if_end = label_end.is_some();
         let is_else = data.else_statement.is_some() || data.else_if_statement.is_some();

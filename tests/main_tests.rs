@@ -3,10 +3,10 @@ use semantic_analyzer::ast::{self, GetName, Ident};
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::expression::ExpressionOperations;
 use semantic_analyzer::types::{
+    Function, PrimitiveValue, Value,
     expression::{ExpressionResult, ExpressionResultValue},
     semantic::SemanticStackContext,
     types::{PrimitiveTypes, Type},
-    Function, PrimitiveValue, Value,
 };
 
 mod utils;

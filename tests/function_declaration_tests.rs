@@ -70,11 +70,12 @@ fn function_declaration_wrong_type() {
         t.state.errors[0]
     );
 
-    assert!(!t
-        .state
-        .global
-        .functions
-        .contains_key(&fn_name.clone().into()));
+    assert!(
+        !t.state
+            .global
+            .functions
+            .contains_key(&fn_name.clone().into())
+    );
     let state = t.state.global.context.clone().get();
     assert_eq!(state.len(), 0);
 

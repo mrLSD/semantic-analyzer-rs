@@ -1,10 +1,10 @@
 use crate::utils::{CustomExpression, CustomExpressionInstruction, SemanticTest};
 use semantic_analyzer::ast;
 use semantic_analyzer::ast::{CodeLocation, GetLocation, GetName, Ident};
+use semantic_analyzer::types::FunctionCall;
 use semantic_analyzer::types::block_state::BlockState;
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::types::{PrimitiveTypes, Type};
-use semantic_analyzer::types::FunctionCall;
 use std::cell::RefCell;
 use std::rc::Rc;
 

@@ -181,7 +181,7 @@ pub struct ConstantExpression {
     /// Constant value for expression operation
     pub value: ConstantValue,
     /// Optional expression operation and next constant expression entry point
-    pub operation: Option<(ExpressionOperations, Box<ConstantExpression>)>,
+    pub operation: Option<(ExpressionOperations, Box<Self>)>,
 }
 
 impl From<ast::ConstantExpression<'_>> for ConstantExpression {

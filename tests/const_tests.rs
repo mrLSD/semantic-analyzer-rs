@@ -3,8 +3,8 @@ use semantic_analyzer::ast::{self, CodeLocation, GetLocation, GetName, Ident};
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::expression::ExpressionOperations;
 use semantic_analyzer::types::{
-    semantic::SemanticStackContext, Constant, ConstantExpression, ConstantName, ConstantValue,
-    PrimitiveValue,
+    Constant, ConstantExpression, ConstantName, ConstantValue, PrimitiveValue,
+    semantic::SemanticStackContext,
 };
 
 mod utils;
@@ -163,11 +163,12 @@ fn const_declaration_with_operations() {
         "Errors: {:?}",
         t.state.errors[0]
     );
-    assert!(!t
-        .state
-        .global
-        .constants
-        .contains_key(&const_name1.clone().into()));
+    assert!(
+        !t.state
+            .global
+            .constants
+            .contains_key(&const_name1.clone().into())
+    );
     t.clean_errors();
 
     // constant2

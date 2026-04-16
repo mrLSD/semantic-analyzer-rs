@@ -1,10 +1,10 @@
 use semantic_analyzer::semantic::State;
+use semantic_analyzer::types::PrimitiveValue;
 use semantic_analyzer::types::block_state::BlockState;
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::expression::{ExpressionResult, ExpressionResultValue};
 use semantic_analyzer::types::semantic::{ExtendedExpression, SemanticContextInstruction};
 use semantic_analyzer::types::types::{PrimitiveTypes, Type};
-use semantic_analyzer::types::PrimitiveValue;
 #[cfg(feature = "codec")]
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
