@@ -181,8 +181,8 @@ fn if_logic_transform() {
         right: if_condition_expr.clone(),
     };
     let expr_cond6_into: ExpressionCondition = expr_cond6.into();
-    assert_eq!(expr_cond6_into.left, if_condition_expr_into.clone());
-    assert_eq!(expr_cond6_into.right, if_condition_expr_into.clone());
+    assert_eq!(expr_cond6_into.left, if_condition_expr_into);
+    assert_eq!(expr_cond6_into.right, if_condition_expr_into);
     assert_eq!(expr_cond6_into.condition, Condition::NotEq);
 
     let logic_cond_and = ast::LogicCondition::And;
@@ -370,7 +370,7 @@ fn if_condition_calculation_simple() {
         true,
     );
 
-    let ctx = block_state.borrow().get_context().clone().get();
+    let ctx = block_state.borrow().get_context().get();
     assert_eq!(ctx.len(), 2);
     assert_eq!(
         ctx[0],
@@ -483,7 +483,7 @@ fn if_condition_calculation_logic() {
         false,
     );
 
-    let ctx = block_state.borrow().get_context().clone().get();
+    let ctx = block_state.borrow().get_context().get();
     assert_eq!(
         ctx[0],
         SemanticStackContext::ConditionExpression {
@@ -785,7 +785,7 @@ fn else_if_statement() {
     println!("{:#?}", t.state.errors);
     assert!(t.is_empty_error());
 
-    let main_ctx = block_state.borrow().get_context().clone().get();
+    let main_ctx = block_state.borrow().get_context().get();
     assert_eq!(main_ctx.len(), 10);
     assert!(block_state.borrow().parent.is_none());
     assert_eq!(block_state.borrow().children.len(), 3);
@@ -802,7 +802,7 @@ fn else_if_statement() {
     assert!(ch_ctx3.borrow().parent.is_some());
     assert!(ch_ctx3.borrow().children.is_empty());
 
-    let ctx1 = ch_ctx1.borrow().get_context().clone().get();
+    let ctx1 = ch_ctx1.borrow().get_context().get();
     assert_eq!(ctx1.len(), 5);
     assert_eq!(
         ctx1[0],
@@ -848,7 +848,7 @@ fn else_if_statement() {
     );
     assert_eq!(ctx1[4], main_ctx[9]);
 
-    let ctx2 = ch_ctx2.borrow().get_context().clone().get();
+    let ctx2 = ch_ctx2.borrow().get_context().get();
     assert_eq!(ctx2.len(), 4);
     assert_eq!(
         ctx2[0],
@@ -887,7 +887,7 @@ fn else_if_statement() {
     );
     assert_eq!(ctx2[3], main_ctx[7]);
 
-    let ctx3 = ch_ctx3.borrow().get_context().clone().get();
+    let ctx3 = ch_ctx3.borrow().get_context().get();
     assert_eq!(ctx3.len(), 1);
     assert_eq!(
         ctx3[0],
@@ -1006,7 +1006,7 @@ fn if_body_statements() {
     assert!(ch_ctx1.borrow().parent.is_some());
     assert!(ch_ctx1.borrow().children.is_empty());
 
-    let ctx1 = ch_ctx1.borrow().get_context().clone().get();
+    let ctx1 = ch_ctx1.borrow().get_context().get();
     assert_eq!(ctx1.len(), 4);
     assert_eq!(
         ctx1[0],
@@ -1048,7 +1048,7 @@ fn if_body_statements() {
     assert!(ch_ctx2.borrow().parent.is_some());
     assert!(ch_ctx2.borrow().children.is_empty());
 
-    let ctx2 = ch_ctx2.borrow().get_context().clone().get();
+    let ctx2 = ch_ctx2.borrow().get_context().get();
     assert_eq!(ctx2.len(), 5);
     assert_eq!(
         ctx2[0],
@@ -1088,7 +1088,7 @@ fn if_body_statements() {
         }
     );
 
-    let stm_ctx = ctx.borrow().get_context().clone().get();
+    let stm_ctx = ctx.borrow().get_context().get();
     assert_eq!(stm_ctx.len(), 16);
     assert_eq!(stm_ctx, main_ctx);
     assert_eq!(
@@ -1280,7 +1280,7 @@ fn if_loop_body_statements() {
     );
     assert!(t.is_empty_error());
 
-    let main_ctx = block_state.borrow().get_context().clone().get();
+    let main_ctx = block_state.borrow().get_context().get();
     assert_eq!(main_ctx.len(), 16);
     assert!(block_state.borrow().parent.is_none());
     assert!(block_state.borrow().parent.is_none());
@@ -1294,7 +1294,7 @@ fn if_loop_body_statements() {
     assert!(ch_ctx1.borrow().parent.is_some());
     assert!(ch_ctx1.borrow().children.is_empty());
 
-    let ctx1 = ch_ctx1.borrow().get_context().clone().get();
+    let ctx1 = ch_ctx1.borrow().get_context().get();
     assert_eq!(ctx1.len(), 4);
     assert_eq!(
         ctx1[0],
@@ -1336,7 +1336,7 @@ fn if_loop_body_statements() {
     assert!(ch_ctx2.borrow().parent.is_some());
     assert!(ch_ctx2.borrow().children.is_empty());
 
-    let ctx2 = ch_ctx2.borrow().get_context().clone().get();
+    let ctx2 = ch_ctx2.borrow().get_context().get();
     assert_eq!(ctx2.len(), 5);
     assert_eq!(
         ctx2[0],
@@ -1375,7 +1375,7 @@ fn if_loop_body_statements() {
         }
     );
 
-    let stm_ctx = ctx.borrow().get_context().clone().get();
+    let stm_ctx = ctx.borrow().get_context().get();
     assert_eq!(stm_ctx.len(), 16);
     assert_eq!(stm_ctx, main_ctx);
     assert_eq!(

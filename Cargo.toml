@@ -19,6 +19,7 @@ as_conversions = "deny"
 module_name_repetitions = "allow"
 doc_lazy_continuation = "allow"
 too_long_first_doc_paragraph = "allow"
+too_many_lines = "allow"
 
 [lib]
 doctest = false

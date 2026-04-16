@@ -1225,7 +1225,6 @@ where
     /// `OP(lhs, rhs)`
     /// Left-value contains optional Expression result for left side
     /// of expression.
-    #[allow(clippy::too_many_lines)]
     pub fn expression_operation(
         &mut self,
         left_value: Option<&ExpressionResult>,
