@@ -9,8 +9,8 @@ license = "MIT"
 edition = "2024"
 homepage = "https://github.com/mrLSD/semantic-analyzer-rs"
 repository = "https://github.com/mrLSD/semantic-analyzer-rs"
-# Edition 2024 requires Rust 1.85.0 or later
-rust-version = "1.85.0"
+# let-chains require Rust 1.88.0
+rust-version = "1.88.0"
 
 [lints.clippy]
 pedantic = { level = "deny", priority = -1 }

@@ -952,7 +952,7 @@ where
             .borrow_mut()
             .get_and_set_next_label(&"if_else".to_string().into());
         // Set if-end label from previous context
-        let label_if_end = label_end.clone().unwrap_or_else(|| {
+        let label_if_end = label_end.as_ref().cloned().unwrap_or_else(|| {
             if_body_state
                 .borrow_mut()
                 .get_and_set_next_label(&"if_end".to_string().into())
