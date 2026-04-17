@@ -7,11 +7,11 @@ use semantic_analyzer::types::expression::{
 };
 use semantic_analyzer::types::semantic::{ExtendedSemanticContext, SemanticContext};
 use semantic_analyzer::types::{
+    Constant, ConstantExpression, ConstantValue, Function, FunctionParameter, InnerValueName,
+    LabelName, Value, ValueName,
     block_state::BlockState,
     semantic::SemanticStack,
     types::{PrimitiveTypes, Type},
-    Constant, ConstantExpression, ConstantValue, Function, FunctionParameter, InnerValueName,
-    LabelName, Value, ValueName,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -142,9 +142,10 @@ fn block_state_inner_value_name() {
 
     let inner_value_name2_0 = "x2.0".into();
     bst2.borrow_mut().set_inner_value_name(&inner_value_name2_0);
-    assert!(bst2
-        .borrow()
-        .is_inner_value_name_exist(&inner_value_name2_0));
+    assert!(
+        bst2.borrow()
+            .is_inner_value_name_exist(&inner_value_name2_0)
+    );
     assert_eq!(
         bst1.borrow()
             .get_next_inner_name(&inner_value_name2)
@@ -216,7 +217,7 @@ fn block_state_value() {
         malloc: false,
     };
     bst1.borrow_mut().values.insert(vn1.clone(), val.clone());
-    assert_eq!(bst1.borrow().get_value_name(&vn1).unwrap(), val.clone());
+    assert_eq!(bst1.borrow().get_value_name(&vn1).unwrap(), val);
     assert_eq!(bst2.borrow().get_value_name(&vn1).unwrap(), val);
     assert!(bst3.borrow().get_value_name(&vn1).is_none());
 

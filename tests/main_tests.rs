@@ -1,12 +1,13 @@
+#![allow(clippy::similar_names)]
 use crate::utils::{CustomExpression, CustomExpressionInstruction, SemanticTest};
 use semantic_analyzer::ast::{self, GetName, Ident};
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::expression::ExpressionOperations;
 use semantic_analyzer::types::{
+    Function, PrimitiveValue, Value,
     expression::{ExpressionResult, ExpressionResultValue},
     semantic::SemanticStackContext,
     types::{PrimitiveTypes, Type},
-    Function, PrimitiveValue, Value,
 };
 
 mod utils;
@@ -154,7 +155,7 @@ fn main_run() {
     assert!(ch_ctx2.borrow().children.is_empty());
 
     // Semantic stack context for the block fn2
-    let st_ctx2 = ctx2.get_context().clone().get();
+    let st_ctx2 = ctx2.get_context().get();
     assert_eq!(st_ctx2.len(), 1);
     assert_eq!(
         st_ctx2[0],
@@ -166,7 +167,7 @@ fn main_run() {
         }
     );
 
-    let st_ch_ctx1 = ch_ctx1.borrow().get_context().clone().get();
+    let st_ch_ctx1 = ch_ctx1.borrow().get_context().get();
     assert_eq!(st_ch_ctx1.len(), 5);
     assert_eq!(
         st_ch_ctx1[0],
@@ -210,7 +211,7 @@ fn main_run() {
         }
     );
 
-    let st_ch_ctx2 = ch_ctx2.borrow().get_context().clone().get();
+    let st_ch_ctx2 = ch_ctx2.borrow().get_context().get();
     assert_eq!(st_ch_ctx2.len(), 5);
     assert_eq!(
         st_ch_ctx2[0],
@@ -278,7 +279,7 @@ fn main_run() {
     );
 
     // Semantic stack context for the block fn1
-    let st_ctx1 = ctx1.get_context().clone().get();
+    let st_ctx1 = ctx1.get_context().get();
     assert_eq!(st_ctx1.len(), 14);
     assert_eq!(
         st_ctx1[0],
@@ -369,8 +370,8 @@ fn double_return() {
     > = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.check_errors_len(2), "Errors: {:?}", t.state.errors.len());
-    assert!(t.check_error_index(0, StateErrorKind::ForbiddenCodeAfterReturnDeprecated));
-    assert!(t.check_error_index(1, StateErrorKind::ReturnAlreadyCalled));
+    assert!(t.check_error_index(0, &StateErrorKind::ForbiddenCodeAfterReturnDeprecated));
+    assert!(t.check_error_index(1, &StateErrorKind::ReturnAlreadyCalled));
 }
 
 #[test]
@@ -394,7 +395,7 @@ fn wrong_return_type() {
     t.state.run(&main_stm);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::WrongReturnType),
+        t.check_error(&StateErrorKind::WrongReturnType),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -428,7 +429,7 @@ fn expression_as_return() {
     assert!(ctx.parent.is_none());
 
     // Semantic stack context for the block
-    let st_ctx = ctx.get_context().clone().get();
+    let st_ctx = ctx.get_context().get();
     assert_eq!(st_ctx.len(), 1);
     assert_eq!(
         st_ctx[0],
@@ -498,7 +499,7 @@ fn if_return_from_function() {
     assert!(children_ctx.parent.is_some());
 
     // Children semantic stack context for the block
-    let st_children_ctx = children_ctx.get_context().clone().get();
+    let st_children_ctx = children_ctx.get_context().get();
     assert_eq!(st_children_ctx.len(), 4);
     assert_eq!(
         st_children_ctx[0],
@@ -728,5 +729,5 @@ fn function_args_duplication() {
     > = vec![fn_stm];
     t.state.run(&main_stm);
     assert!(t.check_errors_len(1));
-    assert!(t.check_error(StateErrorKind::FunctionArgumentNameDuplicated));
+    assert!(t.check_error(&StateErrorKind::FunctionArgumentNameDuplicated));
 }

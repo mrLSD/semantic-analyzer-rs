@@ -1,11 +1,12 @@
+#![allow(clippy::similar_names)]
 use crate::utils::SemanticTest;
 use semantic_analyzer::ast::{self, GetLocation, GetName, Ident};
+use semantic_analyzer::types::ValueName;
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::semantic::SemanticStackContext;
 use semantic_analyzer::types::types::{
     PrimitiveTypes, StructAttributeType, StructTypes, Type, TypeAttributes,
 };
-use semantic_analyzer::types::ValueName;
 
 mod utils;
 
@@ -335,7 +336,7 @@ fn types_declaration() {
     t.state.types(&type_decl2.clone());
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::TypeAlreadyExist),
+        t.check_error(&StateErrorKind::TypeAlreadyExist),
         "Errors: {:?}",
         t.state.errors[0]
     );

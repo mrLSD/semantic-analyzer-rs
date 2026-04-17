@@ -7,9 +7,9 @@ use crate::types::semantic::{ExtendedExpression, SemanticContextInstruction};
 use nom_locate::LocatedSpan;
 #[cfg(feature = "codec")]
 use serde::{
+    Deserialize, Serialize,
     de::{self, Deserializer, MapAccess, Visitor},
     ser::{SerializeStruct, Serializer},
-    Deserialize, Serialize,
 };
 use std::convert::Infallible;
 use std::marker::PhantomData;
@@ -471,7 +471,7 @@ pub struct ConstantExpression<'a> {
     #[cfg_attr(feature = "codec", serde(borrow))]
     pub value: ConstantValue<'a>,
     /// Constant expression optional expression operation with other constant expression declarations.
-    pub operation: Option<(ExpressionOperations, Box<ConstantExpression<'a>>)>,
+    pub operation: Option<(ExpressionOperations, Box<Self>)>,
 }
 
 /// `Constant` constant declaration element of AST.
@@ -711,7 +711,7 @@ pub struct Expression<'a, I: SemanticContextInstruction, E: ExtendedExpression<I
     #[cfg_attr(feature = "codec", serde(borrow))]
     pub expression_value: ExpressionValue<'a, I, E>,
     /// Optional expression operation with other expression value
-    pub operation: Option<(ExpressionOperations, Box<Expression<'a, I, E>>)>,
+    pub operation: Option<(ExpressionOperations, Box<Self>)>,
 }
 
 impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> GetLocation for Expression<'_, I, E> {
@@ -860,7 +860,7 @@ pub struct ExpressionLogicCondition<'a, I: SemanticContextInstruction, E: Extend
     #[cfg_attr(feature = "codec", serde(borrow))]
     pub left: ExpressionCondition<'a, I, E>,
     /// Optional right side contain logic operation to other `ExpressionLogicCondition`
-    pub right: Option<(LogicCondition, Box<ExpressionLogicCondition<'a, I, E>>)>,
+    pub right: Option<(LogicCondition, Box<Self>)>,
 }
 
 /// `IfCondition` if-condition control flow element of AST.
@@ -898,7 +898,7 @@ pub struct IfStatement<'a, I: SemanticContextInstruction, E: ExtendedExpression<
     /// If-else-body statement - body of else-condition success
     pub else_statement: Option<IfBodyStatements<'a, I, E>>,
     /// Else-if-body statement - body of else-if-condition success
-    pub else_if_statement: Option<Box<IfStatement<'a, I, E>>>,
+    pub else_if_statement: Option<Box<Self>>,
 }
 
 impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> GetLocation
@@ -999,7 +999,7 @@ pub enum LoopBodyStatement<'a, I: SemanticContextInstruction, E: ExtendedExpress
     Binding(Binding<'a, I, E>),
     FunctionCall(FunctionCall<'a, I, E>),
     If(IfStatement<'a, I, E>),
-    Loop(Vec<LoopBodyStatement<'a, I, E>>),
+    Loop(Vec<Self>),
     Return(Expression<'a, I, E>),
     Break,
     Continue,

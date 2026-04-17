@@ -29,7 +29,7 @@ fn binding_transform() {
     assert_eq!(binding_ast.clone().name(), "x");
 
     let binding: Binding = binding_ast.clone().into();
-    assert_eq!(binding.clone().to_string(), "x");
+    assert_eq!(binding.to_string(), "x");
     assert_eq!(binding.value, Box::new(expr_ast.into()));
     // For grcov
     let _ = format!("{:?}", binding_ast.clone());
@@ -53,7 +53,7 @@ fn binding_wrong_expression() {
     t.state.binding(&binding, &block_state);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ValueNotFound),
+        t.check_error(&StateErrorKind::ValueNotFound),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -77,7 +77,7 @@ fn binding_value_not_exist() {
     t.state.binding(&binding, &block_state);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ValueNotFound),
+        t.check_error(&StateErrorKind::ValueNotFound),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -135,7 +135,7 @@ fn binding_value_not_mutable() {
     t.state.binding(&binding, &block_state);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ValueIsNotMutable),
+        t.check_error(&StateErrorKind::ValueIsNotMutable),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -169,7 +169,7 @@ fn binding_value_found() {
         malloc: false,
     };
 
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
         state[0],
@@ -199,7 +199,7 @@ fn binding_value_found() {
     };
     t.state.binding(&binding, &block_state);
     assert!(t.is_empty_error());
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 2);
     assert_eq!(
         state[0],
@@ -214,7 +214,7 @@ fn binding_value_found() {
     assert_eq!(
         state[1],
         SemanticStackContext::Binding {
-            val: val.clone(),
+            val,
             expr_result: ExpressionResult {
                 expr_type: Type::Primitive(PrimitiveTypes::U64),
                 expr_value: ExpressionResultValue::PrimitiveValue(PrimitiveValue::U64(100)),

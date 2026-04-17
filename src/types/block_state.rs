@@ -50,7 +50,7 @@ pub struct BlockState<I: SemanticContextInstruction> {
             deserialize_with = "rc_serializer::deserialize_option"
         )
     )]
-    pub parent: Option<Rc<RefCell<BlockState<I>>>>,
+    pub parent: Option<Rc<RefCell<Self>>>,
     /// children states
     #[cfg_attr(
         feature = "codec",
@@ -59,7 +59,7 @@ pub struct BlockState<I: SemanticContextInstruction> {
             deserialize_with = "rc_serializer::deserialize_vec"
         )
     )]
-    pub children: Vec<Rc<RefCell<BlockState<I>>>>,
+    pub children: Vec<Rc<RefCell<Self>>>,
     /// Semantic stack context for Block state
     context: SemanticStack<I>,
 }
@@ -440,7 +440,7 @@ impl<I: SemanticContextInstruction> ExtendedSemanticContext<I> for BlockState<I>
 #[cfg(feature = "codec")]
 pub mod rc_serializer {
     use super::{Rc, RefCell};
-    use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeSeq};
 
     /// Serializer for `Rc<RefCell<T>`.
     #[allow(clippy::missing_errors_doc)]

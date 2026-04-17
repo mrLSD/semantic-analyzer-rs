@@ -1,14 +1,25 @@
 [package]
 name = "semantic-analyzer"
-version = "0.4.6"
+version = "0.4.7"
 authors = ["Evgeny Ukhanov <mrlsd@ya.ru>"]
 description = "Semantic analyzer library for compilers written in Rust for semantic analysis of programming languages AST"
 keywords = ["compiler", "semantic-analisis", "semantic-alalyzer", "compiler-design", "semantic"]
 categories = ["compilers", "development-tools", "development-tools::build-utils"]
 license = "MIT"
-edition = "2021"
+edition = "2024"
 homepage = "https://github.com/mrLSD/semantic-analyzer-rs"
 repository = "https://github.com/mrLSD/semantic-analyzer-rs"
+# let-chains require Rust 1.88.0
+rust-version = "1.88.0"
+
+[lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+as_conversions = "deny"
+module_name_repetitions = "allow"
+doc_lazy_continuation = "allow"
+too_long_first_doc_paragraph = "allow"
+too_many_lines = "allow"
 
 [lib]
 doctest = false

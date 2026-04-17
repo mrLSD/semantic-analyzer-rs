@@ -3,8 +3,8 @@ use semantic_analyzer::ast::{self, CodeLocation, GetLocation, GetName, Ident};
 use semantic_analyzer::types::error::StateErrorKind;
 use semantic_analyzer::types::expression::ExpressionOperations;
 use semantic_analyzer::types::{
-    semantic::SemanticStackContext, Constant, ConstantExpression, ConstantName, ConstantValue,
-    PrimitiveValue,
+    Constant, ConstantExpression, ConstantName, ConstantValue, PrimitiveValue,
+    semantic::SemanticStackContext,
 };
 
 mod utils;
@@ -81,11 +81,11 @@ fn const_expr_ast_transform() {
 
     let expr_op: ExpressionOperations = ast::ExpressionOperations::Eq.into();
     let c_val2: ConstantValue = cnt_expr_prev.value.into();
-    let cnt_expr_op = cnt_expr.operation.clone().unwrap();
+    let cnt_expr_op = cnt_expr.operation.unwrap();
     assert_eq!(cnt_expr_op.0, expr_op);
     assert_eq!(cnt_expr_op.1.value, c_val2);
 
-    let cnt_expr_op2 = cnt_expr_op.clone().1.operation.unwrap();
+    let cnt_expr_op2 = cnt_expr_op.1.operation.unwrap();
     let c_val3: ConstantValue = cnt_expr_prev2.value.into();
     assert_eq!(cnt_expr_op2.0, expr_op);
     assert_eq!(cnt_expr_op2.1.value, c_val3);
@@ -122,7 +122,7 @@ fn const_declaration() {
     t.state.constant(&const_statement);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ConstantAlreadyExist),
+        t.check_error(&StateErrorKind::ConstantAlreadyExist),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -159,15 +159,16 @@ fn const_declaration_with_operations() {
     t.state.constant(&const_statement);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ConstantNotFound),
+        t.check_error(&StateErrorKind::ConstantNotFound),
         "Errors: {:?}",
         t.state.errors[0]
     );
-    assert!(!t
-        .state
-        .global
-        .constants
-        .contains_key(&const_name1.clone().into()));
+    assert!(
+        !t.state
+            .global
+            .constants
+            .contains_key(&const_name1.clone().into())
+    );
     t.clean_errors();
 
     // constant2

@@ -8,12 +8,12 @@ use semantic_analyzer::types::expression::{
 };
 use semantic_analyzer::types::semantic::{ExtendedSemanticContext, SemanticStackContext};
 use semantic_analyzer::types::{
+    Constant, ConstantExpression, ConstantName, ConstantValue, Function, PrimitiveValue, Value,
+    ValueName,
     block_state::BlockState,
     error::StateErrorKind,
     expression::ExpressionResultValue,
     types::{PrimitiveTypes, Type},
-    Constant, ConstantExpression, ConstantName, ConstantValue, Function, PrimitiveValue, Value,
-    ValueName,
 };
 use std::cell::RefCell;
 use std::marker::PhantomData;
@@ -32,12 +32,16 @@ fn set_result_type(
     let left_val = if reg_left {
         ExpressionResultValue::Register(left)
     } else {
-        ExpressionResultValue::PrimitiveValue(PrimitiveValue::U16(left as u16))
+        ExpressionResultValue::PrimitiveValue(PrimitiveValue::U16(
+            u16::try_from(left).expect("fits in u1"),
+        ))
     };
     let right_val = if reg_right {
         ExpressionResultValue::Register(right)
     } else {
-        ExpressionResultValue::PrimitiveValue(PrimitiveValue::U16(right as u16))
+        ExpressionResultValue::PrimitiveValue(PrimitiveValue::U16(
+            u16::try_from(right).expect("fits in u1"),
+        ))
     };
     SemanticStackContext::ExpressionOperation {
         operation: op,
@@ -415,11 +419,11 @@ fn expression_value_name_not_found() {
     let res = t.state.expression(&expr, &block_state);
     assert!(res.is_none());
     assert!(
-        t.check_error(StateErrorKind::ValueNotFound),
+        t.check_error(&StateErrorKind::ValueNotFound),
         "Errors: {:?}",
         t.state.errors[0]
     );
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert!(state.is_empty());
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
 }
@@ -448,7 +452,7 @@ fn expression_value_name_exists() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_value, ExpressionResultValue::Register(1));
     assert_eq!(res.expr_type, ty);
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
         state[0],
@@ -484,7 +488,7 @@ fn expression_const_exists() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_value, ExpressionResultValue::Register(1));
     assert_eq!(res.expr_type, ty);
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
         state[0],
@@ -510,7 +514,7 @@ fn expression_primitive_value() {
         ExpressionResultValue::PrimitiveValue(PrimitiveValue::I32(10))
     );
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::I32));
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert!(state.is_empty());
     assert!(t.is_empty_error());
 }
@@ -589,7 +593,7 @@ fn expression_struct_value_not_found() {
     assert!(res.is_none());
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ValueNotFound),
+        t.check_error(&StateErrorKind::ValueNotFound),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -614,15 +618,12 @@ fn expression_struct_value_wrong_struct_type() {
         alloca: false,
         malloc: false,
     };
-    block_state
-        .borrow_mut()
-        .values
-        .insert("x".into(), val.clone());
+    block_state.borrow_mut().values.insert("x".into(), val);
     let res = t.state.expression(&expr, &block_state);
     assert!(res.is_none());
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ValueNotStruct),
+        t.check_error(&StateErrorKind::ValueNotStruct),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -655,15 +656,12 @@ fn expression_struct_value_type_not_found() {
         alloca: false,
         malloc: false,
     };
-    block_state
-        .borrow_mut()
-        .values
-        .insert("x".into(), val.clone());
+    block_state.borrow_mut().values.insert("x".into(), val);
     let res = t.state.expression(&expr, &block_state);
     assert!(res.is_none());
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::TypeNotFound),
+        t.check_error(&StateErrorKind::TypeNotFound),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -696,10 +694,7 @@ fn expression_struct_value_wrong_expression_type() {
         alloca: false,
         malloc: false,
     };
-    block_state
-        .borrow_mut()
-        .values
-        .insert("x".into(), val.clone());
+    block_state.borrow_mut().values.insert("x".into(), val);
 
     let s_attr = ast::StructType {
         attr_name: Ident::new("attr1"),
@@ -715,7 +710,7 @@ fn expression_struct_value_wrong_expression_type() {
     assert!(res.is_none());
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::WrongExpressionType),
+        t.check_error(&StateErrorKind::WrongExpressionType),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -748,10 +743,7 @@ fn expression_struct_value_wrong_struct_attribute() {
         alloca: false,
         malloc: false,
     };
-    block_state
-        .borrow_mut()
-        .values
-        .insert("x".into(), val.clone());
+    block_state.borrow_mut().values.insert("x".into(), val);
 
     let s_attr = ast::StructType {
         attr_name: Ident::new("attr1"),
@@ -767,7 +759,7 @@ fn expression_struct_value_wrong_struct_attribute() {
     assert!(res.is_none());
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ValueNotStructField),
+        t.check_error(&StateErrorKind::ValueNotStructField),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -824,7 +816,7 @@ fn expression_struct_value() {
     assert!(t.is_empty_error());
     assert_eq!(res.expr_value, ExpressionResultValue::Register(2));
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::Bool));
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
         state[0],
@@ -858,7 +850,7 @@ fn expression_func_call() {
     assert!(res.is_none());
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::FunctionNotFound),
+        t.check_error(&StateErrorKind::FunctionNotFound),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -883,7 +875,7 @@ fn expression_func_call() {
             expr_type: Type::Primitive(PrimitiveTypes::Ptr),
         }
     );
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
         state[0],
@@ -920,7 +912,7 @@ fn expression_sub_expression() {
             expr_type: Type::Primitive(PrimitiveTypes::U32),
         }
     );
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert!(state.is_empty());
 }
 
@@ -945,7 +937,7 @@ fn expression_operation() {
             expr_value: ExpressionResultValue::Register(1),
         }
     );
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 1);
     assert_eq!(
         state[0],
@@ -979,12 +971,12 @@ fn expression_operation_wrong_type() {
     let res = t.state.expression(&expr, &block_state);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::WrongExpressionType),
+        t.check_error(&StateErrorKind::WrongExpressionType),
         "Errors: {:?}",
         t.state.errors[0]
     );
     assert!(res.is_none());
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert!(state.is_empty());
 }
 
@@ -1029,7 +1021,7 @@ fn expression_multiple_operation1() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
     assert_eq!(res.expr_value, ExpressionResultValue::Register(5));
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 5);
     assert_eq!(
         state[0],
@@ -1104,7 +1096,7 @@ fn expression_multiple_operation2() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
     assert_eq!(res.expr_value, ExpressionResultValue::Register(5));
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 5);
     assert_eq!(
         state[0],
@@ -1152,7 +1144,7 @@ fn expression_multiple_operation_simple1() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
     assert_eq!(res.expr_value, ExpressionResultValue::Register(2));
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 2);
     assert_eq!(
         state[0],
@@ -1185,7 +1177,7 @@ fn expression_multiple_operation_simple2() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
     assert_eq!(res.expr_value, ExpressionResultValue::Register(2));
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 2);
     assert_eq!(
         state[0],
@@ -1222,7 +1214,7 @@ fn expression_multiple_operation_simple3() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
     assert_eq!(res.expr_value, ExpressionResultValue::Register(3));
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 3);
     assert_eq!(
         state[0],
@@ -1267,7 +1259,7 @@ fn expression_multiple_operation_simple4() {
     let res = t.state.expression(&expr, &block_state).unwrap();
     assert_eq!(res.expr_type, Type::Primitive(PrimitiveTypes::U16));
     assert_eq!(res.expr_value, ExpressionResultValue::Register(3));
-    let state = block_state.borrow().get_context().clone().get();
+    let state = block_state.borrow().get_context().get();
     assert_eq!(state.len(), 3);
     assert_eq!(
         state[0],
@@ -1289,13 +1281,13 @@ fn custom_expression() {
     use semantic_analyzer::semantic::State;
     use semantic_analyzer::types::semantic::{ExtendedExpression, SemanticContextInstruction};
 
-    #[derive(Clone, Debug, PartialEq)]
+    #[derive(Clone, Debug, PartialEq, Eq)]
     pub enum AstCustomExpression {
         GoIn(u32, u32),
         GoOut(u32),
     }
 
-    #[derive(Clone, Debug, PartialEq)]
+    #[derive(Clone, Debug, PartialEq, Eq)]
     pub struct CustomExpression<I: SemanticContextInstruction> {
         ast: AstCustomExpression,
         _marker: PhantomData<I>,
@@ -1310,7 +1302,7 @@ fn custom_expression() {
         }
     }
 
-    #[derive(Clone, Debug, PartialEq)]
+    #[derive(Clone, Debug, PartialEq, Eq)]
     #[cfg_attr(feature = "codec", derive(serde::Serialize, serde::Deserialize))]
     pub enum CustomExpressionInstruction {
         GoIn { index: u32, value: u32 },
@@ -1369,7 +1361,7 @@ fn custom_expression() {
 
     let expr_into: Expression = expr.clone().into();
     // For grcov
-    let _ = format!("{:#?}", expr_into);
+    let _ = format!("{expr_into:#?}");
     // For grcov
     let _ = format!("{:#?}", expr_into.to_string());
     let res = state.expression(&expr, &block_state).unwrap();
@@ -1382,7 +1374,7 @@ fn custom_expression() {
             expr_value: ExpressionResultValue::Register(3),
         }
     );
-    let bs = block_state.borrow().get_context().clone().get();
+    let bs = block_state.borrow().get_context().get();
     assert_eq!(bs.len(), 3);
 
     assert_eq!(

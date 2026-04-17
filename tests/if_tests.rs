@@ -107,7 +107,7 @@ fn if_single_transform() {
     let if_compare1 = *if_statement1_into.clone().else_if_statement.unwrap();
     let if_compare2 = IfStatement {
         else_if_statement: None,
-        ..if_statement1_into.clone()
+        ..if_statement1_into
     };
     assert_eq!(if_compare1, if_compare2);
     assert_eq!(if_statement1.location(), CodeLocation::new(1, 0));
@@ -131,8 +131,8 @@ fn if_logic_transform() {
         right: if_condition_expr.clone(),
     };
     let expr_cond1_into: ExpressionCondition = expr_cond1.into();
-    assert_eq!(expr_cond1_into.left, if_condition_expr_into.clone());
-    assert_eq!(expr_cond1_into.right, if_condition_expr_into.clone());
+    assert_eq!(expr_cond1_into.left, if_condition_expr_into);
+    assert_eq!(expr_cond1_into.right, if_condition_expr_into);
     assert_eq!(expr_cond1_into.condition, Condition::Great);
 
     let expr_cond2 = ast::ExpressionCondition {
@@ -141,8 +141,8 @@ fn if_logic_transform() {
         right: if_condition_expr.clone(),
     };
     let expr_cond2_into: ExpressionCondition = expr_cond2.into();
-    assert_eq!(expr_cond2_into.left, if_condition_expr_into.clone());
-    assert_eq!(expr_cond2_into.right, if_condition_expr_into.clone());
+    assert_eq!(expr_cond2_into.left, if_condition_expr_into);
+    assert_eq!(expr_cond2_into.right, if_condition_expr_into);
     assert_eq!(expr_cond2_into.condition, Condition::Less);
 
     let expr_cond3 = ast::ExpressionCondition {
@@ -151,8 +151,8 @@ fn if_logic_transform() {
         right: if_condition_expr.clone(),
     };
     let expr_cond3_into: ExpressionCondition = expr_cond3.into();
-    assert_eq!(expr_cond3_into.left, if_condition_expr_into.clone());
-    assert_eq!(expr_cond3_into.right, if_condition_expr_into.clone());
+    assert_eq!(expr_cond3_into.left, if_condition_expr_into);
+    assert_eq!(expr_cond3_into.right, if_condition_expr_into);
     assert_eq!(expr_cond3_into.condition, Condition::Eq);
 
     let expr_cond4 = ast::ExpressionCondition {
@@ -161,8 +161,8 @@ fn if_logic_transform() {
         right: if_condition_expr.clone(),
     };
     let expr_cond4_into: ExpressionCondition = expr_cond4.into();
-    assert_eq!(expr_cond4_into.left, if_condition_expr_into.clone());
-    assert_eq!(expr_cond4_into.right, if_condition_expr_into.clone());
+    assert_eq!(expr_cond4_into.left, if_condition_expr_into);
+    assert_eq!(expr_cond4_into.right, if_condition_expr_into);
     assert_eq!(expr_cond4_into.condition, Condition::GreatEq);
 
     let expr_cond5 = ast::ExpressionCondition {
@@ -171,8 +171,8 @@ fn if_logic_transform() {
         right: if_condition_expr.clone(),
     };
     let expr_cond5_into: ExpressionCondition = expr_cond5.into();
-    assert_eq!(expr_cond5_into.left, if_condition_expr_into.clone());
-    assert_eq!(expr_cond5_into.right, if_condition_expr_into.clone());
+    assert_eq!(expr_cond5_into.left, if_condition_expr_into);
+    assert_eq!(expr_cond5_into.right, if_condition_expr_into);
     assert_eq!(expr_cond5_into.condition, Condition::LessEq);
 
     let expr_cond6 = ast::ExpressionCondition {
@@ -181,8 +181,8 @@ fn if_logic_transform() {
         right: if_condition_expr.clone(),
     };
     let expr_cond6_into: ExpressionCondition = expr_cond6.into();
-    assert_eq!(expr_cond6_into.left, if_condition_expr_into.clone());
-    assert_eq!(expr_cond6_into.right, if_condition_expr_into.clone());
+    assert_eq!(expr_cond6_into.left, if_condition_expr_into);
+    assert_eq!(expr_cond6_into.right, if_condition_expr_into);
     assert_eq!(expr_cond6_into.condition, Condition::NotEq);
 
     let logic_cond_and = ast::LogicCondition::And;
@@ -314,7 +314,7 @@ fn check_if_and_else_if_statement_duplicate() {
     t.state.if_condition(&if_stmt, &block_state, &None, None);
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::IfElseDuplicated),
+        t.check_error(&StateErrorKind::IfElseDuplicated),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -370,7 +370,7 @@ fn if_condition_calculation_simple() {
         true,
     );
 
-    let ctx = block_state.borrow().get_context().clone().get();
+    let ctx = block_state.borrow().get_context().get();
     assert_eq!(ctx.len(), 2);
     assert_eq!(
         ctx[0],
@@ -396,7 +396,7 @@ fn if_condition_calculation_simple() {
     );
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ValueNotFound),
+        t.check_error(&StateErrorKind::ValueNotFound),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -483,7 +483,7 @@ fn if_condition_calculation_logic() {
         false,
     );
 
-    let ctx = block_state.borrow().get_context().clone().get();
+    let ctx = block_state.borrow().get_context().get();
     assert_eq!(
         ctx[0],
         SemanticStackContext::ConditionExpression {
@@ -620,12 +620,12 @@ fn if_condition_when_left_expr_return_error() {
     );
     assert!(t.check_errors_len(2), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error_index(0, StateErrorKind::FunctionNotFound),
+        t.check_error_index(0, &StateErrorKind::FunctionNotFound),
         "Errors: {:?}",
         t.state.errors[0]
     );
     assert!(
-        t.check_error_index(1, StateErrorKind::ConditionIsEmpty),
+        t.check_error_index(1, &StateErrorKind::ConditionIsEmpty),
         "Errors: {:?}",
         t.state.errors[1]
     );
@@ -667,7 +667,7 @@ fn if_condition_left_expr_and_right_expr_different_type() {
     );
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ConditionExpressionWrongType),
+        t.check_error(&StateErrorKind::ConditionExpressionWrongType),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -730,7 +730,7 @@ fn if_condition_primitive_type_only_check() {
     );
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ConditionExpressionNotSupported),
+        t.check_error(&StateErrorKind::ConditionExpressionNotSupported),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -785,7 +785,7 @@ fn else_if_statement() {
     println!("{:#?}", t.state.errors);
     assert!(t.is_empty_error());
 
-    let main_ctx = block_state.borrow().get_context().clone().get();
+    let main_ctx = block_state.borrow().get_context().get();
     assert_eq!(main_ctx.len(), 10);
     assert!(block_state.borrow().parent.is_none());
     assert_eq!(block_state.borrow().children.len(), 3);
@@ -802,7 +802,7 @@ fn else_if_statement() {
     assert!(ch_ctx3.borrow().parent.is_some());
     assert!(ch_ctx3.borrow().children.is_empty());
 
-    let ctx1 = ch_ctx1.borrow().get_context().clone().get();
+    let ctx1 = ch_ctx1.borrow().get_context().get();
     assert_eq!(ctx1.len(), 5);
     assert_eq!(
         ctx1[0],
@@ -848,7 +848,7 @@ fn else_if_statement() {
     );
     assert_eq!(ctx1[4], main_ctx[9]);
 
-    let ctx2 = ch_ctx2.borrow().get_context().clone().get();
+    let ctx2 = ch_ctx2.borrow().get_context().get();
     assert_eq!(ctx2.len(), 4);
     assert_eq!(
         ctx2[0],
@@ -887,7 +887,7 @@ fn else_if_statement() {
     );
     assert_eq!(ctx2[3], main_ctx[7]);
 
-    let ctx3 = ch_ctx3.borrow().get_context().clone().get();
+    let ctx3 = ch_ctx3.borrow().get_context().get();
     assert_eq!(ctx3.len(), 1);
     assert_eq!(
         ctx3[0],
@@ -1006,7 +1006,7 @@ fn if_body_statements() {
     assert!(ch_ctx1.borrow().parent.is_some());
     assert!(ch_ctx1.borrow().children.is_empty());
 
-    let ctx1 = ch_ctx1.borrow().get_context().clone().get();
+    let ctx1 = ch_ctx1.borrow().get_context().get();
     assert_eq!(ctx1.len(), 4);
     assert_eq!(
         ctx1[0],
@@ -1048,7 +1048,7 @@ fn if_body_statements() {
     assert!(ch_ctx2.borrow().parent.is_some());
     assert!(ch_ctx2.borrow().children.is_empty());
 
-    let ctx2 = ch_ctx2.borrow().get_context().clone().get();
+    let ctx2 = ch_ctx2.borrow().get_context().get();
     assert_eq!(ctx2.len(), 5);
     assert_eq!(
         ctx2[0],
@@ -1088,7 +1088,7 @@ fn if_body_statements() {
         }
     );
 
-    let stm_ctx = ctx.borrow().get_context().clone().get();
+    let stm_ctx = ctx.borrow().get_context().get();
     assert_eq!(stm_ctx.len(), 16);
     assert_eq!(stm_ctx, main_ctx);
     assert_eq!(
@@ -1280,7 +1280,7 @@ fn if_loop_body_statements() {
     );
     assert!(t.is_empty_error());
 
-    let main_ctx = block_state.borrow().get_context().clone().get();
+    let main_ctx = block_state.borrow().get_context().get();
     assert_eq!(main_ctx.len(), 16);
     assert!(block_state.borrow().parent.is_none());
     assert!(block_state.borrow().parent.is_none());
@@ -1294,7 +1294,7 @@ fn if_loop_body_statements() {
     assert!(ch_ctx1.borrow().parent.is_some());
     assert!(ch_ctx1.borrow().children.is_empty());
 
-    let ctx1 = ch_ctx1.borrow().get_context().clone().get();
+    let ctx1 = ch_ctx1.borrow().get_context().get();
     assert_eq!(ctx1.len(), 4);
     assert_eq!(
         ctx1[0],
@@ -1336,7 +1336,7 @@ fn if_loop_body_statements() {
     assert!(ch_ctx2.borrow().parent.is_some());
     assert!(ch_ctx2.borrow().children.is_empty());
 
-    let ctx2 = ch_ctx2.borrow().get_context().clone().get();
+    let ctx2 = ch_ctx2.borrow().get_context().get();
     assert_eq!(ctx2.len(), 5);
     assert_eq!(
         ctx2[0],
@@ -1375,7 +1375,7 @@ fn if_loop_body_statements() {
         }
     );
 
-    let stm_ctx = ctx.borrow().get_context().clone().get();
+    let stm_ctx = ctx.borrow().get_context().get();
     assert_eq!(stm_ctx.len(), 16);
     assert_eq!(stm_ctx, main_ctx);
     assert_eq!(
@@ -1508,7 +1508,7 @@ fn if_loop_body_instructions_after_return() {
 
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
+        t.check_error(&StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -1560,7 +1560,7 @@ fn else_if_loop_body_instructions_after_return() {
 
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
+        t.check_error(&StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -1609,7 +1609,7 @@ fn if_body_instructions_after_return() {
 
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
+        t.check_error(&StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -1661,7 +1661,7 @@ fn if_else_body_instructions_after_return() {
 
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
+        t.check_error(&StateErrorKind::ForbiddenCodeAfterReturnDeprecated),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -1706,7 +1706,7 @@ fn if_loop_body_instructions_after_break() {
     );
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ForbiddenCodeAfterBreakDeprecated),
+        t.check_error(&StateErrorKind::ForbiddenCodeAfterBreakDeprecated),
         "Errors: {:?}",
         t.state.errors[0]
     );
@@ -1751,7 +1751,7 @@ fn if_loop_body_instructions_after_continue() {
     );
     assert!(t.check_errors_len(1), "Errors: {:?}", t.state.errors.len());
     assert!(
-        t.check_error(StateErrorKind::ForbiddenCodeAfterContinueDeprecated),
+        t.check_error(&StateErrorKind::ForbiddenCodeAfterContinueDeprecated),
         "Errors: {:?}",
         t.state.errors[0]
     );

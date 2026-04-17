@@ -92,7 +92,7 @@ pub struct ExpressionLogicCondition {
     /// Left expression condition
     pub left: ExpressionCondition,
     /// Optional right expression condition with logic condition
-    pub right: Option<(LogicCondition, Box<ExpressionLogicCondition>)>,
+    pub right: Option<(LogicCondition, Box<Self>)>,
 }
 
 impl<I: SemanticContextInstruction, E: ExtendedExpression<I>>
@@ -145,7 +145,7 @@ pub struct IfStatement {
     /// Basic else-body, if if-condition is false
     pub else_statement: Option<IfBodyStatements>,
     /// Basic else-if-body
-    pub else_if_statement: Option<Box<IfStatement>>,
+    pub else_if_statement: Option<Box<Self>>,
 }
 
 impl<I: SemanticContextInstruction, E: ExtendedExpression<I>> From<ast::IfStatement<'_, I, E>>
@@ -202,7 +202,7 @@ pub enum LoopBodyStatement {
     Binding(Binding),
     FunctionCall(FunctionCall),
     If(IfStatement),
-    Loop(Vec<LoopBodyStatement>),
+    Loop(Vec<Self>),
     Return(Expression),
     Break,
     Continue,
