@@ -54,7 +54,7 @@ impl SemanticTest<CustomExpressionInstruction> {
     }
 
     #[allow(dead_code)]
-    pub fn is_empty_error(&self) -> bool {
+    pub const fn is_empty_error(&self) -> bool {
         self.state.errors.is_empty()
     }
 
@@ -64,7 +64,7 @@ impl SemanticTest<CustomExpressionInstruction> {
     }
 
     #[allow(dead_code)]
-    pub fn check_errors_len(&self, len: usize) -> bool {
+    pub const fn check_errors_len(&self, len: usize) -> bool {
         self.state.errors.len() == len
     }
 
