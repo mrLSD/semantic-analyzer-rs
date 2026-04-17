@@ -32,12 +32,16 @@ fn set_result_type(
     let left_val = if reg_left {
         ExpressionResultValue::Register(left)
     } else {
-        ExpressionResultValue::PrimitiveValue(PrimitiveValue::U16(u16::try_from(left).unwrap()))
+        ExpressionResultValue::PrimitiveValue(PrimitiveValue::U16(
+            u16::try_from(left).expect("fits in u1"),
+        ))
     };
     let right_val = if reg_right {
         ExpressionResultValue::Register(right)
     } else {
-        ExpressionResultValue::PrimitiveValue(PrimitiveValue::U16(u16::try_from(right).unwrap()))
+        ExpressionResultValue::PrimitiveValue(PrimitiveValue::U16(
+            u16::try_from(right).expect("fits in u1"),
+        ))
     };
     SemanticStackContext::ExpressionOperation {
         operation: op,

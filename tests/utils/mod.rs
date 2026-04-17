@@ -60,7 +60,7 @@ impl SemanticTest<CustomExpressionInstruction> {
 
     #[allow(dead_code)]
     pub fn clean_errors(&mut self) {
-        self.state.errors = vec![];
+        self.state.errors.clear();
     }
 
     #[allow(dead_code)]
